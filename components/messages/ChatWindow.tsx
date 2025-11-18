@@ -850,6 +850,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         }
     }
 
+    // Extract current user's avatar from conversation data to ensure it matches Firestore
+    const currentUserInfo = conversationData?.participantInfo?.[currentUser?.uid || ''];
+    const currentUserAvatar = currentUserInfo?.avatar || currentUser?.photoURL || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media';
+
 
     if (loading) {
         return <div className="h-full flex items-center justify-center">{t('messages.loading')}</div>;
@@ -1179,7 +1183,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     onClose={() => setIsStreakModalOpen(false)}
                     crystalData={crystalData}
                     currentUser={currentUser}
+                    currentUserAvatar={currentUserAvatar}
                     otherUser={otherUser}
+                    otherUserAvatar={otherUser.avatar}
                     onPulseCreated={() => {
                         setIsStreakModalOpen(false);
                     }}

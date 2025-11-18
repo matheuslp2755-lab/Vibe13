@@ -22,6 +22,8 @@ interface ConnectionStreakShareModalProps {
   crystalData: CrystalData;
   currentUser: any; // Firebase User type
   otherUser: UserInfo;
+  currentUserAvatar: string;
+  otherUserAvatar: string;
   onPulseCreated: () => void;
 }
 
@@ -38,22 +40,45 @@ const Spinner: React.FC = () => (
 const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
     if (!url) return null;
     try {
+        // Try fetching as a blob first to handle CORS/Origin issues in WebViews
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
         const img = new Image();
-        img.crossOrigin = "anonymous"; 
         return new Promise((resolve) => {
-            img.onload = () => resolve(img);
-            img.onerror = () => {
-                console.warn("Failed to load image, using fallback:", url);
-                resolve(null);
+            img.onload = () => {
+                resolve(img);
+                // URL.revokeObjectURL(objectUrl); // Keep alive for drawing
             };
-            img.src = url;
+            img.onerror = () => {
+                 console.warn("Blob image load failed, trying direct load:", url);
+                 resolve(null);
+            };
+            img.src = objectUrl;
         });
     } catch (e) {
-        return null;
+        // Fallback to direct load if fetch fails (e.g., restricted CORS on fetch but not on img tag)
+        try {
+             const img = new Image();
+             img.crossOrigin = "anonymous"; 
+             return new Promise((resolve) => {
+                 img.onload = () => resolve(img);
+                 img.onerror = () => {
+                     console.warn("Direct image load failed:", url);
+                     resolve(null);
+                 };
+                 img.src = url;
+             });
+        } catch (err) {
+            return null;
+        }
     }
 };
 
-const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({ isOpen, onClose, crystalData, currentUser, otherUser, onPulseCreated }) => {
+const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media";
+
+const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({ isOpen, onClose, crystalData, currentUser, otherUser, currentUserAvatar, otherUserAvatar, onPulseCreated }) => {
     const { t } = useLanguage();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -122,16 +147,15 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.fillStyle = vignette;
                 ctx.fillRect(0, 0, W, H);
 
-                // 2. Carregar Avatares com URL Segura
-                // Garantir que a URL do avatar do currentUser venha do Firestore se possível, ou auth
-                // Para garantir cache busting se necessário, mas Firestore URLs geralmente são estáveis com tokens
-                const userImgUrl = currentUser.photoURL; 
-                const otherUserImgUrl = otherUser.avatar;
+                // 2. Carregar Avatares
+                // Prioritize passed avatars, fallback to generic if load fails
+                let userImg = await loadImageSafe(currentUserAvatar);
+                let otherUserImg = await loadImageSafe(otherUserAvatar);
                 
-                const [userImg, otherUserImg] = await Promise.all([
-                    loadImageSafe(userImgUrl),
-                    loadImageSafe(otherUserImgUrl)
-                ]);
+                // If main image fails, try fallback URL, if that fails, we will draw geometric fallback
+                if (!userImg) userImg = await loadImageSafe(FALLBACK_AVATAR_URL);
+                if (!otherUserImg) otherUserImg = await loadImageSafe(FALLBACK_AVATAR_URL);
+
 
                 // 3. Desenhar Avatares e Conexão
                 const avatarSize = 300; // Diâmetro
@@ -187,7 +211,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     if (img) {
                         ctx.drawImage(img, x, y, size, size);
                     } else {
-                        // Fallback Gráfico: Silhueta Genérica
+                        // Fallback Gráfico: Silhueta Genérica (Último recurso)
                         ctx.fillStyle = '#94a3b8'; // Slate 400
                         // Cabeça
                         ctx.beginPath();
@@ -254,7 +278,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
         
         generateCard();
 
-    }, [isOpen, crystalData, currentUser, otherUser, t]);
+    }, [isOpen, crystalData, currentUserAvatar, otherUserAvatar, t]);
 
     const handlePublish = async () => {
         if (!generatedImage || !currentUser) return;
