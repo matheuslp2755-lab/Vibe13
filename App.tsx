@@ -18,6 +18,40 @@ declare global {
   }
 }
 
+const EmojiBackground = () => (
+  <>
+    <style>{`
+      @keyframes animate-scroll {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(-50%);
+        }
+      }
+      .emoji-background::before {
+        content: '${'😂😍🎉👍❤️😊😎🥰😜'.repeat(200)}';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 200%;
+        font-size: 2rem;
+        line-height: 1.2;
+        z-index: 0;
+        opacity: 0.05;
+        animation: animate-scroll 240s linear infinite;
+        word-break: break-all;
+        color: black;
+      }
+      .dark .emoji-background::before {
+        color: white;
+      }
+    `}</style>
+    <div className="emoji-background" aria-hidden="true"></div>
+  </>
+);
+
 const AppContent: React.FC = () => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,8 +237,9 @@ useEffect(() => {
 
     if (!user) {
       return (
-        <div className="bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col">
-          <main className="flex-grow flex items-center justify-center py-10 px-4">
+        <div className="bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col relative overflow-hidden">
+          <EmojiBackground />
+          <main className="flex-grow flex items-center justify-center py-10 px-4 z-10">
             {authPage === 'login' ? (
               <Login onSwitchMode={() => switchAuthPage('signup')} />
             ) : (
