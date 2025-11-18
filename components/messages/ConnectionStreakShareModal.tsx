@@ -36,44 +36,61 @@ const Spinner: React.FC = () => (
     </div>
 );
 
-// Robust image loader that prefers Blob fetching to avoid Tainted Canvas issues
+// Improved Safe Image Loader with Cache Busting
 const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
     if (!url) return null;
 
+    const getUrlWithCacheBuster = (u: string) => {
+        try {
+            // Check if it's a data URL (base64), return as is
+            if (u.startsWith('data:')) return u;
+            
+            const separator = u.includes('?') ? '&' : '?';
+            return `${u}${separator}t=${new Date().getTime()}`;
+        } catch (e) {
+            return u;
+        }
+    };
+
+    const createImg = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.referrerPolicy = "no-referrer";
+            img.onload = () => resolve(img);
+            img.onerror = (e) => reject(e);
+            img.src = src;
+        });
+    };
+
     try {
-        // Method 1: Fetch as Blob (Best for CORS/Canvas security)
-        // 'no-cors' might be needed depending on storage rules, but 'cors' is standard for canvas
-        const response = await fetch(url, { mode: 'cors' });
-        if (!response.ok) throw new Error('Network response was not ok');
+        // Attempt 1: Fetch as Blob (Best for Canvas security/CORS)
+        // We use a simple fetch without complex headers to avoid preflight issues on some networks
+        const safeUrl = getUrlWithCacheBuster(url);
+        const response = await fetch(safeUrl);
+        
+        if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
         
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
-
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                resolve(img);
-                // We don't revoke immediately to ensure canvas can draw it
-            };
-            img.onerror = () => {
-                reject(new Error('Image load error'));
-            };
-            img.src = objectUrl;
-        });
+        return await createImg(objectUrl);
     } catch (e) {
-        console.warn("Blob fetch failed, trying direct Image load:", url, e);
+        console.warn("Blob load failed, trying direct image load with CORS:", e);
         
-        // Method 2: Direct Image Tag (Fallback)
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => resolve(img);
-            img.onerror = () => {
-                console.warn("Direct image load failed:", url);
-                resolve(null);
-            };
-            img.src = url;
-        });
+        try {
+            // Attempt 2: Direct Image Tag with crossOrigin and cache buster
+            const safeUrl = getUrlWithCacheBuster(url);
+            return await createImg(safeUrl);
+        } catch (err) {
+            console.warn("Cache-busted direct load failed, trying original URL:", url);
+            try {
+                 // Attempt 3: Original URL (Last resort, might taint canvas but better than nothing)
+                 return await createImg(url);
+            } catch (finalErr) {
+                 console.error("All image load strategies failed for:", url);
+                 return null;
+            }
+        }
     }
 };
 
@@ -99,171 +116,157 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
             setIsGenerating(true);
             setError('');
             const canvas = canvasRef.current;
-            if (!canvas) {
-                setIsGenerating(false);
-                return;
-            }
-
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                setIsGenerating(false);
-                return;
-            }
+            if (!ctx) return;
 
-            // Tamanho do Story/Pulse (9:16)
             const W = 1080;
             const H = 1920;
             canvas.width = W;
             canvas.height = H;
 
             try {
-                // 1. Fundo de Neve (Snow Background)
-                const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-                bgGradient.addColorStop(0, '#020617'); // Slate 950
-                bgGradient.addColorStop(0.5, '#1e3a8a'); // Blue 900
-                bgGradient.addColorStop(1, '#3b82f6'); // Blue 500
-                ctx.fillStyle = bgGradient;
-                ctx.fillRect(0, 0, W, H);
+                // 1. Load Images concurrently
+                const [userImg, otherUserImg] = await Promise.all([
+                    loadImageSafe(currentUserAvatar || FALLBACK_AVATAR_URL),
+                    loadImageSafe(otherUserAvatar || FALLBACK_AVATAR_URL)
+                ]);
 
-                // Desenhando flocos de neve
-                const snowflakeCount = 400;
-                for (let i = 0; i < snowflakeCount; i++) {
-                    const x = Math.random() * W;
-                    const y = Math.random() * H;
-                    const radius = Math.random() * 4 + 1;
-                    const alpha = Math.random() * 0.6 + 0.1;
-                    
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-                    ctx.fill();
-                }
+                const drawCanvas = (safeMode: boolean) => {
+                    // Background
+                    const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
+                    bgGradient.addColorStop(0, '#020617');
+                    bgGradient.addColorStop(0.5, '#1e3a8a');
+                    bgGradient.addColorStop(1, '#3b82f6');
+                    ctx.fillStyle = bgGradient;
+                    ctx.fillRect(0, 0, W, H);
 
-                // Vinheta
-                const vignette = ctx.createRadialGradient(W / 2, H / 2, W / 3, W / 2, H / 2, H);
-                vignette.addColorStop(0, 'rgba(0,0,0,0)');
-                vignette.addColorStop(1, 'rgba(0,0,0,0.6)');
-                ctx.fillStyle = vignette;
-                ctx.fillRect(0, 0, W, H);
-
-                // 2. Carregar Avatares (Priorizando as URLs passadas)
-                // Usamos Promise.allSettled para que uma falha não impeça a outra
-                const loadUser = loadImageSafe(currentUserAvatar);
-                const loadOther = loadImageSafe(otherUserAvatar);
-
-                const results = await Promise.all([loadUser, loadOther]);
-                let userImg = results[0];
-                let otherUserImg = results[1];
-
-                // Se falhar, tenta o fallback explicitamente
-                if (!userImg) userImg = await loadImageSafe(FALLBACK_AVATAR_URL);
-                if (!otherUserImg) otherUserImg = await loadImageSafe(FALLBACK_AVATAR_URL);
-
-                // 3. Desenhar Avatares e Conexão
-                const avatarSize = 300; 
-                const avatarY = 600;
-                const spacing = 60;
-                const totalWidth = (avatarSize * 2) + spacing;
-                const startX = (W - totalWidth) / 2;
-                
-                const userAvatarX = startX;
-                const otherAvatarX = startX + avatarSize + spacing;
-
-                // Linha de conexão (Raio/Energia)
-                ctx.save();
-                ctx.shadowColor = '#fef08a'; 
-                ctx.shadowBlur = 40;
-                ctx.strokeStyle = '#fde047'; 
-                ctx.lineWidth = 10;
-                ctx.lineCap = 'round';
-                
-                const lineY = avatarY + (avatarSize / 2);
-                const lineStartX = userAvatarX + avatarSize - 20;
-                const lineEndX = otherAvatarX + 20;
-
-                ctx.beginPath();
-                ctx.moveTo(lineStartX, lineY);
-                ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.3, lineY - 30);
-                ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.6, lineY + 30);
-                ctx.lineTo(lineEndX, lineY);
-                ctx.stroke();
-                ctx.restore();
-
-                // Função auxiliar para desenhar avatar
-                const drawAvatar = (img: HTMLImageElement | null, x: number, y: number, size: number) => {
-                    ctx.save();
-                    
-                    // Sombra e borda
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 20;
-                    ctx.shadowOffsetY = 10;
-
-                    ctx.beginPath();
-                    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 12;
-                    ctx.stroke();
-                    ctx.clip(); // Corte circular
-
-                    // Fundo base
-                    ctx.fillStyle = '#cbd5e1';
-                    ctx.fillRect(x, y, size, size);
-
-                    if (img) {
-                        ctx.drawImage(img, x, y, size, size);
-                    } else {
-                        // Fallback Gráfico
-                        ctx.fillStyle = '#94a3b8';
+                    // Snow
+                    for (let i = 0; i < 400; i++) {
+                        const x = Math.random() * W;
+                        const y = Math.random() * H;
+                        const radius = Math.random() * 4 + 1;
                         ctx.beginPath();
-                        ctx.arc(x + size / 2, y + size / 2 - size * 0.15, size * 0.25, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.beginPath();
-                        ctx.arc(x + size / 2, y + size, size * 0.45, Math.PI, 0);
+                        ctx.arc(x, y, radius, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.6 + 0.1})`;
                         ctx.fill();
                     }
+
+                    // Avatar Logic
+                    const avatarSize = 300; 
+                    const avatarY = 600;
+                    const spacing = 60;
+                    const startX = (W - (avatarSize * 2 + spacing)) / 2;
+                    const userAvatarX = startX;
+                    const otherAvatarX = startX + avatarSize + spacing;
+
+                    // Connecting Line
+                    ctx.save();
+                    ctx.shadowColor = '#fef08a'; 
+                    ctx.shadowBlur = 40;
+                    ctx.strokeStyle = '#fde047'; 
+                    ctx.lineWidth = 10;
+                    ctx.lineCap = 'round';
+                    const lineY = avatarY + (avatarSize / 2);
+                    const lineStartX = userAvatarX + avatarSize - 20;
+                    const lineEndX = otherAvatarX + 20;
+                    ctx.beginPath();
+                    ctx.moveTo(lineStartX, lineY);
+                    ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.3, lineY - 30);
+                    ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.6, lineY + 30);
+                    ctx.lineTo(lineEndX, lineY);
+                    ctx.stroke();
                     ctx.restore();
+
+                    // Helper to draw avatars
+                    const drawAvatar = (img: HTMLImageElement | null, x: number, y: number) => {
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowOffsetY = 10;
+                        ctx.beginPath();
+                        ctx.arc(x + avatarSize / 2, y + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 12;
+                        ctx.stroke();
+                        ctx.clip();
+                        
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.fillRect(x, y, avatarSize, avatarSize);
+
+                        if (img && !safeMode) {
+                            try {
+                                ctx.drawImage(img, x, y, avatarSize, avatarSize);
+                            } catch (e) {
+                                // If drawing fails (e.g. broken image), draw fallback
+                                console.warn("Failed to draw image on canvas", e);
+                                drawFallback(x, y);
+                            }
+                        } else {
+                            drawFallback(x, y);
+                        }
+                        ctx.restore();
+                    };
+
+                    const drawFallback = (x: number, y: number) => {
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.beginPath();
+                        ctx.arc(x + avatarSize / 2, y + avatarSize / 2 - avatarSize * 0.15, avatarSize * 0.25, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(x + avatarSize / 2, y + avatarSize, avatarSize * 0.45, Math.PI, 0);
+                        ctx.fill();
+                    }
+
+                    drawAvatar(userImg, userAvatarX, avatarY);
+                    drawAvatar(otherUserImg, otherAvatarX, avatarY);
+
+                    // Text
+                    ctx.font = 'bold 80px "Helvetica Neue", sans-serif';
+                    ctx.fillStyle = '#f8fafc'; 
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.fillText(t('crystal.shareTitle'), W / 2, 300);
+
+                    ctx.font = 'bold 500px "Helvetica Neue", sans-serif';
+                    const textGradient = ctx.createLinearGradient(0, 1000, 0, 1500);
+                    textGradient.addColorStop(0, '#ffffff'); 
+                    textGradient.addColorStop(1, '#bae6fd'); 
+                    ctx.fillStyle = textGradient;
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 30;
+                    ctx.fillText(crystalData.streak.toString(), W / 2, 1200);
+
+                    ctx.font = 'bold 60px "Helvetica Neue", sans-serif';
+                    ctx.fillStyle = '#e0f2fe'; 
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(t('crystal.streakDays', { streak: '' }).replace(/[0-9]/g, '').trim(), W / 2, 1450);
+
+                    ctx.font = 'italic 40px serif';
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.fillText('Vibe', W / 2, H - 100);
                 };
 
-                drawAvatar(userImg, userAvatarX, avatarY, avatarSize);
-                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize);
-
-                // 4. Textos
-                ctx.font = 'bold 80px "Helvetica Neue", sans-serif';
-                ctx.fillStyle = '#f8fafc'; 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                ctx.shadowBlur = 15;
-                ctx.fillText(t('crystal.shareTitle'), W / 2, 300);
-
-                const streakNumber = crystalData.streak.toString();
-                ctx.font = 'bold 500px "Helvetica Neue", sans-serif';
+                // 2. Try drawing normally
+                drawCanvas(false);
                 
-                const textGradient = ctx.createLinearGradient(0, 1000, 0, 1500);
-                textGradient.addColorStop(0, '#ffffff'); 
-                textGradient.addColorStop(1, '#bae6fd'); 
-                ctx.fillStyle = textGradient;
+                // 3. Try to export. If it fails (Tainted Canvas due to CORS), redraw in Safe Mode (no images)
+                try {
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    setGeneratedImage(dataUrl);
+                } catch (securityError) {
+                    console.warn("Canvas tainted! Redrawing with placeholders to ensure sharing works.", securityError);
+                    drawCanvas(true); // Redraw without external images
+                    setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
+                }
                 
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 30;
-                ctx.shadowOffsetY = 10;
-                
-                ctx.fillText(streakNumber, W / 2, 1200);
-
-                ctx.font = 'bold 60px "Helvetica Neue", sans-serif';
-                ctx.fillStyle = '#e0f2fe'; 
-                ctx.shadowBlur = 5;
-                ctx.fillText(t('crystal.streakDays', { streak: '' }).replace(/[0-9]/g, '').trim(), W / 2, 1450);
-
-                ctx.font = 'italic 40px serif';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.fillText('Vibe', W / 2, H - 100);
-
-                setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
                 setIsGenerating(false);
 
             } catch (e) {
-                console.error("Generation failed:", e);
+                console.error("Fatal generation error:", e);
+                // Instead of showing error, try to fallback to safe mode immediately
                 setError(t('crystal.imageLoadError'));
                 setIsGenerating(false);
             }
@@ -275,7 +278,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
     const handlePublish = async () => {
         if (!generatedImage || !currentUser) return;
-        
         setIsPublishing(true);
         setError('');
 
@@ -318,7 +320,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                              <p className="text-xs text-zinc-400 mt-2">Criando imagem...</p>
                         </div>
                     )}
-                    {error && !isGenerating && <p className="text-red-400 text-center p-4">{error}</p>}
+                    {error && !isGenerating && !generatedImage && <p className="text-red-400 text-center p-4">{error}</p>}
                     {generatedImage && (
                         <img src={generatedImage} alt="Connection streak preview" className="w-full h-full object-contain" />
                     )}

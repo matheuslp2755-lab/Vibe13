@@ -255,6 +255,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
+    const [currentUserFirestore, setCurrentUserFirestore] = useState<any>(null);
     const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
     const [conversationData, setConversationData] = useState<ConversationData | null>(null);
     const [crystalData, setCrystalData] = useState<CrystalData | null>(null);
@@ -284,6 +285,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const dialogRef = useRef<HTMLDivElement>(null);
     const prevCrystalData = usePrevious(crystalData);
     const unsubUserStatusRef = useRef<(() => void) | null>(null);
+    const unsubCurrentUserRef = useRef<(() => void) | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -342,6 +344,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             };
         }
     }, [crystalData, prevCrystalData, t]);
+
+    // Fetch Current User Realtime
+    useEffect(() => {
+        if (!currentUser) return;
+        
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        unsubCurrentUserRef.current = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                setCurrentUserFirestore(doc.data());
+            }
+        });
+
+        return () => {
+            if (unsubCurrentUserRef.current) {
+                unsubCurrentUserRef.current();
+            }
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         if (!conversationId || !currentUser) {
@@ -448,10 +468,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             }
         };
     }, [conversationId, currentUser, t, isCurrentUserAnonymous]);
-
-    // ... (rest of functions: handleClearMedia, handleFileSelect, sendAudioMessage, handleStartRecording, etc.)
-
-    // ... (rest of functions: handleStopRecording, handleSendMessage, handleDeleteMessage)
 
     const handleClearMedia = () => {
         setMediaFile(null);
@@ -861,12 +877,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         }
     }
 
-    // Extract current user's avatar from conversation data to ensure it matches Firestore
-    const currentUserInfo = conversationData?.participantInfo?.[currentUser?.uid || ''];
-    const currentUserAvatar = currentUserInfo?.avatar || currentUser?.photoURL || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media';
+    const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media";
+
+    // Extract current user's avatar from Firestore state or conversation data to ensure it matches
+    const currentUserAvatar = currentUserFirestore?.avatar || conversationData?.participantInfo?.[currentUser?.uid || '']?.avatar || currentUser?.photoURL || FALLBACK_AVATAR_URL;
     
     // IMPORTANT: use the state variable `otherUser.avatar` which is updated in real-time by the listener
-    const otherUserAvatar = otherUser?.avatar || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media';
+    const otherUserAvatar = otherUser?.avatar || FALLBACK_AVATAR_URL;
 
     if (loading) {
         return <div className="h-full flex items-center justify-center">{t('messages.loading')}</div>;

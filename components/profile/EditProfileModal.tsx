@@ -99,7 +99,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                           <span className="font-semibold">{user.username}</span>
                           {/* UPLOAD FIX: Overlay Input - The most reliable way for WebViews */}
                           <div className="relative mt-1">
-                              <span className="text-sm font-semibold text-sky-500">
+                              <span className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer">
                                 {t('editProfile.changePhoto')}
                               </span>
                               <input 
@@ -107,6 +107,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                                   onChange={handleAvatarChange}
                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                   accept="image/*"
+                                  title={t('editProfile.changePhoto')}
                               />
                           </div>
                       </div>
