@@ -37,6 +37,7 @@ const Spinner: React.FC = () => (
 // Helper to load image safely dealing with potential CORS via Blob
 const loadImageSafe = async (url: string): Promise<HTMLImageElement> => {
     try {
+        // Tenta fazer fetch com modo cors
         const response = await fetch(url, { mode: 'cors' });
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
@@ -47,6 +48,7 @@ const loadImageSafe = async (url: string): Promise<HTMLImageElement> => {
             };
             img.onerror = (e) => {
                 console.error("Error loading image blob", e);
+                // Fallback: tenta carregar direto (pode dar tainted canvas, mas tenta)
                 const fallbackImg = new Image();
                 fallbackImg.crossOrigin = "anonymous";
                 fallbackImg.onload = () => resolve(fallbackImg);
@@ -100,67 +102,44 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 return;
             }
 
+            // Tamanho do Story/Pulse (9:16)
             const W = 1080;
             const H = 1920;
             canvas.width = W;
             canvas.height = H;
 
             try {
-                // 1. Generate Background using Pollinations.ai (Alternative Platform)
-                let bgImage: HTMLImageElement | null = null;
-                try {
-                    let promptDescription = "";
-                    switch(crystalData.level) {
-                        case 'BRILHANTE':
-                            promptDescription = "mystical glowing bright blue and cyan crystal energy background, divine atmosphere, magical, 8k resolution, vertical wallpaper style, dark vignette";
-                            break;
-                        case 'EQUILIBRADO':
-                            promptDescription = "calm and balanced blue and purple gradient background with sacred geometry, harmonic, smooth, vertical wallpaper style, 8k";
-                            break;
-                        case 'RACHADO':
-                            promptDescription = "dark moody background with cracked glowing red lines, dramatic lighting, dark grey tones, vertical wallpaper style, 8k";
-                            break;
-                        default: // APAGADO
-                            promptDescription = "mysterious grey and misty background, minimal light, foggy atmosphere, vertical wallpaper style";
-                    }
+                // 1. Fundo de Neve (Snow Background) desenhado manualmente
+                // Gradiente de céu de inverno
+                const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
+                bgGradient.addColorStop(0, '#020617'); // Slate 950 (Céu noturno escuro)
+                bgGradient.addColorStop(0.5, '#1e3a8a'); // Blue 900 (Azul profundo)
+                bgGradient.addColorStop(1, '#3b82f6'); // Blue 500 (Gelo na base)
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, W, H);
 
-                    // Using Pollinations.ai API
-                    // We add a random seed to ensure uniqueness each time
-                    const seed = Math.floor(Math.random() * 100000);
-                    const encodedPrompt = encodeURIComponent(promptDescription);
-                    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1920&nologo=true&model=flux&seed=${seed}`;
-
-                    bgImage = await loadImageSafe(imageUrl);
-
-                } catch (aiError) {
-                    console.error("AI Generation failed, falling back to gradient", aiError);
-                    // Fallback handled below if bgImage is null
-                }
-
-                // 2. Draw Background
-                if (bgImage) {
-                    ctx.drawImage(bgImage, 0, 0, W, H);
-                    // Add a dark overlay to ensure text readability
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                    ctx.fillRect(0, 0, W, H);
-                } else {
-                    // Fallback Gradient
-                    const bgGradient = ctx.createLinearGradient(0, 0, W, H);
-                    bgGradient.addColorStop(0, '#0f172a'); 
-                    bgGradient.addColorStop(1, '#1e293b'); 
-                    ctx.fillStyle = bgGradient;
-                    ctx.fillRect(0, 0, W, H);
+                // Desenhando flocos de neve (Snowflakes)
+                const snowflakeCount = 400;
+                for (let i = 0; i < snowflakeCount; i++) {
+                    const x = Math.random() * W;
+                    const y = Math.random() * H;
+                    const radius = Math.random() * 4 + 1;
+                    const alpha = Math.random() * 0.6 + 0.1;
                     
-                    // Particles Fallback
-                    for (let i = 0; i < 150; i++) {
-                        ctx.fillStyle = `rgba(253, 224, 71, ${Math.random() * 0.5 + 0.2})`;
-                        ctx.beginPath();
-                        ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 2.5 + 1, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.fill();
                 }
 
-                // 3. Load Avatars Safely
+                // Adiciona uma vinheta escura para focar no centro
+                const vignette = ctx.createRadialGradient(W / 2, H / 2, W / 3, W / 2, H / 2, H);
+                vignette.addColorStop(0, 'rgba(0,0,0,0)');
+                vignette.addColorStop(1, 'rgba(0,0,0,0.6)');
+                ctx.fillStyle = vignette;
+                ctx.fillRect(0, 0, W, H);
+
+                // 2. Carregar Avatares
                 const userImgUrl = `${currentUser.photoURL}?t=${new Date().getTime()}`;
                 const otherUserImgUrl = `${otherUser.avatar}?t=${new Date().getTime()}`;
                 
@@ -169,102 +148,107 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     loadImageSafe(otherUserImgUrl)
                 ]);
 
-                // 4. Draw Avatars & Connection Line
-                const avatarSize = 320;
-                const avatarY = 550;
-                const userAvatarX = W / 2 - avatarSize - 30;
-                const otherAvatarX = W / 2 + 30;
+                // 3. Desenhar Avatares e Conexão
+                const avatarSize = 300; // Diâmetro
+                const avatarY = 600;
+                const centerX = W / 2;
+                const spacing = 60;
 
-                // Lightning/Connection Bolt
-                const boltY = avatarY + avatarSize / 2;
-                const boltStartX = userAvatarX + avatarSize;
-                const boltEndX = otherAvatarX;
+                // Posições
+                const userX = centerX - (avatarSize / 2) - (spacing / 2) - 100; // Um pouco para esquerda
+                const otherX = centerX + (avatarSize / 2) + (spacing / 2) - 100; // Centralizando melhor o par
+
+                // Recalculando para centralizar o par de avatares exatamente
+                const totalWidth = (avatarSize * 2) + spacing;
+                const startX = (W - totalWidth) / 2;
                 
+                const userAvatarX = startX;
+                const otherAvatarX = startX + avatarSize + spacing;
+
+                // Linha de conexão (Raio/Energia) atrás dos avatares
                 ctx.save();
-                ctx.shadowColor = '#fef08a'; 
-                ctx.shadowBlur = 30;
-                ctx.strokeStyle = '#fde047'; 
-                ctx.lineWidth = 15;
+                ctx.shadowColor = '#fef08a'; // Amarelo brilho
+                ctx.shadowBlur = 40;
+                ctx.strokeStyle = '#fde047'; // Amarelo
+                ctx.lineWidth = 10;
                 ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(boltStartX, boltY);
-                ctx.lineTo(boltStartX + 60, boltY + 40);
-                ctx.lineTo(boltStartX + 30, boltY);
-                ctx.lineTo(boltStartX + 90, boltY - 40);
-                ctx.lineTo(boltEndX, boltY);
-                ctx.stroke();
-                ctx.restore();
                 
-                // User Avatar
-                ctx.save();
-                ctx.shadowColor = 'rgba(250, 204, 21, 0.7)';
-                ctx.shadowBlur = 40;
+                const lineY = avatarY + (avatarSize / 2);
+                const lineStartX = userAvatarX + avatarSize - 20;
+                const lineEndX = otherAvatarX + 20;
+
                 ctx.beginPath();
-                ctx.arc(userAvatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
-                ctx.lineWidth = 8;
+                ctx.moveTo(lineStartX, lineY);
+                // Zig-zag simples
+                ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.3, lineY - 30);
+                ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.6, lineY + 30);
+                ctx.lineTo(lineEndX, lineY);
                 ctx.stroke();
-                ctx.clip();
-                ctx.drawImage(userImg, userAvatarX, avatarY, avatarSize, avatarSize);
                 ctx.restore();
 
-                // Other User Avatar
-                ctx.save();
-                ctx.shadowColor = 'rgba(250, 204, 21, 0.7)';
-                ctx.shadowBlur = 40;
-                ctx.beginPath();
-                ctx.arc(otherAvatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
-                ctx.lineWidth = 8;
-                ctx.stroke();
-                ctx.clip();
-                ctx.drawImage(otherUserImg, otherAvatarX, avatarY, avatarSize, avatarSize);
-                ctx.restore();
+                // Função auxiliar para desenhar avatar circular com borda
+                const drawAvatar = (img: HTMLImageElement, x: number, y: number, size: number) => {
+                    ctx.save();
+                    // Sombra do avatar
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowOffsetY = 10;
 
-                // 5. Text Overlay
-                // Title
-                ctx.font = '70px "Times New Roman", serif';
-                ctx.fillStyle = '#f1f5f9'; 
+                    // Borda
+                    ctx.beginPath();
+                    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 12;
+                    ctx.stroke();
+
+                    // Corte circular
+                    ctx.clip();
+                    ctx.drawImage(img, x, y, size, size);
+                    ctx.restore();
+                };
+
+                drawAvatar(userImg, userAvatarX, avatarY, avatarSize);
+                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize);
+
+                // 4. Textos
+                // Título
+                ctx.font = 'bold 80px "Helvetica Neue", sans-serif';
+                ctx.fillStyle = '#f8fafc'; 
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 15;
                 ctx.fillText(t('crystal.shareTitle'), W / 2, 300);
 
-                // Streak Number
+                // Número do Streak
                 const streakNumber = crystalData.streak.toString();
-                ctx.font = 'bold 400px "Helvetica Neue", sans-serif';
+                ctx.font = 'bold 500px "Helvetica Neue", sans-serif';
                 
-                // Gold gradient for text
-                const textGradient = ctx.createLinearGradient(0, 1000, 0, 1400);
-                textGradient.addColorStop(0, '#fcd34d'); 
-                textGradient.addColorStop(1, '#fbbf24'); 
+                // Gradiente no texto
+                const textGradient = ctx.createLinearGradient(0, 1000, 0, 1500);
+                textGradient.addColorStop(0, '#ffffff'); 
+                textGradient.addColorStop(1, '#bae6fd'); // Azul claro gelo
                 ctx.fillStyle = textGradient;
                 
-                ctx.shadowColor = 'rgba(0,0,0,0.6)';
-                ctx.shadowBlur = 20;
-                ctx.shadowOffsetX = 8;
-                ctx.shadowOffsetY = 8;
-                ctx.fillText(streakNumber, W / 2, 1150);
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 30;
+                ctx.shadowOffsetY = 10;
                 
-                // Reset Shadow
-                ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
+                // Desenhando o número bem grande embaixo dos avatares
+                ctx.fillText(streakNumber, W / 2, 1200);
 
-                // Subtitle
-                ctx.font = '60px "Helvetica Neue", sans-serif';
-                ctx.fillStyle = '#e2e8f0'; 
-                ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                ctx.shadowBlur = 4;
-                ctx.fillText(t('crystal.streakDays', { streak: '' }).trim(), W / 2, 1350);
+                // Subtítulo "dias de conexão"
+                ctx.font = 'bold 60px "Helvetica Neue", sans-serif';
+                ctx.fillStyle = '#e0f2fe'; 
+                ctx.shadowBlur = 5;
+                ctx.fillText(t('crystal.streakDays', { streak: '' }).replace(/[0-9]/g, '').trim(), W / 2, 1450);
 
-                // Watermark
-                ctx.font = 'italic 40px "Times New Roman", serif';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                // Marca d'água
+                ctx.font = 'italic 40px serif';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.fillText('Vibe', W / 2, H - 100);
 
+                // Finaliza
                 setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
                 setIsGenerating(false);
 
@@ -321,7 +305,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     {isGenerating && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-10">
                              <Spinner />
-                             <p className="text-xs text-zinc-400 mt-2">Gerando imagem com IA...</p>
+                             <p className="text-xs text-zinc-400 mt-2">Criando imagem...</p>
                         </div>
                     )}
                     {error && !isGenerating && <p className="text-red-400 text-center p-4">{error}</p>}
