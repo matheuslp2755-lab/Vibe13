@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import TextInput from '../common/TextInput';
 import TextAreaInput from '../common/TextAreaInput';
@@ -37,7 +37,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [error, setError] = useState('');
   const { t } = useLanguage();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -99,20 +98,15 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                       <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                       <div className="flex flex-col">
                           <span className="font-semibold">{user.username}</span>
-                          <button
-                            type="button"
-                            onClick={() => avatarInputRef.current?.click()}
-                            className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 text-left p-0 bg-transparent border-none cursor-pointer"
-                          >
+                          <label className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 text-left p-0 bg-transparent border-none cursor-pointer relative">
                             {t('editProfile.changePhoto')}
-                          </button>
-                          <input 
-                              type="file"
-                              ref={avatarInputRef}
-                              onChange={handleAvatarChange}
-                              className="hidden"
-                              accept="image/*"
-                          />
+                            <input 
+                                type="file"
+                                onChange={handleAvatarChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                accept="image/*"
+                            />
+                          </label>
                       </div>
                   </div>
                   <div className="w-full flex flex-col gap-4 mt-4">

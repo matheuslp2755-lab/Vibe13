@@ -398,7 +398,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage }) => 
 
             if (avatarFile) {
                 const avatarStorageRef = storageRef(storage, `avatars/${userToUpdate.uid}/${Date.now()}-${avatarFile.name}`);
-                await uploadBytes(avatarStorageRef, avatarFile);
+                // Explicitly setting content type to help with file systems that might lose MIME info
+                await uploadBytes(avatarStorageRef, avatarFile, { contentType: avatarFile.type });
                 newAvatarUrl = await getDownloadURL(avatarStorageRef);
                 firestoreUpdates.avatar = newAvatarUrl;
                 authUpdates.photoURL = newAvatarUrl;
