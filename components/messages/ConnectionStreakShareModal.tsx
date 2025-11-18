@@ -34,38 +34,22 @@ const Spinner: React.FC = () => (
     </div>
 );
 
-// Helper to safely load image or return null if failed (prevents Promise.all rejection)
+// Helper to safely load image or return null if failed
 const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
     if (!url) return null;
     try {
-        // Tenta fazer fetch com modo cors para obter Blob e evitar Tainted Canvas
-        const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
-        if (!response.ok) throw new Error('Network response was not ok');
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const img = new Image();
-        return new Promise((resolve) => {
-            img.onload = () => resolve(img);
-            img.onerror = (e) => {
-                console.warn("Error loading image blob from URL:", url, e);
-                resolve(null); // Resolve with null instead of reject
-            };
-            img.src = objectUrl;
-        });
-    } catch (e) {
-        console.warn("Fetch failed, falling back to direct load for:", url, e);
-        // Fallback: tenta carregar direto. Se falhar, resolve com null.
-        // Nota: Direct load pode causar tainted canvas se o servidor não enviar headers CORS corretos.
         const img = new Image();
         img.crossOrigin = "anonymous"; 
         return new Promise((resolve) => {
             img.onload = () => resolve(img);
             img.onerror = () => {
-                console.error("Final fallback failed for image:", url);
+                console.warn("Failed to load image, using fallback:", url);
                 resolve(null);
             };
             img.src = url;
         });
+    } catch (e) {
+        return null;
     }
 };
 
@@ -117,7 +101,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.fillStyle = bgGradient;
                 ctx.fillRect(0, 0, W, H);
 
-                // Desenhando flocos de neve (Snowflakes)
+                // Desenhando flocos de neve
                 const snowflakeCount = 400;
                 for (let i = 0; i < snowflakeCount; i++) {
                     const x = Math.random() * W;
@@ -131,7 +115,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     ctx.fill();
                 }
 
-                // Adiciona uma vinheta escura para focar no centro
+                // Vinheta
                 const vignette = ctx.createRadialGradient(W / 2, H / 2, W / 3, W / 2, H / 2, H);
                 vignette.addColorStop(0, 'rgba(0,0,0,0)');
                 vignette.addColorStop(1, 'rgba(0,0,0,0.6)');
@@ -139,15 +123,10 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.fillRect(0, 0, W, H);
 
                 // 2. Carregar Avatares com URL Segura
-                const getSafeUrl = (url: string) => {
-                    if (!url) return '';
-                    // Firebase storage URLs already have params, so use '&'
-                    const separator = url.includes('?') ? '&' : '?';
-                    return `${url}${separator}t=${new Date().getTime()}`;
-                };
-
-                const userImgUrl = getSafeUrl(currentUser.photoURL);
-                const otherUserImgUrl = getSafeUrl(otherUser.avatar);
+                // Garantir que a URL do avatar do currentUser venha do Firestore se possível, ou auth
+                // Para garantir cache busting se necessário, mas Firestore URLs geralmente são estáveis com tokens
+                const userImgUrl = currentUser.photoURL; 
+                const otherUserImgUrl = otherUser.avatar;
                 
                 const [userImg, otherUserImg] = await Promise.all([
                     loadImageSafe(userImgUrl),
@@ -157,8 +136,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 // 3. Desenhar Avatares e Conexão
                 const avatarSize = 300; // Diâmetro
                 const avatarY = 600;
-                
-                // Recalculando para centralizar o par de avatares exatamente
                 const spacing = 60;
                 const totalWidth = (avatarSize * 2) + spacing;
                 const startX = (W - totalWidth) / 2;
@@ -166,7 +143,7 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 const userAvatarX = startX;
                 const otherAvatarX = startX + avatarSize + spacing;
 
-                // Linha de conexão (Raio/Energia) atrás dos avatares
+                // Linha de conexão (Raio/Energia)
                 ctx.save();
                 ctx.shadowColor = '#fef08a'; // Amarelo brilho
                 ctx.shadowBlur = 40;
@@ -180,50 +157,52 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
                 ctx.beginPath();
                 ctx.moveTo(lineStartX, lineY);
-                // Zig-zag simples
+                // Zig-zag
                 ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.3, lineY - 30);
                 ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.6, lineY + 30);
                 ctx.lineTo(lineEndX, lineY);
                 ctx.stroke();
                 ctx.restore();
 
-                // Função auxiliar para desenhar avatar circular com borda ou fallback
-                const drawAvatar = (img: HTMLImageElement | null, x: number, y: number, size: number, name: string) => {
+                // Função auxiliar para desenhar avatar
+                const drawAvatar = (img: HTMLImageElement | null, x: number, y: number, size: number) => {
                     ctx.save();
                     
-                    // Sombra do avatar
+                    // Sombra e borda
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                     ctx.shadowBlur = 20;
                     ctx.shadowOffsetY = 10;
 
-                    // Cria o caminho circular
                     ctx.beginPath();
                     ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 12;
                     ctx.stroke();
-                    ctx.clip(); // Tudo desenhado depois daqui fica dentro do circulo
+                    ctx.clip(); // Corte circular
+
+                    // Fundo base (caso imagem tenha transparência ou não carregue)
+                    ctx.fillStyle = '#cbd5e1'; // Slate 300
+                    ctx.fillRect(x, y, size, size);
 
                     if (img) {
                         ctx.drawImage(img, x, y, size, size);
                     } else {
-                        // Fallback se a imagem não carregar: Círculo com inicial
-                        ctx.fillStyle = '#64748b'; // Slate 500
-                        ctx.fillRect(x, y, size, size);
-                        
-                        ctx.font = 'bold 150px sans-serif';
-                        ctx.fillStyle = 'white';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        // Reseta shadows para o texto interno
-                        ctx.shadowColor = 'transparent';
-                        ctx.fillText(name.charAt(0).toUpperCase(), x + size / 2, y + size / 2);
+                        // Fallback Gráfico: Silhueta Genérica
+                        ctx.fillStyle = '#94a3b8'; // Slate 400
+                        // Cabeça
+                        ctx.beginPath();
+                        ctx.arc(x + size / 2, y + size / 2 - size * 0.15, size * 0.25, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Corpo
+                        ctx.beginPath();
+                        ctx.arc(x + size / 2, y + size, size * 0.45, Math.PI, 0);
+                        ctx.fill();
                     }
                     ctx.restore();
                 };
 
-                drawAvatar(userImg, userAvatarX, avatarY, avatarSize, currentUser.displayName || '?');
-                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize, otherUser.username || '?');
+                drawAvatar(userImg, userAvatarX, avatarY, avatarSize);
+                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize);
 
                 // 4. Textos
                 // Título
@@ -249,10 +228,9 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.shadowBlur = 30;
                 ctx.shadowOffsetY = 10;
                 
-                // Desenhando o número bem grande embaixo dos avatares
                 ctx.fillText(streakNumber, W / 2, 1200);
 
-                // Subtítulo "dias de conexão"
+                // Subtítulo
                 ctx.font = 'bold 60px "Helvetica Neue", sans-serif';
                 ctx.fillStyle = '#e0f2fe'; 
                 ctx.shadowBlur = 5;

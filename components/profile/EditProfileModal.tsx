@@ -98,17 +98,18 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                       <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                       <div className="flex flex-col">
                           <span className="font-semibold">{user.username}</span>
-                          <div className="relative mt-1 inline-block">
-                              <p className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 pointer-events-none">
+                          {/* UPLOAD FIX: Using a label wrapper is the standard way to trigger file inputs reliably in Android WebViews */}
+                          <label className="cursor-pointer mt-1 inline-block">
+                              <span className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400">
                                 {t('editProfile.changePhoto')}
-                              </p>
+                              </span>
                               <input 
                                   type="file"
                                   onChange={handleAvatarChange}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  className="hidden"
                                   accept="image/*"
                               />
-                          </div>
+                          </label>
                       </div>
                   </div>
                   <div className="w-full flex flex-col gap-4 mt-4">
