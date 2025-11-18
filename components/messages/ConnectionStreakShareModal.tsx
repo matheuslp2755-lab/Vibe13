@@ -34,36 +34,36 @@ const Spinner: React.FC = () => (
     </div>
 );
 
-// Helper to load image safely dealing with potential CORS via Blob
-const loadImageSafe = async (url: string): Promise<HTMLImageElement> => {
+// Helper to safely load image or return null if failed (prevents Promise.all rejection)
+const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
+    if (!url) return null;
     try {
-        // Tenta fazer fetch com modo cors
-        const response = await fetch(url, { mode: 'cors' });
+        // Tenta fazer fetch com modo cors para obter Blob e evitar Tainted Canvas
+        const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
+        if (!response.ok) throw new Error('Network response was not ok');
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
         const img = new Image();
-        return new Promise((resolve, reject) => {
-            img.onload = () => {
-                resolve(img);
-            };
+        return new Promise((resolve) => {
+            img.onload = () => resolve(img);
             img.onerror = (e) => {
-                console.error("Error loading image blob", e);
-                // Fallback: tenta carregar direto (pode dar tainted canvas, mas tenta)
-                const fallbackImg = new Image();
-                fallbackImg.crossOrigin = "anonymous";
-                fallbackImg.onload = () => resolve(fallbackImg);
-                fallbackImg.onerror = reject;
-                fallbackImg.src = url;
+                console.warn("Error loading image blob from URL:", url, e);
+                resolve(null); // Resolve with null instead of reject
             };
             img.src = objectUrl;
         });
     } catch (e) {
-        console.warn("Fetch failed, falling back to direct load", e);
+        console.warn("Fetch failed, falling back to direct load for:", url, e);
+        // Fallback: tenta carregar direto. Se falhar, resolve com null.
+        // Nota: Direct load pode causar tainted canvas se o servidor não enviar headers CORS corretos.
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        return new Promise((resolve, reject) => {
+        img.crossOrigin = "anonymous"; 
+        return new Promise((resolve) => {
             img.onload = () => resolve(img);
-            img.onerror = reject;
+            img.onerror = () => {
+                console.error("Final fallback failed for image:", url);
+                resolve(null);
+            };
             img.src = url;
         });
     }
@@ -110,7 +110,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
             try {
                 // 1. Fundo de Neve (Snow Background) desenhado manualmente
-                // Gradiente de céu de inverno
                 const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
                 bgGradient.addColorStop(0, '#020617'); // Slate 950 (Céu noturno escuro)
                 bgGradient.addColorStop(0.5, '#1e3a8a'); // Blue 900 (Azul profundo)
@@ -139,9 +138,16 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.fillStyle = vignette;
                 ctx.fillRect(0, 0, W, H);
 
-                // 2. Carregar Avatares
-                const userImgUrl = `${currentUser.photoURL}?t=${new Date().getTime()}`;
-                const otherUserImgUrl = `${otherUser.avatar}?t=${new Date().getTime()}`;
+                // 2. Carregar Avatares com URL Segura
+                const getSafeUrl = (url: string) => {
+                    if (!url) return '';
+                    // Firebase storage URLs already have params, so use '&'
+                    const separator = url.includes('?') ? '&' : '?';
+                    return `${url}${separator}t=${new Date().getTime()}`;
+                };
+
+                const userImgUrl = getSafeUrl(currentUser.photoURL);
+                const otherUserImgUrl = getSafeUrl(otherUser.avatar);
                 
                 const [userImg, otherUserImg] = await Promise.all([
                     loadImageSafe(userImgUrl),
@@ -151,14 +157,9 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 // 3. Desenhar Avatares e Conexão
                 const avatarSize = 300; // Diâmetro
                 const avatarY = 600;
-                const centerX = W / 2;
-                const spacing = 60;
-
-                // Posições
-                const userX = centerX - (avatarSize / 2) - (spacing / 2) - 100; // Um pouco para esquerda
-                const otherX = centerX + (avatarSize / 2) + (spacing / 2) - 100; // Centralizando melhor o par
-
+                
                 // Recalculando para centralizar o par de avatares exatamente
+                const spacing = 60;
                 const totalWidth = (avatarSize * 2) + spacing;
                 const startX = (W - totalWidth) / 2;
                 
@@ -186,29 +187,43 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.stroke();
                 ctx.restore();
 
-                // Função auxiliar para desenhar avatar circular com borda
-                const drawAvatar = (img: HTMLImageElement, x: number, y: number, size: number) => {
+                // Função auxiliar para desenhar avatar circular com borda ou fallback
+                const drawAvatar = (img: HTMLImageElement | null, x: number, y: number, size: number, name: string) => {
                     ctx.save();
+                    
                     // Sombra do avatar
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
                     ctx.shadowBlur = 20;
                     ctx.shadowOffsetY = 10;
 
-                    // Borda
+                    // Cria o caminho circular
                     ctx.beginPath();
                     ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 12;
                     ctx.stroke();
+                    ctx.clip(); // Tudo desenhado depois daqui fica dentro do circulo
 
-                    // Corte circular
-                    ctx.clip();
-                    ctx.drawImage(img, x, y, size, size);
+                    if (img) {
+                        ctx.drawImage(img, x, y, size, size);
+                    } else {
+                        // Fallback se a imagem não carregar: Círculo com inicial
+                        ctx.fillStyle = '#64748b'; // Slate 500
+                        ctx.fillRect(x, y, size, size);
+                        
+                        ctx.font = 'bold 150px sans-serif';
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        // Reseta shadows para o texto interno
+                        ctx.shadowColor = 'transparent';
+                        ctx.fillText(name.charAt(0).toUpperCase(), x + size / 2, y + size / 2);
+                    }
                     ctx.restore();
                 };
 
-                drawAvatar(userImg, userAvatarX, avatarY, avatarSize);
-                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize);
+                drawAvatar(userImg, userAvatarX, avatarY, avatarSize, currentUser.displayName || '?');
+                drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize, otherUser.username || '?');
 
                 // 4. Textos
                 // Título

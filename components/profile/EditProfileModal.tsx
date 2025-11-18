@@ -106,7 +106,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                                   type="file"
                                   onChange={handleAvatarChange}
                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                                  accept="image/*"
                               />
                           </div>
                       </div>
