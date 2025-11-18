@@ -1,0 +1,8 @@
+{
+  "name": "Vibe10",
+  "description": "A visually appealing social media application called Vibe, inspired by Instagram, built with React, TypeScript, and Tailwind CSS.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
