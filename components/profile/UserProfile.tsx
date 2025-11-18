@@ -6,6 +6,7 @@ import {
     storage,
     storageRef,
     uploadString,
+    uploadBytes,
     getDownloadURL,
     doc,
     getDoc,
@@ -395,9 +396,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage }) => 
             const authUpdates: { displayName?: string; photoURL?: string } = {};
             let newAvatarUrl: string | undefined = undefined;
 
-            if (avatarFile && avatarPreview) {
+            if (avatarFile) {
                 const avatarStorageRef = storageRef(storage, `avatars/${userToUpdate.uid}/${Date.now()}-${avatarFile.name}`);
-                await uploadString(avatarStorageRef, avatarPreview, 'data_url');
+                await uploadBytes(avatarStorageRef, avatarFile);
                 newAvatarUrl = await getDownloadURL(avatarStorageRef);
                 firestoreUpdates.avatar = newAvatarUrl;
                 authUpdates.photoURL = newAvatarUrl;
