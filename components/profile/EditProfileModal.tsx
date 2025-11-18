@@ -37,8 +37,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
   const [error, setError] = useState('');
   const { t } = useLanguage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   useEffect(() => {
     if (isOpen) {
       setUsername(user.username);
@@ -72,7 +71,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
     setError('');
     try {
         await onUpdate({ username, bio, avatarFile, avatarPreview, isPrivate, profileMusic });
-        // onClose will be called by parent on success
     } catch (err) {
         console.error(err);
         setError(t('editProfile.updateError'));
@@ -99,21 +97,18 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                       <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                       <div className="flex flex-col items-start">
                           <span className="font-semibold">{user.username}</span>
-                          {/* UPLOAD FIX: Use a button that clicks the hidden input via Ref. This is cleaner for WebViews. */}
-                          <button 
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 mt-1 p-0 bg-transparent border-none"
-                          >
-                            {t('editProfile.changePhoto')}
-                          </button>
-                          <input 
-                              ref={fileInputRef}
-                              type="file"
-                              onChange={handleAvatarChange}
-                              className="hidden"
-                              accept="image/*"
-                          />
+                          {/* UPLOAD FIX: Overlay Input - The most reliable way for WebViews */}
+                          <div className="relative mt-1">
+                              <span className="text-sm font-semibold text-sky-500">
+                                {t('editProfile.changePhoto')}
+                              </span>
+                              <input 
+                                  type="file"
+                                  onChange={handleAvatarChange}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  accept="image/*"
+                              />
+                          </div>
                       </div>
                   </div>
                   <div className="w-full flex flex-col gap-4 mt-4">
@@ -179,7 +174,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
       <AddMusicModal 
         isOpen={isMusicModalOpen}
         onClose={() => setIsMusicModalOpen(false)}
-        postId="" // Not used for profile music, but prop is required.
+        postId="" 
         onMusicAdded={(music) => {
           setProfileMusic(music);
           setIsMusicModalOpen(false);

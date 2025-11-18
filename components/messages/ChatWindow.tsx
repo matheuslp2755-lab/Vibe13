@@ -335,7 +335,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
             const settlingTimer = setTimeout(() => {
                 setAnimationState('settling');
-            }, 1700); // Wait 1.7s before moving (Total 3s: 0.3s in + 1.7s wait + 1s move)
+            }, 1700); 
 
             return () => {
                 clearTimeout(settlingTimer);
@@ -361,8 +361,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 const otherUserId = data.participants.find((p: string) => p !== currentUser.uid);
                 
                 if(otherUserId) {
+                    // Initialize from conversation data
                     const otherUserInfo = data.participantInfo[otherUserId];
-                    setOtherUser({
+                    setOtherUser(prev => prev ? prev : {
                         id: otherUserId,
                         username: otherUserInfo?.username || t('common.user'),
                         avatar: otherUserInfo?.avatar || `https://i.pravatar.cc/150?u=${otherUserId}`,
@@ -377,6 +378,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 const isAnonymous = userData.isAnonymous || false;
                                 const isOnline = !isAnonymous && lastSeen && (new Date().getTime() / 1000 - lastSeen.seconds) < 600;
                                 setIsOtherUserOnline(isOnline);
+                                
+                                // REAL-TIME UPDATE: Update the otherUser state with fresh data from the user document
+                                // This ensures the avatar is always up to date, even if the conversation data is stale.
+                                if (userData.avatar) {
+                                    setOtherUser(prev => prev ? { ...prev, avatar: userData.avatar } : null);
+                                }
                             } else {
                                 setIsOtherUserOnline(false);
                             }
@@ -441,6 +448,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             }
         };
     }, [conversationId, currentUser, t, isCurrentUserAnonymous]);
+
+    // ... (rest of functions: handleClearMedia, handleFileSelect, sendAudioMessage, handleStartRecording, etc.)
+
+    // ... (rest of functions: handleStopRecording, handleSendMessage, handleDeleteMessage)
 
     const handleClearMedia = () => {
         setMediaFile(null);
@@ -853,7 +864,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     // Extract current user's avatar from conversation data to ensure it matches Firestore
     const currentUserInfo = conversationData?.participantInfo?.[currentUser?.uid || ''];
     const currentUserAvatar = currentUserInfo?.avatar || currentUser?.photoURL || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media';
-
+    
+    // IMPORTANT: use the state variable `otherUser.avatar` which is updated in real-time by the listener
+    const otherUserAvatar = otherUser?.avatar || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media';
 
     if (loading) {
         return <div className="h-full flex items-center justify-center">{t('messages.loading')}</div>;
@@ -1185,7 +1198,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     currentUser={currentUser}
                     currentUserAvatar={currentUserAvatar}
                     otherUser={otherUser}
-                    otherUserAvatar={otherUser.avatar}
+                    otherUserAvatar={otherUserAvatar}
                     onPulseCreated={() => {
                         setIsStreakModalOpen(false);
                     }}

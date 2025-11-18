@@ -36,43 +36,44 @@ const Spinner: React.FC = () => (
     </div>
 );
 
-// Helper to safely load image or return null if failed
+// Robust image loader that prefers Blob fetching to avoid Tainted Canvas issues
 const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
     if (!url) return null;
+
     try {
-        // Try fetching as a blob first to handle CORS/Origin issues in WebViews
-        const response = await fetch(url);
+        // Method 1: Fetch as Blob (Best for CORS/Canvas security)
+        // 'no-cors' might be needed depending on storage rules, but 'cors' is standard for canvas
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) throw new Error('Network response was not ok');
+        
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
 
-        const img = new Image();
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
             img.onload = () => {
                 resolve(img);
-                // URL.revokeObjectURL(objectUrl); // Keep alive for drawing
+                // We don't revoke immediately to ensure canvas can draw it
             };
             img.onerror = () => {
-                 console.warn("Blob image load failed, trying direct load:", url);
-                 resolve(null);
+                reject(new Error('Image load error'));
             };
             img.src = objectUrl;
         });
     } catch (e) {
-        // Fallback to direct load if fetch fails (e.g., restricted CORS on fetch but not on img tag)
-        try {
-             const img = new Image();
-             img.crossOrigin = "anonymous"; 
-             return new Promise((resolve) => {
-                 img.onload = () => resolve(img);
-                 img.onerror = () => {
-                     console.warn("Direct image load failed:", url);
-                     resolve(null);
-                 };
-                 img.src = url;
-             });
-        } catch (err) {
-            return null;
-        }
+        console.warn("Blob fetch failed, trying direct Image load:", url, e);
+        
+        // Method 2: Direct Image Tag (Fallback)
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                console.warn("Direct image load failed:", url);
+                resolve(null);
+            };
+            img.src = url;
+        });
     }
 };
 
@@ -99,14 +100,12 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
             setError('');
             const canvas = canvasRef.current;
             if (!canvas) {
-                setError(t('crystal.canvasError'));
                 setIsGenerating(false);
                 return;
             }
 
             const ctx = canvas.getContext('2d');
             if (!ctx) {
-                setError(t('crystal.canvasError'));
                 setIsGenerating(false);
                 return;
             }
@@ -118,11 +117,11 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
             canvas.height = H;
 
             try {
-                // 1. Fundo de Neve (Snow Background) desenhado manualmente
+                // 1. Fundo de Neve (Snow Background)
                 const bgGradient = ctx.createLinearGradient(0, 0, 0, H);
-                bgGradient.addColorStop(0, '#020617'); // Slate 950 (Céu noturno escuro)
-                bgGradient.addColorStop(0.5, '#1e3a8a'); // Blue 900 (Azul profundo)
-                bgGradient.addColorStop(1, '#3b82f6'); // Blue 500 (Gelo na base)
+                bgGradient.addColorStop(0, '#020617'); // Slate 950
+                bgGradient.addColorStop(0.5, '#1e3a8a'); // Blue 900
+                bgGradient.addColorStop(1, '#3b82f6'); // Blue 500
                 ctx.fillStyle = bgGradient;
                 ctx.fillRect(0, 0, W, H);
 
@@ -147,18 +146,21 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.fillStyle = vignette;
                 ctx.fillRect(0, 0, W, H);
 
-                // 2. Carregar Avatares
-                // Prioritize passed avatars, fallback to generic if load fails
-                let userImg = await loadImageSafe(currentUserAvatar);
-                let otherUserImg = await loadImageSafe(otherUserAvatar);
-                
-                // If main image fails, try fallback URL, if that fails, we will draw geometric fallback
+                // 2. Carregar Avatares (Priorizando as URLs passadas)
+                // Usamos Promise.allSettled para que uma falha não impeça a outra
+                const loadUser = loadImageSafe(currentUserAvatar);
+                const loadOther = loadImageSafe(otherUserAvatar);
+
+                const results = await Promise.all([loadUser, loadOther]);
+                let userImg = results[0];
+                let otherUserImg = results[1];
+
+                // Se falhar, tenta o fallback explicitamente
                 if (!userImg) userImg = await loadImageSafe(FALLBACK_AVATAR_URL);
                 if (!otherUserImg) otherUserImg = await loadImageSafe(FALLBACK_AVATAR_URL);
 
-
                 // 3. Desenhar Avatares e Conexão
-                const avatarSize = 300; // Diâmetro
+                const avatarSize = 300; 
                 const avatarY = 600;
                 const spacing = 60;
                 const totalWidth = (avatarSize * 2) + spacing;
@@ -169,9 +171,9 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
                 // Linha de conexão (Raio/Energia)
                 ctx.save();
-                ctx.shadowColor = '#fef08a'; // Amarelo brilho
+                ctx.shadowColor = '#fef08a'; 
                 ctx.shadowBlur = 40;
-                ctx.strokeStyle = '#fde047'; // Amarelo
+                ctx.strokeStyle = '#fde047'; 
                 ctx.lineWidth = 10;
                 ctx.lineCap = 'round';
                 
@@ -181,7 +183,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
                 ctx.beginPath();
                 ctx.moveTo(lineStartX, lineY);
-                // Zig-zag
                 ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.3, lineY - 30);
                 ctx.lineTo(lineStartX + (lineEndX - lineStartX) * 0.6, lineY + 30);
                 ctx.lineTo(lineEndX, lineY);
@@ -204,20 +205,18 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     ctx.stroke();
                     ctx.clip(); // Corte circular
 
-                    // Fundo base (caso imagem tenha transparência ou não carregue)
-                    ctx.fillStyle = '#cbd5e1'; // Slate 300
+                    // Fundo base
+                    ctx.fillStyle = '#cbd5e1';
                     ctx.fillRect(x, y, size, size);
 
                     if (img) {
                         ctx.drawImage(img, x, y, size, size);
                     } else {
-                        // Fallback Gráfico: Silhueta Genérica (Último recurso)
-                        ctx.fillStyle = '#94a3b8'; // Slate 400
-                        // Cabeça
+                        // Fallback Gráfico
+                        ctx.fillStyle = '#94a3b8';
                         ctx.beginPath();
                         ctx.arc(x + size / 2, y + size / 2 - size * 0.15, size * 0.25, 0, Math.PI * 2);
                         ctx.fill();
-                        // Corpo
                         ctx.beginPath();
                         ctx.arc(x + size / 2, y + size, size * 0.45, Math.PI, 0);
                         ctx.fill();
@@ -229,7 +228,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 drawAvatar(otherUserImg, otherAvatarX, avatarY, avatarSize);
 
                 // 4. Textos
-                // Título
                 ctx.font = 'bold 80px "Helvetica Neue", sans-serif';
                 ctx.fillStyle = '#f8fafc'; 
                 ctx.textAlign = 'center';
@@ -238,14 +236,12 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 ctx.shadowBlur = 15;
                 ctx.fillText(t('crystal.shareTitle'), W / 2, 300);
 
-                // Número do Streak
                 const streakNumber = crystalData.streak.toString();
                 ctx.font = 'bold 500px "Helvetica Neue", sans-serif';
                 
-                // Gradiente no texto
                 const textGradient = ctx.createLinearGradient(0, 1000, 0, 1500);
                 textGradient.addColorStop(0, '#ffffff'); 
-                textGradient.addColorStop(1, '#bae6fd'); // Azul claro gelo
+                textGradient.addColorStop(1, '#bae6fd'); 
                 ctx.fillStyle = textGradient;
                 
                 ctx.shadowColor = 'rgba(0,0,0,0.5)';
@@ -254,18 +250,15 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 
                 ctx.fillText(streakNumber, W / 2, 1200);
 
-                // Subtítulo
                 ctx.font = 'bold 60px "Helvetica Neue", sans-serif';
                 ctx.fillStyle = '#e0f2fe'; 
                 ctx.shadowBlur = 5;
                 ctx.fillText(t('crystal.streakDays', { streak: '' }).replace(/[0-9]/g, '').trim(), W / 2, 1450);
 
-                // Marca d'água
                 ctx.font = 'italic 40px serif';
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.fillText('Vibe', W / 2, H - 100);
 
-                // Finaliza
                 setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
                 setIsGenerating(false);
 
