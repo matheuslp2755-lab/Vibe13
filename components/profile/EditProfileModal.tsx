@@ -3,7 +3,7 @@ import Button from '../common/Button';
 import TextInput from '../common/TextInput';
 import TextAreaInput from '../common/TextAreaInput';
 import { useLanguage } from '../../context/LanguageContext';
-import AddMusicModal from '../post/AddMusicModal'; // Reusing for UI, but need a profile version
+import AddMusicModal from '../post/AddMusicModal';
 
 type MusicInfo = {
   nome: string;
@@ -98,15 +98,17 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                       <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                       <div className="flex flex-col">
                           <span className="font-semibold">{user.username}</span>
-                          <label className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 text-left p-0 bg-transparent border-none cursor-pointer relative">
-                            {t('editProfile.changePhoto')}
-                            <input 
-                                type="file"
-                                onChange={handleAvatarChange}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                accept="image/*"
-                            />
-                          </label>
+                          <div className="relative mt-1 inline-block">
+                              <p className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 pointer-events-none">
+                                {t('editProfile.changePhoto')}
+                              </p>
+                              <input 
+                                  type="file"
+                                  onChange={handleAvatarChange}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                              />
+                          </div>
                       </div>
                   </div>
                   <div className="w-full flex flex-col gap-4 mt-4">
