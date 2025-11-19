@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ConversationList from './ConversationList';
 import ChatWindow from './ChatWindow';
@@ -42,7 +43,7 @@ const XIcon: React.FC<{className?: string}> = ({ className }) => (
 );
 
 const AnonIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 2c2.761 0 5 2.239 5 5s-2.239 5-5 5-5-2.239-5-5 2.239-5 5-5zm0 10c-3.866 0-7 1.79-7 4v3h14v-3c0-2.21-3.134-4-7-4zm-1.5-6a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm6 0a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5a6.002 6.002 0 00-4.321 1.832" />
     </svg>
@@ -325,6 +326,48 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
                         timestamp: serverTimestamp(),
                     }
                 });
+
+                 // Send Push Notification
+                const sendPushNotification = async () => {
+                    try {
+                        const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                        if (!ONESIGNAL_REST_API_KEY) {
+                            console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
+                            return;
+                        }
+
+                        const recipientDocRef = doc(db, 'users', targetUserId);
+                        const recipientDoc = await getDoc(recipientDocRef);
+                        
+                        if (recipientDoc.exists()) {
+                            const recipientData = recipientDoc.data();
+                            if (recipientData.oneSignalPlayerId) {
+                                const content = initialMessage;
+                                const contentEn = initialMessage;
+        
+                                const message = {
+                                    app_id: "d0307e8d-3a9b-4e71-b414-ebc34e40ff4f",
+                                    include_player_ids: [recipientData.oneSignalPlayerId],
+                                    headings: { "pt": auth.currentUser!.displayName, "en": auth.currentUser!.displayName },
+                                    contents: { "pt": content, "en": contentEn },
+                                    data: { conversationId: conversationId }
+                                };
+        
+                                await fetch('https://onesignal.com/api/v1/notifications', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json; charset=utf-8',
+                                        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
+                                    },
+                                    body: JSON.stringify(message),
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error sending message push notification:", error);
+                    }
+                };
+                sendPushNotification();
             }
 
             setActiveConversationId(conversationId);
