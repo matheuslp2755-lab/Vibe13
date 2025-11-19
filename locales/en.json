@@ -366,6 +366,7 @@
     "error": "An error occurred. Please try again.",
     "addToMemoryTitle": "Add to Memory",
     "createNew": "Create New Memory",
-    "added": "Added!"
+    "added": "Added!",
+    "uploadPhoto": "Upload Photo"
   }
 }

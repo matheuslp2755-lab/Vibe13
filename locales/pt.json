@@ -371,6 +371,7 @@
     "error": "Ocorreu um erro. Tente novamente.",
     "addToMemoryTitle": "Adicionar à Lembrança",
     "createNew": "Criar nova Lembrança",
-    "added": "Adicionado!"
+    "added": "Adicionado!",
+    "uploadPhoto": "Carregar Foto"
   }
 }
