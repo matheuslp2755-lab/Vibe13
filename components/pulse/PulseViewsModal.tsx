@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { db, collection, getDocs, doc, getDoc } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
-import OnlineIndicator from '../common/OnlineIndicator';
 
 interface PulseViewsModalProps {
   isOpen: boolean;
   onClose: () => void;
   pulseId: string;
+  onUserSelect?: (userId: string) => void;
 }
 
 type UserSearchResult = {
@@ -27,7 +28,7 @@ const Spinner: React.FC = () => (
 );
 
 
-const PulseViewsModal: React.FC<PulseViewsModalProps> = ({ isOpen, onClose, pulseId }) => {
+const PulseViewsModal: React.FC<PulseViewsModalProps> = ({ isOpen, onClose, pulseId, onUserSelect }) => {
     const { t } = useLanguage();
     const [viewers, setViewers] = useState<UserSearchResult[]>([]);
     const [loading, setLoading] = useState(false);
@@ -73,6 +74,12 @@ const PulseViewsModal: React.FC<PulseViewsModalProps> = ({ isOpen, onClose, puls
 
     if (!isOpen) return null;
 
+    const handleUserClick = (userId: string) => {
+        if (onUserSelect) {
+            onUserSelect(userId);
+        }
+    };
+
     return (
         <div
             className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[60]"
@@ -91,20 +98,17 @@ const PulseViewsModal: React.FC<PulseViewsModalProps> = ({ isOpen, onClose, puls
                     {loading ? (
                         <Spinner />
                     ) : viewers.length > 0 ? (
-                        viewers.map(user => {
-                             const isOnline = !user.isAnonymous && user.lastSeen && (new Date().getTime() / 1000 - user.lastSeen.seconds) < 600;
-                             return (
-                                <div key={user.id} className="w-full text-left flex items-center p-3 gap-3">
-                                    <div className="relative flex-shrink-0">
-                                        <img src={user.avatar} alt={user.username} className="w-11 h-11 rounded-full object-cover" />
-                                        {isOnline && <OnlineIndicator />}
-                                    </div>
-                                    <div className="flex-grow overflow-hidden">
-                                        <p className="font-semibold">{user.username}</p>
-                                    </div>
+                        viewers.map(user => (
+                            <button 
+                                key={user.id} 
+                                onClick={() => handleUserClick(user.id)}
+                                className="w-full text-left flex items-center p-3 gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                            >
+                                <div className="flex-grow overflow-hidden">
+                                    <p className="font-semibold hover:underline">{user.username}</p>
                                 </div>
-                             )
-                        })
+                            </button>
+                        ))
                     ) : (
                         <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 p-4">{t('pulseViewer.noViews')}</p>
                     )}

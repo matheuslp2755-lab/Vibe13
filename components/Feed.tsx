@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './common/Header';
 import UserProfile from './profile/UserProfile';
@@ -299,7 +300,12 @@ const Feed: React.FC = () => {
       />
       <main className="pt-20 bg-zinc-50 dark:bg-black min-h-screen">
         {viewingProfileId ? (
-          <UserProfile userId={viewingProfileId} key={`${viewingProfileId}-${profileKey}`} onStartMessage={handleStartMessage} />
+          <UserProfile 
+            userId={viewingProfileId} 
+            key={`${viewingProfileId}-${profileKey}`} 
+            onStartMessage={handleStartMessage} 
+            onSelectUser={handleSelectUser}
+          />
         ) : (
           <div className="container mx-auto max-w-lg py-8">
             {feedLoading ? (
@@ -364,6 +370,7 @@ const Feed: React.FC = () => {
                 authorInfo={viewingUserWithPulses.author}
                 onClose={() => setViewingUserWithPulses(null)}
                 onDelete={handlePulseDeleted}
+                onViewProfile={handleSelectUser}
             />
         )}
     </>

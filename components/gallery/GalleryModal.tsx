@@ -225,7 +225,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
-                style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }} 
+                style={{ opacity: 0, width: '0.1px', height: '0.1px', position: 'absolute', overflow: 'hidden', zIndex: -1 }} 
                 accept="image/*" 
                 multiple 
             />

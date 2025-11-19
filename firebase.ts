@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -24,17 +25,19 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObjec
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBscsAkO_yJYfVVtCBh3rNF8Cm51_HLW54",
-    authDomain: "teste-rede-fcb99.firebaseapp.com",
-    projectId: "teste-rede-fcb99",
-    storageBucket: "teste-rede-fcb99.firebasestorage.app",
-    messagingSenderId: "1006477304115",
-    appId: "1:1006477304115:web:e88d8e5f2e75d1b4df5e46"
+  apiKey: "AIzaSyBscsAkO_yJYfVVtCBh3rNF8Cm51_HLW54",
+  authDomain: "teste-rede-fcb99.firebaseapp.com",
+  databaseURL: "https://teste-rede-fcb99-default-rtdb.firebaseio.com",
+  projectId: "teste-rede-fcb99",
+  storageBucket: "teste-rede-fcb99.appspot.com",
+  messagingSenderId: "1006477304115",
+  appId: "1:1006477304115:web:e88d8e5f2e75d1b4df5e46"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+// Explicitly using gs:// URI with the correct bucket to avoid any auto-configuration issues
 const storage = getStorage(app, `gs://${firebaseConfig.storageBucket}`);
 const messaging = getMessaging(app);
 
@@ -48,11 +51,11 @@ export {
   collection,
   query,
   where,
-  getDocs,
+  getDocs, 
   limit,
   doc,
-  setDoc,
-  deleteDoc,
+  setDoc, 
+  deleteDoc, 
   serverTimestamp,
   storageRef,
   uploadBytes,

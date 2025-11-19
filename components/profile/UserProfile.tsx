@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { updateProfile } from 'firebase/auth';
 import {
@@ -64,6 +65,7 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
 interface UserProfileProps {
     userId: string;
     onStartMessage: (targetUser: { id: string, username: string, avatar: string }) => void;
+    onSelectUser?: (userId: string) => void;
 }
 
 type MusicInfo = {
@@ -112,7 +114,7 @@ type Memory = {
     coverUrl: string;
 };
 
-const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSelectUser }) => {
     const { t } = useLanguage();
     const { startCall, activeCall } = useCall();
     const [user, setUser] = useState<ProfileUserData | null>(null);
@@ -642,6 +644,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage }) => 
                     }
                     handleDeletePulse(pulseToDelete);
                 }}
+                onViewProfile={onSelectUser}
             />
         )}
         <FollowersModal

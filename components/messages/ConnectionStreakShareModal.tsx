@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, storage, addDoc, collection, serverTimestamp, storageRef, uploadString, getDownloadURL } from '../../firebase';
 import Button from '../common/Button';
@@ -36,26 +37,31 @@ const Spinner: React.FC = () => (
     </div>
 );
 
-// Improved Safe Image Loader with Cache Busting
+// Improved Safe Image Loader with URL Correction
 const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
     if (!url) return null;
 
-    const getUrlWithCacheBuster = (u: string) => {
+    const getSafeUrl = (u: string) => {
         try {
-            // Check if it's a data URL (base64), return as is
-            if (u.startsWith('data:')) return u;
+            // FIX: Force replacement of incorrect domain (firebasestorage.app) with correct one (appspot.com)
+            // The user explicitly reported that firebasestorage.app URLs are invalid for this bucket.
+            let normalizedUrl = u.replace(/firebasestorage\.app/g, 'appspot.com');
             
-            const separator = u.includes('?') ? '&' : '?';
-            return `${u}${separator}t=${new Date().getTime()}`;
+            // If it's a data URL, return as is
+            if (normalizedUrl.startsWith('data:')) return normalizedUrl;
+            
+            return normalizedUrl;
         } catch (e) {
             return u;
         }
     };
 
-    const createImg = (src: string): Promise<HTMLImageElement> => {
+    const createImg = (src: string, isCrossOrigin: boolean): Promise<HTMLImageElement> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.crossOrigin = "anonymous";
+            if (isCrossOrigin) {
+                img.crossOrigin = "anonymous";
+            }
             img.referrerPolicy = "no-referrer";
             img.onload = () => resolve(img);
             img.onerror = (e) => reject(e);
@@ -63,38 +69,40 @@ const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
         });
     };
 
+    const safeUrl = getSafeUrl(url);
+    console.log(`[ImageLoader] Attempting to load: ${safeUrl}`);
+
+    // Strategy 1: Fetch as Blob (Best for Canvas security/CORS)
     try {
-        // Attempt 1: Fetch as Blob (Best for Canvas security/CORS)
-        // We use a simple fetch without complex headers to avoid preflight issues on some networks
-        const safeUrl = getUrlWithCacheBuster(url);
         const response = await fetch(safeUrl);
-        
         if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-        
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
-        return await createImg(objectUrl);
+        return await createImg(objectUrl, false);
     } catch (e) {
-        console.warn("Blob load failed, trying direct image load with CORS:", e);
-        
-        try {
-            // Attempt 2: Direct Image Tag with crossOrigin and cache buster
-            const safeUrl = getUrlWithCacheBuster(url);
-            return await createImg(safeUrl);
-        } catch (err) {
-            console.warn("Cache-busted direct load failed, trying original URL:", url);
-            try {
-                 // Attempt 3: Original URL (Last resort, might taint canvas but better than nothing)
-                 return await createImg(url);
-            } catch (finalErr) {
-                 console.error("All image load strategies failed for:", url);
-                 return null;
-            }
-        }
+        console.warn("[ImageLoader] Strategy 1 (Fetch Blob) failed:", e);
+    }
+
+    // Strategy 2: Direct Image Tag with crossOrigin (Standard CORS load)
+    try {
+        return await createImg(safeUrl, true);
+    } catch (e) {
+        console.warn("[ImageLoader] Strategy 2 (CORS Image) failed:", e);
+    }
+
+    // Strategy 3: Direct Image Tag WITHOUT crossOrigin (Fallback)
+    // This allows the image to display even if CORS headers are missing,
+    // but it will 'taint' the canvas, preventing toDataURL() from working securely.
+    try {
+         console.warn("[ImageLoader] Attempting Strategy 3 (Non-CORS) for:", safeUrl);
+         return await createImg(safeUrl, false);
+    } catch (e) {
+         console.error("[ImageLoader] All image load strategies failed for:", safeUrl);
+         return null;
     }
 };
 
-const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media";
+const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.appspot.com/o/avatars%2Fdefault%2Favatar.png?alt=media";
 
 const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({ isOpen, onClose, crystalData, currentUser, otherUser, currentUserAvatar, otherUserAvatar, onPulseCreated }) => {
     const { t } = useLanguage();
@@ -249,16 +257,17 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                     ctx.fillText('Vibe', W / 2, H - 100);
                 };
 
-                // 2. Try drawing normally
+                // 2. Try drawing normally (with images)
                 drawCanvas(false);
                 
-                // 3. Try to export. If it fails (Tainted Canvas due to CORS), redraw in Safe Mode (no images)
+                // 3. Try to export. 
+                // If images were loaded via Strategy 3 (no CORS), the canvas is tainted, and toDataURL will throw.
                 try {
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                     setGeneratedImage(dataUrl);
                 } catch (securityError) {
-                    console.warn("Canvas tainted! Redrawing with placeholders to ensure sharing works.", securityError);
-                    drawCanvas(true); // Redraw without external images
+                    console.warn("Canvas tainted (probably due to Strategy 3 image load). Redrawing with placeholders.", securityError);
+                    drawCanvas(true); // Redraw without external images (Safe Mode)
                     setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
                 }
                 
@@ -266,7 +275,6 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
 
             } catch (e) {
                 console.error("Fatal generation error:", e);
-                // Instead of showing error, try to fallback to safe mode immediately
                 setError(t('crystal.imageLoadError'));
                 setIsGenerating(false);
             }

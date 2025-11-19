@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     auth, 
@@ -8,23 +9,22 @@ import {
     orderBy, 
     onSnapshot, 
     writeBatch, 
-    serverTimestamp,
-    deleteDoc,
-    updateDoc,
-    getDocs,
-    limit,
-    getDoc,
-    storage,
-    storageRef,
-    uploadString,
-    getDownloadURL,
-    uploadBytes
+    serverTimestamp, 
+    deleteDoc, 
+    updateDoc, 
+    getDocs, 
+    limit, 
+    getDoc, 
+    storage, 
+    storageRef, 
+    uploadString, 
+    getDownloadURL, 
+    uploadBytes 
 } from '../../firebase';
 import ConnectionCrystal from './ConnectionCrystal';
 import OnlineIndicator from '../common/OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
-import ConnectionStreakShareModal from './ConnectionStreakShareModal';
 
 interface ForwardedPostProps {
   content: {
@@ -249,13 +249,13 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.appspot.com/o/avatars%2Fdefault%2Favatar.png?alt=media";
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurrentUserAnonymous }) => {
     const { t } = useLanguage();
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
-    const [currentUserFirestore, setCurrentUserFirestore] = useState<any>(null);
     const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
     const [conversationData, setConversationData] = useState<ConversationData | null>(null);
     const [crystalData, setCrystalData] = useState<CrystalData | null>(null);
@@ -272,7 +272,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const [recordingTime, setRecordingTime] = useState(0);
     const { startCall, activeCall } = useCall();
     const [isCallDropdownOpen, setIsCallDropdownOpen] = useState(false);
-    const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
 
     type AnimationState = 'idle' | 'forming' | 'settling';
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
@@ -285,7 +284,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const dialogRef = useRef<HTMLDivElement>(null);
     const prevCrystalData = usePrevious(crystalData);
     const unsubUserStatusRef = useRef<(() => void) | null>(null);
-    const unsubCurrentUserRef = useRef<(() => void) | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -345,24 +343,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         }
     }, [crystalData, prevCrystalData, t]);
 
-    // Fetch Current User Realtime
-    useEffect(() => {
-        if (!currentUser) return;
-        
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        unsubCurrentUserRef.current = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-                setCurrentUserFirestore(doc.data());
-            }
-        });
-
-        return () => {
-            if (unsubCurrentUserRef.current) {
-                unsubCurrentUserRef.current();
-            }
-        }
-    }, [currentUser]);
-
     useEffect(() => {
         if (!conversationId || !currentUser) {
             setMessages([]);
@@ -381,14 +361,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 const otherUserId = data.participants.find((p: string) => p !== currentUser.uid);
                 
                 if(otherUserId) {
-                    // Initialize from conversation data
+                    // Initialize from conversation data first to show something immediately
                     const otherUserInfo = data.participantInfo[otherUserId];
-                    setOtherUser(prev => prev ? prev : {
-                        id: otherUserId,
-                        username: otherUserInfo?.username || t('common.user'),
-                        avatar: otherUserInfo?.avatar || `https://i.pravatar.cc/150?u=${otherUserId}`,
-                    });
+                    if (otherUserInfo && !otherUser) {
+                        setOtherUser({
+                            id: otherUserId,
+                            username: otherUserInfo.username,
+                            avatar: otherUserInfo.avatar || FALLBACK_AVATAR_URL,
+                        });
+                    }
 
+                    // Setup real-time listener for user profile
                     if (!unsubUserStatusRef.current) {
                         const userDocRef = doc(db, 'users', otherUserId);
                         unsubUserStatusRef.current = onSnapshot(userDocRef, (userSnap) => {
@@ -399,11 +382,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 const isOnline = !isAnonymous && lastSeen && (new Date().getTime() / 1000 - lastSeen.seconds) < 600;
                                 setIsOtherUserOnline(isOnline);
                                 
-                                // REAL-TIME UPDATE: Update the otherUser state with fresh data from the user document
-                                // This ensures the avatar is always up to date, even if the conversation data is stale.
-                                if (userData.avatar) {
-                                    setOtherUser(prev => prev ? { ...prev, avatar: userData.avatar } : null);
-                                }
+                                // Update otherUser with fresh data from user document
+                                setOtherUser({ 
+                                    id: otherUserId,
+                                    username: userData.username,
+                                    avatar: userData.avatar || FALLBACK_AVATAR_URL
+                                });
                             } else {
                                 setIsOtherUserOnline(false);
                             }
@@ -467,7 +451,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 unsubUserStatusRef.current = null;
             }
         };
-    }, [conversationId, currentUser, t, isCurrentUserAnonymous]);
+    }, [conversationId, currentUser, isCurrentUserAnonymous]);
 
     const handleClearMedia = () => {
         setMediaFile(null);
@@ -877,14 +861,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         }
     }
 
-    const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.firebasestorage.app/o/avatars%2Fdefault%2Favatar.png?alt=media";
-
-    // Extract current user's avatar from Firestore state or conversation data to ensure it matches
-    const currentUserAvatar = currentUserFirestore?.avatar || conversationData?.participantInfo?.[currentUser?.uid || '']?.avatar || currentUser?.photoURL || FALLBACK_AVATAR_URL;
-    
-    // IMPORTANT: use the state variable `otherUser.avatar` which is updated in real-time by the listener
-    const otherUserAvatar = otherUser?.avatar || FALLBACK_AVATAR_URL;
-
     if (loading) {
         return <div className="h-full flex items-center justify-center">{t('messages.loading')}</div>;
     }
@@ -905,67 +881,74 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             {otherUser && (
                 <header className="flex items-center gap-3 p-4 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
                     <button onClick={onBack} aria-label={t('messages.back')}>
-                       <BackArrowIcon className="w-6 h-6" />
-                    </button>
-                    <div className="relative">
-                        <img src={otherUser.avatar} alt={otherUser.username} className="w-10 h-10 rounded-full object-cover" />
-                        {isOtherUserOnline && <OnlineIndicator className="bottom-0 right-0 h-3 w-3" />}
-                    </div>
-                    <div className="flex-grow">
-                        <p className="font-semibold">{otherUser.username}</p>
-                        {crystalData && (
-                            <button 
-                                onClick={() => setIsStreakModalOpen(true)} 
-                                className="rounded-md -ml-1 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                title={t('crystal.title', { status: getCrystalStatusText(crystalData.level) })}
-                            >
-                                <div 
-                                    ref={crystalHeaderRef} 
-                                    className={`flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 transition-opacity duration-300 ${animationState !== 'idle' ? 'opacity-0' : 'opacity-100'}`} 
-                                >
-                                    <ConnectionCrystal level={crystalData.level} className="w-4 h-4" />
-                                    <span>{getCrystalStatusText(crystalData.level)}</span>
-                                    {crystalData.streak > 1 && (
-                                        <span title={t('crystal.streak', { streak: crystalData.streak })}>🔥 {crystalData.streak}</span>
-                                    )}
-                                </div>
-                            </button>
-                        )}
-                    </div>
-                    <div ref={callDropdownRef} className="ml-auto relative">
-                        <button 
-                            onClick={() => setIsCallDropdownOpen(prev => !prev)}
-                            disabled={!!activeCall}
-                            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={t('call.call')}
+                   <BackArrowIcon className="w-6 h-6" />
+                </button>
+                <div className="relative">
+                    <img 
+                        src={otherUser.avatar || FALLBACK_AVATAR_URL} 
+                        alt={otherUser.username} 
+                        className="w-10 h-10 rounded-full object-cover"
+                        onError={(e) => {
+                            // Fallback to generic placeholder if image fails to load, instead of initials
+                            e.currentTarget.src = FALLBACK_AVATAR_URL;
+                        }}
+                    />
+                    {isOtherUserOnline && <OnlineIndicator className="bottom-0 right-0 h-3 w-3" />}
+                </div>
+                <div className="flex-grow">
+                    <p className="font-semibold">{otherUser.username}</p>
+                    {crystalData && (
+                        <div 
+                            className="rounded-md -ml-1 p-1 transition-colors cursor-default"
+                            title={t('crystal.title', { status: getCrystalStatusText(crystalData.level) })}
                         >
-                            <CallIcon className="w-6 h-6" />
-                        </button>
-                        {isCallDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
-                                <button 
-                                    disabled // Video call not implemented
-                                    className="w-full flex items-center gap-3 text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <VideoIcon className="w-5 h-5" />
-                                    <span>{t('call.videoCall')}</span>
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        if (otherUser) {
-                                            startCall(otherUser);
-                                        }
-                                        setIsCallDropdownOpen(false);
-                                    }}
-                                    className="w-full flex items-center gap-3 text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                                >
-                                    <CallIcon className="w-5 h-5" />
-                                    <span>{t('call.voiceCall')}</span>
-                                </button>
+                            <div 
+                                ref={crystalHeaderRef} 
+                                className={`flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 transition-opacity duration-300 ${animationState !== 'idle' ? 'opacity-0' : 'opacity-100'}`} 
+                            >
+                                <ConnectionCrystal level={crystalData.level} className="w-4 h-4" />
+                                <span>{getCrystalStatusText(crystalData.level)}</span>
+                                {crystalData.streak > 1 && (
+                                    <span title={t('crystal.streak', { streak: crystalData.streak })}>🔥 {crystalData.streak}</span>
+                                )}
                             </div>
-                        )}
-                    </div>
-                </header>
+                        </div>
+                    )}
+                </div>
+                <div ref={callDropdownRef} className="ml-auto relative">
+                    <button 
+                        onClick={() => setIsCallDropdownOpen(prev => !prev)}
+                        disabled={!!activeCall}
+                        className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('call.call')}
+                    >
+                        <CallIcon className="w-6 h-6" />
+                    </button>
+                    {isCallDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
+                            <button 
+                                disabled // Video call not implemented
+                                className="w-full flex items-center gap-3 text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <VideoIcon className="w-5 h-5" />
+                                <span>{t('call.videoCall')}</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    if (otherUser) {
+                                        startCall(otherUser);
+                                    }
+                                    setIsCallDropdownOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                            >
+                                <CallIcon className="w-5 h-5" />
+                                <span>{t('call.voiceCall')}</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </header>
             )}
             <div className="flex-grow py-4 px-2 overflow-y-auto">
                 <div className="flex flex-col gap-1">
@@ -1089,7 +1072,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 ref={fileInputRef} 
                                 onChange={handleFileSelect} 
                                 accept="image/*,video/*" 
-                                style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }}
+                                style={{ opacity: 0, width: '0.1px', height: '0.1px', position: 'absolute', overflow: 'hidden', zIndex: -1 }}
                              />
                              <button 
                                 type="button" 
@@ -1213,20 +1196,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         {animationMessage}
                     </p>
                 </div>
-            )}
-            {otherUser && crystalData && currentUser && (
-                <ConnectionStreakShareModal
-                    isOpen={isStreakModalOpen}
-                    onClose={() => setIsStreakModalOpen(false)}
-                    crystalData={crystalData}
-                    currentUser={currentUser}
-                    otherUser={otherUser}
-                    currentUserAvatar={currentUserAvatar}
-                    otherUserAvatar={otherUserAvatar}
-                    onPulseCreated={() => {
-                        setIsStreakModalOpen(false);
-                    }}
-                />
             )}
         </div>
     );

@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { db, collection, getDocs, doc, getDoc } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
-import OnlineIndicator from '../common/OnlineIndicator';
 
 interface PostViewsModalProps {
   isOpen: boolean;
@@ -92,13 +92,8 @@ const PostViewsModal: React.FC<PostViewsModalProps> = ({ isOpen, onClose, postId
                         <Spinner />
                     ) : viewers.length > 0 ? (
                         viewers.map(user => {
-                             const isOnline = !user.isAnonymous && user.lastSeen && (new Date().getTime() / 1000 - user.lastSeen.seconds) < 600;
                              return (
                                 <div key={user.id} className="w-full text-left flex items-center p-3 gap-3">
-                                    <div className="relative flex-shrink-0">
-                                        <img src={user.avatar} alt={user.username} className="w-11 h-11 rounded-full object-cover" />
-                                        {isOnline && <OnlineIndicator />}
-                                    </div>
                                     <div className="flex-grow overflow-hidden">
                                         <p className="font-semibold">{user.username}</p>
                                     </div>

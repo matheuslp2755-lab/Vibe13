@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, doc, setDoc, serverTimestamp, collection, onSnapshot } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
@@ -27,6 +28,7 @@ interface PulseViewerModalProps {
     authorInfo: { id: string, username: string; avatar: string };
     onClose: () => void;
     onDelete: (pulse: Pulse) => void;
+    onViewProfile?: (userId: string) => void;
 }
 
 const TrashIcon: React.FC<{className?: string}> = ({ className }) => (
@@ -54,7 +56,7 @@ const NextIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPulseIndex, authorInfo, onClose, onDelete }) => {
+const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPulseIndex, authorInfo, onClose, onDelete, onViewProfile }) => {
     const { t } = useLanguage();
     const [localPulses, setLocalPulses] = useState([...pulses]);
     const [currentIndex, setCurrentIndex] = useState(initialPulseIndex);
@@ -122,6 +124,14 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
         setIsDeleteConfirmOpen(false);
     };
 
+    const handleHeaderClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onViewProfile) {
+            onViewProfile(authorInfo.id);
+            onClose();
+        }
+    }
+
     const canGoNext = currentIndex < localPulses.length - 1;
     const canGoPrev = currentIndex > 0;
     
@@ -131,6 +141,13 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 isOpen={isViewsModalOpen}
                 onClose={() => setIsViewsModalOpen(false)}
                 pulseId={currentPulse.id}
+                onUserSelect={(userId) => {
+                    if(onViewProfile) {
+                        onViewProfile(userId);
+                        setIsViewsModalOpen(false);
+                        onClose();
+                    }
+                }}
             />
             {isOwner && (
                 <>
@@ -184,10 +201,10 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                             ))}
                         </div>
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <button onClick={handleHeaderClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                                 <img src={authorInfo.avatar} alt={authorInfo.username} className="w-8 h-8 rounded-full object-cover" />
                                 <p className="text-white font-semibold text-sm">{authorInfo.username}</p>
-                            </div>
+                            </button>
                             <div className="flex items-center gap-2">
                                 {isOwner && (
                                     <>
