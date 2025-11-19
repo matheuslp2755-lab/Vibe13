@@ -220,7 +220,15 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 </div>
             </div>
 
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" multiple />
+            {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }} 
+                accept="image/*" 
+                multiple 
+            />
             <canvas ref={canvasRef} className="hidden"></canvas>
         </div>
     );

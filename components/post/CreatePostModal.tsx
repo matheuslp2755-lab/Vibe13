@@ -295,7 +295,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                         <div className="flex flex-col items-center justify-center p-16">
                             <ImageUploadIcon />
                             <h3 className="text-xl mt-4 mb-2">{t('createPost.dragPhotos')}</h3>
-                            <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+                            {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleImageChange} 
+                                style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }} 
+                                accept="image/*" 
+                            />
                             <Button onClick={triggerFileInput}>
                                 {t('createPost.selectFromComputer')}
                             </Button>

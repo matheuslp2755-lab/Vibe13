@@ -206,15 +206,13 @@ const CreateMemoryModal: React.FC<CreateMemoryModalProps> = ({ isOpen, onClose, 
                         {loading && <Spinner />}
                         {!loading && (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">
-                                <div 
+                                <label 
                                     className="relative aspect-square cursor-pointer bg-zinc-100 dark:bg-zinc-900 flex flex-col items-center justify-center text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-                                    onClick={() => fileInputRef.current?.click()}
                                 >
                                     <input 
                                         type="file" 
-                                        ref={fileInputRef} 
                                         onChange={handleFileSelect} 
-                                        className="hidden" 
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                         accept="image/*" 
                                         multiple 
                                     />
@@ -223,7 +221,7 @@ const CreateMemoryModal: React.FC<CreateMemoryModalProps> = ({ isOpen, onClose, 
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                     <span className="text-xs font-medium">{t('memories.uploadPhoto')}</span>
-                                </div>
+                                </label>
 
                                 {[...uploadedItems, ...allContent].map(item => {
                                     const isSelected = !!selectedContent.find(c => c.id === item.id);

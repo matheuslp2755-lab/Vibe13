@@ -97,19 +97,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                       <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
                       <div className="flex flex-col items-start">
                           <span className="font-semibold">{user.username}</span>
-                          {/* UPLOAD FIX: Overlay Input - The most reliable way for WebViews */}
-                          <div className="relative mt-1">
-                              <span className="text-sm font-semibold text-sky-500 hover:text-sky-600 dark:hover:text-sky-400 cursor-pointer">
+                          {/* UPLOAD FIX: Label with overlay Input - Reliable for WebViews */}
+                          <label className="relative mt-1 cursor-pointer inline-block group">
+                              <span className="text-sm font-semibold text-sky-500 group-hover:text-sky-600 dark:group-hover:text-sky-400">
                                 {t('editProfile.changePhoto')}
                               </span>
                               <input 
                                   type="file"
                                   onChange={handleAvatarChange}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                                   accept="image/*"
                                   title={t('editProfile.changePhoto')}
                               />
-                          </div>
+                          </label>
                       </div>
                   </div>
                   <div className="w-full flex flex-col gap-4 mt-4">

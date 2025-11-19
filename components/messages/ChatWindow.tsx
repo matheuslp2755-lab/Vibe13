@@ -1083,7 +1083,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         </div>
                     ) : (
                         <>
-                             <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*" className="hidden" />
+                             {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
+                             <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileSelect} 
+                                accept="image/*,video/*" 
+                                style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }}
+                             />
                              <button 
                                 type="button" 
                                 onClick={() => fileInputRef.current?.click()} 
@@ -1213,8 +1220,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     onClose={() => setIsStreakModalOpen(false)}
                     crystalData={crystalData}
                     currentUser={currentUser}
-                    currentUserAvatar={currentUserAvatar}
                     otherUser={otherUser}
+                    currentUserAvatar={currentUserAvatar}
                     otherUserAvatar={otherUserAvatar}
                     onPulseCreated={() => {
                         setIsStreakModalOpen(false);
