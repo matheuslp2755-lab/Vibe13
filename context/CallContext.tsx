@@ -107,6 +107,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                  return;
             }
             
+            // Handle call connection (Important for the caller)
+            if (status === 'connected' && activeCallRef.current?.status !== 'connected') {
+                console.log("Firestore listener: Call connected!");
+                setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
+            }
+            
             // For caller: set remote description when answer is available
             if (data.answer && pc.current?.remoteDescription?.type !== 'answer') {
                 try {
@@ -128,9 +134,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unsubs.push(onSnapshot(candidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
-                    console.log("Firestore listener: Received new ICE candidate.", change.doc.data());
-                    const candidate = new RTCIceCandidate(change.doc.data());
-                    pc.current?.addIceCandidate(candidate).catch(e => console.error("Firestore listener: Error adding received ICE candidate.", e));
+                    // console.log("Firestore listener: Received new ICE candidate.", change.doc.data());
+                    try {
+                        const candidate = new RTCIceCandidate(change.doc.data());
+                        pc.current?.addIceCandidate(candidate).catch(e => console.error("Firestore listener: Error adding received ICE candidate.", e));
+                    } catch (e) {
+                        console.warn("Invalid ICE candidate received");
+                    }
                 }
             });
         }));
@@ -150,9 +160,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
         pc.current.onicecandidate = event => {
             if (event.candidate) {
-                console.log("New ICE candidate found, sending to Firestore.", event.candidate);
+                // console.log("New ICE candidate found, sending to Firestore.", event.candidate);
                 const candidatesCollection = collection(db, 'calls', callId, isCaller ? 'callerCandidates' : 'receiverCandidates');
-                addDoc(candidatesCollection, event.candidate.toJSON());
+                // Sanitize candidate before sending to avoid circular reference errors in logging or transmission
+                const candidateJSON = event.candidate.toJSON();
+                addDoc(candidatesCollection, candidateJSON);
             }
         };
     

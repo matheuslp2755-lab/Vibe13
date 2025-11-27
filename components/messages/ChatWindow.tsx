@@ -499,6 +499,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const sendAudioMessage = async (audioBlob: Blob) => {
         if (!currentUser || !conversationId || !otherUser) return;
         
+        // Ensure blob has content
+        if (audioBlob.size === 0) {
+            console.error("Audio blob is empty");
+            setUploadError(t('messages.recordingError'));
+            return;
+        }
+
         setIsUploading(true);
         setUploadError('');
       
@@ -605,7 +612,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             audioChunksRef.current = [];
 
             mediaRecorderRef.current.ondataavailable = (event) => {
-                audioChunksRef.current.push(event.data);
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
             };
 
             mediaRecorderRef.current.onstop = () => {
@@ -614,7 +623,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 stream.getTracks().forEach(track => track.stop()); // Stop microphone
             };
 
-            mediaRecorderRef.current.start();
+            // Using a timeslice of 1000ms ensures dataavailable fires periodically
+            // This is safer for ensuring we actually capture data on some browsers
+            mediaRecorderRef.current.start(1000);
             setIsRecording(true);
             recordingTimerRef.current = window.setInterval(() => {
                 setRecordingTime(prev => prev + 1);

@@ -51,19 +51,27 @@ const CallUI: React.FC = () => {
 
         // Handle Audio Streams (for both voice and video calls, though video tag handles audio too if present)
         if (localStream && localAudioRef.current && !activeCall.isVideo) {
-            localAudioRef.current.srcObject = localStream;
+            if (localAudioRef.current.srcObject !== localStream) {
+                localAudioRef.current.srcObject = localStream;
+            }
         }
         if (remoteStream && remoteAudioRef.current && !activeCall.isVideo) {
-            remoteAudioRef.current.srcObject = remoteStream;
+            if (remoteAudioRef.current.srcObject !== remoteStream) {
+                remoteAudioRef.current.srcObject = remoteStream;
+            }
         }
 
         // Handle Video Streams
         if (activeCall.isVideo) {
             if (localStream && localVideoRef.current) {
-                localVideoRef.current.srcObject = localStream;
+                if (localVideoRef.current.srcObject !== localStream) {
+                    localVideoRef.current.srcObject = localStream;
+                }
             }
             if (remoteStream && remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStream;
+                if (remoteVideoRef.current.srcObject !== remoteStream) {
+                    remoteVideoRef.current.srcObject = remoteStream;
+                }
             }
         }
     }, [localStream, remoteStream, activeCall]);
