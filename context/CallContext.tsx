@@ -137,7 +137,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     // console.log("Firestore listener: Received new ICE candidate.", change.doc.data());
                     try {
                         const candidate = new RTCIceCandidate(change.doc.data());
-                        pc.current?.addIceCandidate(candidate).catch(e => console.error("Firestore listener: Error adding received ICE candidate.", e));
+                        pc.current?.addIceCandidate(candidate).catch(e => console.error("Firestore listener: Error adding received ICE candidate.", e instanceof Error ? e.message : String(e)));
                     } catch (e) {
                         console.warn("Invalid ICE candidate received");
                     }

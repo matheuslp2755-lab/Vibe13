@@ -64,7 +64,8 @@ const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
             }
             img.referrerPolicy = "no-referrer";
             img.onload = () => resolve(img);
-            img.onerror = (e) => reject(e);
+            // Reject with a generic Error to prevent circular reference errors when logging the Event object
+            img.onerror = () => reject(new Error(`Failed to load image from ${src}`));
             img.src = src;
         });
     };
@@ -79,15 +80,15 @@ const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
         return await createImg(objectUrl, false);
-    } catch (e) {
-        console.warn("[ImageLoader] Strategy 1 (Fetch Blob) failed:", e);
+    } catch (e: any) {
+        console.warn("[ImageLoader] Strategy 1 (Fetch Blob) failed:", e.message || e);
     }
 
     // Strategy 2: Direct Image Tag with crossOrigin (Standard CORS load)
     try {
         return await createImg(safeUrl, true);
-    } catch (e) {
-        console.warn("[ImageLoader] Strategy 2 (CORS Image) failed:", e);
+    } catch (e: any) {
+        console.warn("[ImageLoader] Strategy 2 (CORS Image) failed:", e.message || e);
     }
 
     // Strategy 3: Direct Image Tag WITHOUT crossOrigin (Fallback)
