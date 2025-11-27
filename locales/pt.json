@@ -1,3 +1,4 @@
+
 {
   "common": {
     "online": "Online",
@@ -300,6 +301,7 @@
     "call": "Ligar",
     "calling": "Ligando para {username}...",
     "incomingCall": "Chamada de {username}",
+    "incomingVideoCall": "Chamada de vídeo de {username}",
     "answer": "Atender",
     "decline": "Recusar",
     "hangUp": "Desligar",

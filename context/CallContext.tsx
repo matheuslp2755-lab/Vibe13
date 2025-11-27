@@ -26,13 +26,14 @@ interface ActiveCall {
     caller: UserInfo;
     receiver: UserInfo;
     status: CallStatus;
+    isVideo: boolean;
 }
 
 interface CallContextType {
     activeCall: ActiveCall | null;
     localStream: MediaStream | null;
     remoteStream: MediaStream | null;
-    startCall: (receiver: UserInfo) => Promise<void>;
+    startCall: (receiver: UserInfo, isVideo?: boolean) => Promise<void>;
     answerCall: () => Promise<void>;
     hangUp: (isCleanupOnly?: boolean) => Promise<void>;
     declineCall: () => Promise<void>;
@@ -176,9 +177,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     };
 
-    const startCall = async (receiver: UserInfo) => {
+    const startCall = async (receiver: UserInfo, isVideo: boolean = false) => {
         const currentUser = auth.currentUser;
-        console.log("startCall: Initiating call to", receiver.id, "from user:", currentUser?.uid);
+        console.log("startCall: Initiating call to", receiver.id, "from user:", currentUser?.uid, "Video:", isVideo);
         if (!currentUser || activeCallRef.current) {
             console.error("startCall: Aborted. Pre-conditions not met.", { hasUser: !!currentUser, hasActiveCall: !!activeCallRef.current });
             return;
@@ -186,9 +187,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(null);
         
         try {
-            console.log("startCall: Requesting microphone access...");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("startCall: Microphone access granted.");
+            console.log("startCall: Requesting media access...");
+            const constraints = isVideo 
+                ? { audio: true, video: { facingMode: 'user' } } 
+                : { audio: true };
+            
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log("startCall: Media access granted.");
             setLocalStream(stream);
             
             const callDocRef = await addDoc(collection(db, 'calls'), {
@@ -199,6 +204,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 receiverUsername: receiver.username,
                 receiverAvatar: receiver.avatar,
                 status: 'ringing',
+                type: isVideo ? 'video' : 'audio'
             });
             const callId = callDocRef.id;
             console.log("startCall: Created call document in Firestore with ID:", callId);
@@ -224,7 +230,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 app_id: "d0307e8d-3a9b-4e71-b414-ebc34e40ff4f",
                                 include_player_ids: [recipientData.oneSignalPlayerId],
                                 headings: { "pt": "Vibe", "en": "Vibe" },
-                                contents: { "pt": `Chamada de ${currentUser.displayName}`, "en": `Call from ${currentUser.displayName}` },
+                                contents: { "pt": `Chamada de ${currentUser.displayName}`, "en": `Incoming call from ${currentUser.displayName}` },
                                 data: { callId: callId }
                             };
     
@@ -261,12 +267,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 callId,
                 caller: { id: currentUser.uid, username: currentUser.displayName || '', avatar: currentUser.photoURL || '' },
                 receiver,
-                status: 'ringing-outgoing'
+                status: 'ringing-outgoing',
+                isVideo
             });
         } catch (err) {
             console.error("startCall: Error during call initiation.", err);
             resetCallState();
-            setError("call.noMicrophone");
+            setError("call.noMicrophone"); // Using generic error key, but logic handles media permission
         }
     };
     
@@ -276,6 +283,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             caller: { id: callData.callerId, username: callData.callerUsername, avatar: callData.callerAvatar },
             receiver: { id: callData.receiverId, username: callData.receiverUsername, avatar: callData.receiverAvatar },
             status: 'ringing-incoming',
+            isVideo: callData.type === 'video'
         });
     };
 
@@ -296,10 +304,15 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (!callDocSnap.exists()) throw new Error("Call document not found.");
             
             const callData = callDocSnap.data();
+            const isVideo = callData.type === 'video';
 
-            console.log("answerCall: Requesting microphone access...");
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("answerCall: Microphone access granted.");
+            console.log("answerCall: Requesting media access... Video:", isVideo);
+            const constraints = isVideo 
+                ? { audio: true, video: { facingMode: 'user' } } 
+                : { audio: true };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log("answerCall: Media access granted.");
             setLocalStream(stream);
 
             setupPeerConnection(stream, callId, false);
@@ -317,7 +330,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await updateDoc(callDocRef, { answer: { sdp: answerDescription.sdp, type: answerDescription.type }, status: 'connected' });
             console.log("answerCall: Answer sent to Firestore.");
             
-            setActiveCall(prev => prev ? ({ ...prev, status: 'connected' }) : null);
+            setActiveCall(prev => prev ? ({ ...prev, status: 'connected', isVideo }) : null);
 
         } catch (err) {
             console.error("answerCall: Error during call answering.", err);

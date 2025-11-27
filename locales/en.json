@@ -1,3 +1,4 @@
+
 {
   "common": {
     "online": "Online",
@@ -295,6 +296,7 @@
     "call": "Call",
     "calling": "Calling {username}...",
     "incomingCall": "Incoming call from {username}",
+    "incomingVideoCall": "Incoming video call from {username}",
     "answer": "Answer",
     "decline": "Decline",
     "hangUp": "Hang Up",

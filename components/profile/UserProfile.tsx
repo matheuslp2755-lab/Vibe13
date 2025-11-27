@@ -489,7 +489,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     <CallIcon className="w-5 h-5" />
                  </Button>
                  <Button 
-                     disabled // Video call not implemented
+                     onClick={() => {
+                        if (user) {
+                           startCall({ id: userId, username: user.username, avatar: user.avatar }, true);
+                        }
+                    }} 
+                     disabled={!!activeCall}
                      className="!w-auto !px-2 !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white hover:!bg-zinc-300 dark:hover:!bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
                      title={t('call.videoCall')}
                  >

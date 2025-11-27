@@ -927,7 +927,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     {isCallDropdownOpen && (
                         <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
                             <button 
-                                disabled // Video call not implemented
+                                onClick={() => {
+                                    if (otherUser) {
+                                        startCall(otherUser, true);
+                                    }
+                                    setIsCallDropdownOpen(false);
+                                }}
                                 className="w-full flex items-center gap-3 text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <VideoIcon className="w-5 h-5" />
