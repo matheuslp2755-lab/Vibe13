@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc, storage, storageRef, deleteObject, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, getDocs, limit, writeBatch, getDoc, setDoc } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
@@ -154,7 +155,7 @@ const ForwardPostModal: React.FC<ForwardPostModalProps> = ({ isOpen, onClose, po
                  // Send Push Notification
                 const sendPushNotification = async () => {
                     try {
-                        const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                        const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
                         if (!ONESIGNAL_REST_API_KEY) {
                             console.warn("OneSignal REST API Key is not set. Skipping push notification.");
                             return;

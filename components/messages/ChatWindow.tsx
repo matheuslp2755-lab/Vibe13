@@ -555,7 +555,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     try {
                         if (!otherUser || !currentUser) return;
         
-                        const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                        const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
                         if (!ONESIGNAL_REST_API_KEY) {
                             console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
                             return;
@@ -608,7 +608,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         try {
             console.log("Requesting microphone permission for voice message.");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
+            
+            // Check supported mime types
+            const options = MediaRecorder.isTypeSupported('audio/webm') 
+                ? { mimeType: 'audio/webm' } 
+                : (MediaRecorder.isTypeSupported('audio/mp4') ? { mimeType: 'audio/mp4' } : undefined);
+
+            mediaRecorderRef.current = new MediaRecorder(stream, options);
             audioChunksRef.current = [];
 
             mediaRecorderRef.current.ondataavailable = (event) => {
@@ -618,14 +624,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             };
 
             mediaRecorderRef.current.onstop = () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                sendAudioMessage(audioBlob);
+                // Determine mimeType for the blob
+                const blobType = mediaRecorderRef.current?.mimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+                
+                if (audioBlob.size > 0) {
+                    sendAudioMessage(audioBlob);
+                } else {
+                    console.error("Recorded audio blob is empty");
+                    setUploadError(t('messages.recordingError'));
+                }
+                
                 stream.getTracks().forEach(track => track.stop()); // Stop microphone
             };
 
-            // Using a timeslice of 1000ms ensures dataavailable fires periodically
-            // This is safer for ensuring we actually capture data on some browsers
-            mediaRecorderRef.current.start(1000);
+            // Using a smaller timeslice (100ms) to ensure data is captured even for short recordings
+            mediaRecorderRef.current.start(100);
             setIsRecording(true);
             recordingTimerRef.current = window.setInterval(() => {
                 setRecordingTime(prev => prev + 1);
@@ -755,7 +769,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 try {
                     if (!otherUser || !currentUser) return;
     
-                    const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                    const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
                     if (!ONESIGNAL_REST_API_KEY) {
                         console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
                         return;

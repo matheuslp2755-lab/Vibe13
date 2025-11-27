@@ -330,7 +330,7 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
                  // Send Push Notification
                 const sendPushNotification = async () => {
                     try {
-                        const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                        const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
                         if (!ONESIGNAL_REST_API_KEY) {
                             console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
                             return;

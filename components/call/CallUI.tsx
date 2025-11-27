@@ -107,6 +107,7 @@ const CallUI: React.FC = () => {
                     autoPlay 
                     playsInline 
                     className="w-full h-full object-cover"
+                    key={remoteStream ? remoteStream.id : 'remote-waiting'}
                 />
                 
                 {/* Controls Overlay */}
@@ -137,6 +138,7 @@ const CallUI: React.FC = () => {
                         playsInline 
                         className="w-full h-full object-cover mirrored"
                         style={{ transform: 'scaleX(-1)' }}
+                        key={localStream ? localStream.id : 'local-waiting'}
                     />
                 </div>
             </div>

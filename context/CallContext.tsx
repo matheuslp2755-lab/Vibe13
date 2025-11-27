@@ -226,7 +226,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 try {
                     if (!receiver || !currentUser) return;
                     
-                    const ONESIGNAL_REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY;
+                    const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
                     if (!ONESIGNAL_REST_API_KEY) {
                         console.warn("OneSignal REST API Key is not set. Skipping call push notification.");
                         return;
