@@ -44,8 +44,15 @@ const Login: React.FC<LoginProps> = ({ onSwitchMode }) => {
       await signInWithEmailAndPassword(auth, email, password);
       // Auth state change will be handled by App.tsx
     } catch (err: any) {
-      setError(t('login.error'));
-      console.error(err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError(t('login.error'));
+        console.warn("Login attempt failed: Invalid credentials.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Muitas tentativas falhas. Tente novamente mais tarde.");
+      } else {
+        setError(t('login.error'));
+        console.error("Login Error:", err);
+      }
     } finally {
       setLoading(false);
     }

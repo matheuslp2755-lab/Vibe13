@@ -81,14 +81,15 @@ const loadImageSafe = async (url: string): Promise<HTMLImageElement | null> => {
         const objectUrl = URL.createObjectURL(blob);
         return await createImg(objectUrl, false);
     } catch (e: any) {
-        console.warn("[ImageLoader] Strategy 1 (Fetch Blob) failed:", e.message || e);
+        // Log stringified error to prevent circular JSON error in WebViews
+        console.warn("[ImageLoader] Strategy 1 (Fetch Blob) failed:", e.message || String(e));
     }
 
     // Strategy 2: Direct Image Tag with crossOrigin (Standard CORS load)
     try {
         return await createImg(safeUrl, true);
     } catch (e: any) {
-        console.warn("[ImageLoader] Strategy 2 (CORS Image) failed:", e.message || e);
+        console.warn("[ImageLoader] Strategy 2 (CORS Image) failed:", e.message || String(e));
     }
 
     // Strategy 3: Direct Image Tag WITHOUT crossOrigin (Fallback)
@@ -206,9 +207,9 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                         if (img && !safeMode) {
                             try {
                                 ctx.drawImage(img, x, y, avatarSize, avatarSize);
-                            } catch (e) {
+                            } catch (e: any) {
                                 // If drawing fails (e.g. broken image), draw fallback
-                                console.warn("Failed to draw image on canvas", e);
+                                console.warn("Failed to draw image on canvas", e.message || String(e));
                                 drawFallback(x, y);
                             }
                         } else {
@@ -266,16 +267,16 @@ const ConnectionStreakShareModal: React.FC<ConnectionStreakShareModalProps> = ({
                 try {
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                     setGeneratedImage(dataUrl);
-                } catch (securityError) {
-                    console.warn("Canvas tainted (probably due to Strategy 3 image load). Redrawing with placeholders.", securityError);
+                } catch (securityError: any) {
+                    console.warn("Canvas tainted (probably due to Strategy 3 image load). Redrawing with placeholders.", securityError.message || String(securityError));
                     drawCanvas(true); // Redraw without external images (Safe Mode)
                     setGeneratedImage(canvas.toDataURL('image/jpeg', 0.9));
                 }
                 
                 setIsGenerating(false);
 
-            } catch (e) {
-                console.error("Fatal generation error:", e);
+            } catch (e: any) {
+                console.error("Fatal generation error:", e.message || String(e));
                 setError(t('crystal.imageLoadError'));
                 setIsGenerating(false);
             }

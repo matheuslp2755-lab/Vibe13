@@ -193,7 +193,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const currentUser = auth.currentUser;
         console.log("startCall: Initiating call to", receiver.id, "from user:", currentUser?.uid, "Video:", isVideo);
         if (!currentUser || activeCallRef.current) {
-            console.error("startCall: Aborted. Pre-conditions not met.", { hasUser: !!currentUser, hasActiveCall: !!activeCallRef.current });
+            console.error("startCall: Aborted. Pre-conditions not met.");
             return;
         }
         setError(null);
@@ -258,7 +258,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     }
                 } catch (error) {
-                    console.error("Error sending call push notification:", error);
+                    console.error("Error sending call push notification:", String(error));
                 }
             };
             sendPushNotification();
@@ -282,8 +282,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 status: 'ringing-outgoing',
                 isVideo
             });
-        } catch (err) {
-            console.error("startCall: Error during call initiation.", err);
+        } catch (err: any) {
+            console.error("startCall: Error during call initiation.", err.message || String(err));
             resetCallState();
             setError("call.noMicrophone"); // Using generic error key, but logic handles media permission
         }
@@ -304,7 +304,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const call = activeCallRef.current;
         console.log("answerCall: Answering call...", call?.callId);
         if (!currentUser || !call || call.status !== 'ringing-incoming') {
-            console.error("answerCall: Aborted. Pre-conditions not met.", { hasUser: !!currentUser, call });
+            console.error("answerCall: Aborted. Pre-conditions not met.");
             return;
         }
         setError(null);
@@ -344,8 +344,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             setActiveCall(prev => prev ? ({ ...prev, status: 'connected', isVideo }) : null);
 
-        } catch (err) {
-            console.error("answerCall: Error during call answering.", err);
+        } catch (err: any) {
+            console.error("answerCall: Error during call answering.", err.message || String(err));
             resetCallState();
             setError("call.callError");
         }

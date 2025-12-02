@@ -513,7 +513,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         const messagesRef = collection(conversationRef, 'messages');
       
         try {
-            const uploadRef = storageRef(storage, `chat_audio/${conversationId}/${Date.now()}.webm`);
+            // Determine correct extension based on MIME type
+            const extension = audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
+            const uploadRef = storageRef(storage, `chat_audio/${conversationId}/${Date.now()}.${extension}`);
+            
             await uploadBytes(uploadRef, audioBlob);
             const audioUrl = await getDownloadURL(uploadRef);
     
@@ -609,10 +612,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             console.log("Requesting microphone permission for voice message.");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Check supported mime types
-            const options = MediaRecorder.isTypeSupported('audio/webm') 
-                ? { mimeType: 'audio/webm' } 
-                : (MediaRecorder.isTypeSupported('audio/mp4') ? { mimeType: 'audio/mp4' } : undefined);
+            // Check supported mime types and configure MediaRecorder
+            let options;
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                options = { mimeType: 'audio/webm;codecs=opus' };
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                options = { mimeType: 'audio/webm' };
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                options = { mimeType: 'audio/mp4' };
+            }
 
             mediaRecorderRef.current = new MediaRecorder(stream, options);
             audioChunksRef.current = [];
@@ -638,8 +646,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 stream.getTracks().forEach(track => track.stop()); // Stop microphone
             };
 
-            // Using a smaller timeslice (100ms) to ensure data is captured even for short recordings
-            mediaRecorderRef.current.start(100);
+            // Remove timeslice to force browser to dump all data at once on stop.
+            // This is more robust for short recordings on mobile devices.
+            mediaRecorderRef.current.start();
             setIsRecording(true);
             recordingTimerRef.current = window.setInterval(() => {
                 setRecordingTime(prev => prev + 1);

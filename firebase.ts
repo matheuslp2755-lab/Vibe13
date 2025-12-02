@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -53,7 +52,7 @@ export {
   where,
   getDocs, 
   limit,
-  doc,
+  doc, 
   setDoc, 
   deleteDoc, 
   serverTimestamp,
