@@ -11,38 +11,45 @@ import WelcomeAnimation from './components/feed/WelcomeAnimation';
 import Toast from './components/common/Toast';
 import CallUI from './components/call/CallUI';
 
-const EmojiBackground = () => (
-  <>
+const GalaxyBackground = () => (
+  <div className="fixed inset-0 z-0 bg-black overflow-hidden pointer-events-none">
+    {/* Gradient Background */}
+    <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-black to-slate-950 opacity-100"></div>
+    
+    {/* Nebula Effects */}
+    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/30 rounded-full blur-[120px] animate-pulse"></div>
+    <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-900/30 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+    
+    {/* Stars via CSS */}
     <style>{`
-      @keyframes animate-scroll {
-        0% {
-          transform: translateY(0);
+        .star-field {
+            background-image: 
+                radial-gradient(1px 1px at 25px 5px, white, transparent),
+                radial-gradient(1px 1px at 50px 25px, white, transparent),
+                radial-gradient(1px 1px at 12px 45px, white, transparent),
+                radial-gradient(1.5px 1.5px at 80px 10px, white, transparent),
+                radial-gradient(1px 1px at 60px 70px, white, transparent);
+            background-size: 150px 150px;
+            opacity: 0.6;
+            animation: star-move 60s linear infinite;
         }
-        100% {
-          transform: translateY(-50%);
+        .star-field-2 {
+            background-image: 
+                radial-gradient(1.5px 1.5px at 15px 15px, white, transparent),
+                radial-gradient(1px 1px at 85px 35px, white, transparent),
+                radial-gradient(1.5px 1.5px at 45px 85px, white, transparent);
+            background-size: 200px 200px;
+            opacity: 0.4;
+            animation: star-move 100s linear infinite reverse;
         }
-      }
-      .emoji-background::before {
-        content: '${'😂😍🎉👍❤️😊😎🥰😜'.repeat(200)}';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 200%;
-        font-size: 2rem;
-        line-height: 1.2;
-        z-index: 0;
-        opacity: 0.05;
-        animation: animate-scroll 240s linear infinite;
-        word-break: break-all;
-        color: black;
-      }
-      .dark .emoji-background::before {
-        color: white;
-      }
+        @keyframes star-move {
+            from { transform: translateY(0); }
+            to { transform: translateY(-500px); }
+        }
     `}</style>
-    <div className="emoji-background" aria-hidden="true"></div>
-  </>
+    <div className="absolute inset-0 star-field"></div>
+    <div className="absolute inset-0 star-field-2"></div>
+  </div>
 );
 
 const AppContent: React.FC = () => {
@@ -172,8 +179,8 @@ const AppContent: React.FC = () => {
 
     if (!user) {
       return (
-        <div className="bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col relative overflow-hidden">
-          <EmojiBackground />
+        <div className="font-sans text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col relative overflow-hidden">
+          <GalaxyBackground />
           <main className="flex-grow flex items-center justify-center py-10 px-4 z-10">
             {authPage === 'login' ? (
               <Login onSwitchMode={() => switchAuthPage('signup')} />
