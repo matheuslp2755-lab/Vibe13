@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, db, setDoc, doc, storage, storageRef, uploadBytes, getDownloadURL, serverTimestamp } from '../firebase';
@@ -66,7 +67,6 @@ const SignUp: React.FC<SignUpProps> = ({ onSwitchMode }) => {
         lastSeen: serverTimestamp(),
         language: 'pt-BR',
         isAnonymous: false,
-        oneSignalPlayerId: null,
       });
 
       // Auth state change will be handled by App.tsx

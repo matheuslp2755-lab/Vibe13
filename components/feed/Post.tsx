@@ -152,46 +152,6 @@ const ForwardPostModal: React.FC<ForwardPostModalProps> = ({ isOpen, onClose, po
                     timestamp: serverTimestamp(),
                 });
 
-                 // Send Push Notification
-                const sendPushNotification = async () => {
-                    try {
-                        const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
-                        if (!ONESIGNAL_REST_API_KEY) {
-                            console.warn("OneSignal REST API Key is not set. Skipping push notification.");
-                            return;
-                        }
-                        const recipientDocRef = doc(db, 'users', recipientId);
-                        const recipientDoc = await getDoc(recipientDocRef);
-                        
-                        if (recipientDoc.exists()) {
-                            const recipientData = recipientDoc.data();
-                            if (recipientData.oneSignalPlayerId) {
-                                const content = `↪️ Encaminhou uma publicação`;
-                                const contentEn = `↪️ Forwarded a post`;
-                                const message = {
-                                    app_id: "d0307e8d-3a9b-4e71-b414-ebc34e40ff4f",
-                                    include_player_ids: [recipientData.oneSignalPlayerId],
-                                    headings: { "pt": currentUser.displayName, "en": currentUser.displayName },
-                                    contents: { "pt": content, "en": contentEn },
-                                    data: { conversationId: conversationId }
-                                };
-        
-                                await fetch('https://onesignal.com/api/v1/notifications', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json; charset=utf-8',
-                                        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
-                                    },
-                                    body: JSON.stringify(message),
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error sending forwarded post push notification:", error);
-                    }
-                };
-                sendPushNotification();
-
             } catch (error) {
                 console.error(`Failed to send post to ${recipient.username}:`, error);
             }

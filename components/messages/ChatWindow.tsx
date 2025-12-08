@@ -25,6 +25,8 @@ import ConnectionCrystal from './ConnectionCrystal';
 import OnlineIndicator from '../common/OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
+import AddToMemoryModal from '../post/AddToMemoryModal';
+import CreateMemoryModal from '../profile/CreateMemoryModal';
 
 interface ForwardedPostProps {
   content: {
@@ -210,18 +212,28 @@ const XIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
+const MicrophoneIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    </svg>
+);
+
+const StopIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+);
+
+const SendIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+    </svg>
+);
+
 const Spinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-);
-
-const MicrophoneIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19v3" />
     </svg>
 );
   
@@ -268,10 +280,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState('');
     const [viewingMedia, setViewingMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingTime, setRecordingTime] = useState(0);
     const { startCall, activeCall } = useCall();
     const [isCallDropdownOpen, setIsCallDropdownOpen] = useState(false);
+    
+    // Audio Recording States
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<any>(null);
+    const [recordedAudioMimeType, setRecordedAudioMimeType] = useState<string>('');
+
+    // Memory Modal States
+    const [isAddToMemoryOpen, setIsAddToMemoryOpen] = useState(false);
+    const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
+    const [contentForMemory, setContentForMemory] = useState<any>(null);
 
     type AnimationState = 'idle' | 'forming' | 'settling';
     const [animationState, setAnimationState] = useState<AnimationState>('idle');
@@ -286,9 +309,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const unsubUserStatusRef = useRef<(() => void) | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
-    const recordingTimerRef = useRef<number | null>(null);
     const callDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -361,7 +381,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 const otherUserId = data.participants.find((p: string) => p !== currentUser.uid);
                 
                 if(otherUserId) {
-                    // Initialize from conversation data first to show something immediately
                     const otherUserInfo = data.participantInfo[otherUserId];
                     if (otherUserInfo && !otherUser) {
                         setOtherUser({
@@ -371,7 +390,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         });
                     }
 
-                    // Setup real-time listener for user profile
                     if (!unsubUserStatusRef.current) {
                         const userDocRef = doc(db, 'users', otherUserId);
                         unsubUserStatusRef.current = onSnapshot(userDocRef, (userSnap) => {
@@ -382,7 +400,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 const isOnline = !isAnonymous && lastSeen && (new Date().getTime() / 1000 - lastSeen.seconds) < 600;
                                 setIsOtherUserOnline(isOnline);
                                 
-                                // Update otherUser with fresh data from user document
                                 setOtherUser({ 
                                     id: otherUserId,
                                     username: userData.username,
@@ -496,177 +513,142 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         reader.readAsDataURL(file);
     };
 
-    const sendAudioMessage = async (audioBlob: Blob) => {
-        if (!currentUser || !conversationId || !otherUser) return;
-        
-        // Ensure blob has content
-        if (audioBlob.size === 0) {
-            console.error("Audio blob is empty");
-            setUploadError(t('messages.recordingError'));
-            return;
-        }
-
-        setIsUploading(true);
-        setUploadError('');
-      
-        const conversationRef = doc(db, 'conversations', conversationId);
-        const messagesRef = collection(conversationRef, 'messages');
-      
-        try {
-            // Determine correct extension based on MIME type
-            const extension = audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
-            const uploadRef = storageRef(storage, `chat_audio/${conversationId}/${Date.now()}.${extension}`);
-            
-            await uploadBytes(uploadRef, audioBlob);
-            const audioUrl = await getDownloadURL(uploadRef);
-    
-            const messageData: any = {
-                senderId: currentUser.uid,
-                text: '',
-                timestamp: serverTimestamp(),
-                mediaUrl: audioUrl,
-                mediaType: 'audio',
-            };
-    
-            const conversationSnap = await getDoc(conversationRef);
-            const currentData = conversationSnap.data();
-            let newStreak = currentData?.crystal?.streak || 1;
-    
-            const lastMessageUpdate: any = {
-                text: '',
-                senderId: currentUser.uid,
-                timestamp: serverTimestamp(),
-                mediaType: 'audio',
-            };
-    
-            const batch = writeBatch(db);
-            const newMessageRef = doc(messagesRef);
-            batch.set(newMessageRef, messageData);
-            batch.update(conversationRef, { 
-                lastMessage: lastMessageUpdate, 
-                timestamp: serverTimestamp(),
-                'crystal.lastInteractionAt': serverTimestamp(),
-                'crystal.level': 'BRILHANTE',
-                'crystal.streak': newStreak
-            });
-
-            await batch.commit();
-
-            // Send Push Notification
-            if (conversationId) {
-                const sendPushNotification = async () => {
-                    try {
-                        if (!otherUser || !currentUser) return;
-        
-                        const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
-                        if (!ONESIGNAL_REST_API_KEY) {
-                            console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
-                            return;
-                        }
-        
-                        const recipientDocRef = doc(db, 'users', otherUser.id);
-                        const recipientDoc = await getDoc(recipientDocRef);
-                        
-                        if (recipientDoc.exists()) {
-                            const recipientData = recipientDoc.data();
-                            if (recipientData.oneSignalPlayerId) {
-                                const content = `🎤 Mensagem de voz`;
-                                const contentEn = `🎤 Voice message`;
-        
-                                const message = {
-                                    app_id: "d0307e8d-3a9b-4e71-b414-ebc34e40ff4f",
-                                    include_player_ids: [recipientData.oneSignalPlayerId],
-                                    headings: { "pt": currentUser.displayName, "en": currentUser.displayName },
-                                    contents: { "pt": content, "en": contentEn },
-                                    data: { conversationId: conversationId }
-                                };
-        
-                                await fetch('https://onesignal.com/api/v1/notifications', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json; charset=utf-8',
-                                        'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
-                                    },
-                                    body: JSON.stringify(message),
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error sending audio push notification:", error);
-                    }
-                };
-                sendPushNotification();
-            }
-
-        } catch (error) {
-            console.error("Error sending audio message:", error);
-            setUploadError(t('messages.media.uploadError'));
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
     const handleStartRecording = async () => {
-        if (isRecording) return;
         try {
-            console.log("Requesting microphone permission for voice message.");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Check supported mime types and configure MediaRecorder
-            let options;
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                options = { mimeType: 'audio/webm;codecs=opus' };
-            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                options = { mimeType: 'audio/webm' };
-            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                options = { mimeType: 'audio/mp4' };
+            let mimeType = 'audio/webm;codecs=opus';
+            if (typeof MediaRecorder === 'undefined') {
+                 console.error("MediaRecorder not supported");
+                 setUploadError(t('messages.recordingError'));
+                 return;
             }
 
-            mediaRecorderRef.current = new MediaRecorder(stream, options);
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'audio/mp4'; // Safari
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'audio/ogg'; // Older
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = ''; // Default
+                    }
+                }
+            }
+
+            const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+            mediaRecorderRef.current = mediaRecorder;
+            setRecordedAudioMimeType(mediaRecorder.mimeType);
             audioChunksRef.current = [];
 
-            mediaRecorderRef.current.ondataavailable = (event) => {
+            mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
                 }
             };
 
-            mediaRecorderRef.current.onstop = () => {
-                // Determine mimeType for the blob
-                const blobType = mediaRecorderRef.current?.mimeType || 'audio/webm';
-                const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
-                
-                if (audioBlob.size > 0) {
-                    sendAudioMessage(audioBlob);
-                } else {
-                    console.error("Recorded audio blob is empty");
-                    setUploadError(t('messages.recordingError'));
-                }
-                
-                stream.getTracks().forEach(track => track.stop()); // Stop microphone
-            };
-
-            // Remove timeslice to force browser to dump all data at once on stop.
-            // This is more robust for short recordings on mobile devices.
-            mediaRecorderRef.current.start();
+            mediaRecorder.start(); 
             setIsRecording(true);
-            recordingTimerRef.current = window.setInterval(() => {
+            setRecordingTime(0);
+
+            recordingTimerRef.current = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
+
         } catch (error) {
-            console.error("Error starting recording:", error);
+            console.error("Error accessing microphone:", error);
             setUploadError(t('messages.recordingError'));
         }
     };
 
     const handleStopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.onstop = () => {
+                const mimeType = mediaRecorderRef.current?.mimeType || recordedAudioMimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                if (audioBlob.size > 0) {
+                    sendAudioMessage(audioBlob, mimeType);
+                }
+            };
             mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            
             if (recordingTimerRef.current) {
                 clearInterval(recordingTimerRef.current);
             }
             setIsRecording(false);
             setRecordingTime(0);
+        }
+    };
+
+    const handleCancelRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            
+            if (recordingTimerRef.current) {
+                clearInterval(recordingTimerRef.current);
+            }
+            setIsRecording(false);
+            setRecordingTime(0);
+            audioChunksRef.current = [];
+        }
+    };
+
+    const sendAudioMessage = async (audioBlob: Blob, mimeType: string) => {
+        if (!currentUser || !conversationId) return;
+        setIsUploading(true);
+
+        try {
+            // Determine extension based on MIME type
+            let extension = 'webm';
+            if (mimeType.includes('mp4') || mimeType.includes('aac')) {
+                extension = 'm4a'; // or 'mp4', but m4a is common for audio-only mp4 container
+            } else if (mimeType.includes('ogg')) {
+                extension = 'ogg';
+            }
+            
+            // Upload Audio to Conversation Folder
+            const fileName = `${Date.now()}.${extension}`;
+            const audioRef = storageRef(storage, `chat_media/${conversationId}/${fileName}`);
+            
+            // Add metadata for correct content type
+            const metadata = { contentType: mimeType };
+            await uploadBytes(audioRef, audioBlob, metadata);
+            const audioUrl = await getDownloadURL(audioRef);
+
+            // Send Message
+            const conversationRef = doc(db, 'conversations', conversationId);
+            const messagesRef = collection(conversationRef, 'messages');
+
+            const messageData: any = {
+                senderId: currentUser.uid,
+                text: '',
+                timestamp: serverTimestamp(),
+                mediaUrl: audioUrl,
+                mediaType: 'audio'
+            };
+
+            const batch = writeBatch(db);
+            const newMessageRef = doc(messagesRef);
+            batch.set(newMessageRef, messageData);
+            
+            // Update last message
+            batch.update(conversationRef, {
+                lastMessage: {
+                    text: '🎤 Áudio',
+                    senderId: currentUser.uid,
+                    timestamp: serverTimestamp(),
+                    mediaType: 'audio'
+                },
+                timestamp: serverTimestamp()
+            });
+
+            await batch.commit();
+
+        } catch (error) {
+            console.error("Error sending audio:", error);
+            setUploadError(t('messages.media.uploadError'));
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -772,60 +754,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             batch.update(conversationRef, { lastMessage: lastMessageUpdate, timestamp: serverTimestamp(), ...crystalUpdate });
 
             await batch.commit();
-
-            // Send Push Notification
-            const sendPushNotification = async () => {
-                try {
-                    if (!otherUser || !currentUser) return;
-    
-                    const ONESIGNAL_REST_API_KEY = "dxdjuk4bhu5k4pihzhhhnwk2l";
-                    if (!ONESIGNAL_REST_API_KEY) {
-                        console.warn("OneSignal REST API Key is not set. Skipping message push notification.");
-                        return;
-                    }
-    
-                    const recipientDocRef = doc(db, 'users', otherUser.id);
-                    const recipientDoc = await getDoc(recipientDocRef);
-                    
-                    if (recipientDoc.exists()) {
-                        const recipientData = recipientDoc.data();
-                        if (recipientData.oneSignalPlayerId) {
-                            let content = tempMessageText.trim();
-                            let contentEn = tempMessageText.trim();
-
-                            if (!content) {
-                                if (tempMediaType === 'image') {
-                                    content = `📷 Foto`;
-                                    contentEn = `📷 Photo`;
-                                } else if (tempMediaType === 'video') {
-                                    content = `📹 Vídeo`;
-                                    contentEn = `📹 Video`;
-                                }
-                            }
-    
-                            const message = {
-                                app_id: "d0307e8d-3a9b-4e71-b414-ebc34e40ff4f",
-                                include_player_ids: [recipientData.oneSignalPlayerId],
-                                headings: { "pt": currentUser.displayName, "en": currentUser.displayName },
-                                contents: { "pt": content, "en": contentEn },
-                                data: { conversationId: conversationId }
-                            };
-    
-                            await fetch('https://onesignal.com/api/v1/notifications', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json; charset=utf-8',
-                                    'Authorization': `Basic ${ONESIGNAL_REST_API_KEY}`,
-                                },
-                                body: JSON.stringify(message),
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error sending message push notification:", error);
-                }
-            };
-            sendPushNotification();
 
         } catch (error) {
             console.error("Error sending message:", error);
@@ -1091,19 +1019,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         </p>
                     </div>
                 )}
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    {isRecording ? (
-                        <div className="flex items-center justify-between w-full bg-zinc-100 dark:bg-zinc-900 rounded-full px-4 py-2">
-                            <div className="flex items-center gap-2 text-red-500">
-                                <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                                <span className="text-sm font-mono">{formatTime(recordingTime)}</span>
-                                <span className="text-sm hidden sm:inline">{t('messages.recording')}</span>
-                            </div>
-                            <button type="button" onClick={handleStopRecording} className="text-sky-500 font-semibold text-sm px-2">
-                                {t('messages.send')}
-                            </button>
+                {isRecording ? (
+                    <div className="flex items-center gap-4 w-full bg-zinc-100 dark:bg-zinc-900 rounded-full py-2 px-4 border border-red-500/50">
+                        <div className="flex items-center gap-2 text-red-500 flex-grow">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                            <span className="text-sm font-mono">{formatTime(recordingTime)}</span>
                         </div>
-                    ) : (
+                        <button onClick={handleCancelRecording} className="p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={handleStopRecording} className="p-2 bg-sky-500 text-white rounded-full hover:bg-sky-600">
+                            <SendIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                         <>
                              {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
                              <input 
@@ -1131,7 +1061,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 disabled={isUploading}
                                 className={`w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 py-2 pl-4 pr-4 text-sm focus:outline-none focus:border-sky-500 ${replyingTo || mediaPreview ? 'rounded-b-full rounded-t-none' : 'rounded-full'}`}
                             />
-                            { (newMessage.trim() || mediaFile) ? (
+                            {newMessage.trim() || mediaFile ? (
                                 <button 
                                     type="submit" 
                                     disabled={isUploading} 
@@ -1140,19 +1070,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                     {isUploading ? <Spinner /> : t('messages.send')}
                                 </button>
                             ) : (
-                                <button
+                                <button 
                                     type="button"
                                     onClick={handleStartRecording}
-                                    disabled={isUploading}
-                                    className="p-1 text-zinc-500 dark:text-zinc-400 hover:text-sky-500 dark:hover:text-sky-400 disabled:opacity-50"
-                                    aria-label="Record voice message"
+                                    className="p-1 text-zinc-500 dark:text-zinc-400 hover:text-red-500 dark:hover:text-red-400"
                                 >
-                                    <MicrophoneIcon className="w-7 h-7" />
+                                    <MicrophoneIcon className="w-6 h-6" />
                                 </button>
                             )}
                         </>
-                    )}
-                </form>
+                    </form>
+                )}
             </div>
             {showDeleteConfirm.open && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[60]"
@@ -1188,6 +1116,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         <button onClick={() => setViewingMedia(null)} className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 z-10">
                             <XIcon className="w-6 h-6" />
                         </button>
+                        {/* Add to Memory Button */}
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setContentForMemory({
+                                    id: `msg-${Date.now()}`, // Temporary ID for memory
+                                    type: viewingMedia.type === 'video' ? 'pulse' : 'image', // Mapping for CreateMemoryModal
+                                    mediaUrl: viewingMedia.url,
+                                    timestamp: serverTimestamp()
+                                });
+                                setIsAddToMemoryOpen(true);
+                            }}
+                            className="absolute top-4 right-16 text-white bg-black/50 rounded-full p-2 z-10 mr-2"
+                            title={t('post.addToMemory')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                        </button>
+
                         {viewingMedia.type === 'image' ? (
                             <img src={viewingMedia.url} alt={t('messages.media.viewMedia')} className="max-w-full max-h-full object-contain" />
                         ) : (
@@ -1196,6 +1144,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     </div>
                 </div>
             )}
+            {/* Memory Modals */}
+            {contentForMemory && (
+                <AddToMemoryModal
+                    isOpen={isAddToMemoryOpen}
+                    onClose={() => {
+                        setIsAddToMemoryOpen(false);
+                        // Do not clear contentForMemory here if opening CreateMemoryModal
+                    }}
+                    content={contentForMemory}
+                    onOpenCreate={(initialContent) => {
+                        setContentForMemory(initialContent); // Ensure content is passed
+                        setIsAddToMemoryOpen(false);
+                        setIsCreateMemoryOpen(true);
+                    }}
+                />
+            )}
+            <CreateMemoryModal
+                isOpen={isCreateMemoryOpen}
+                onClose={() => {
+                    setIsCreateMemoryOpen(false);
+                    setContentForMemory(null);
+                }}
+                onMemoryCreated={() => { /* Optional toast */ }}
+                initialContent={contentForMemory}
+            />
+
             {animationState !== 'idle' && (
                 <div className="absolute inset-0 bg-black bg-opacity-30 z-10 flex flex-col justify-center items-center pointer-events-none">
                     <div
