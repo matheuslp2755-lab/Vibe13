@@ -11,14 +11,14 @@ import WelcomeAnimation from './components/feed/WelcomeAnimation';
 import Toast from './components/common/Toast';
 import CallUI from './components/call/CallUI';
 
-const GalaxyBackground = () => (
+const GalaxyBackground = ({ variant = 'default' }: { variant?: 'default' | 'subtle' }) => (
   <div className="fixed inset-0 z-0 bg-black overflow-hidden pointer-events-none">
     {/* Gradient Background */}
     <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-black to-slate-950 opacity-100"></div>
     
-    {/* Nebula Effects */}
-    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/30 rounded-full blur-[120px] animate-pulse"></div>
-    <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-900/30 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+    {/* Nebula Effects - Reduced opacity if subtle */}
+    <div className={`absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/30 rounded-full blur-[120px] animate-pulse transition-opacity duration-1000 ${variant === 'subtle' ? 'opacity-20' : 'opacity-100'}`}></div>
+    <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-900/30 rounded-full blur-[120px] animate-pulse transition-opacity duration-1000 ${variant === 'subtle' ? 'opacity-20' : 'opacity-100'}`} style={{ animationDelay: '2s' }}></div>
     
     {/* Stars via CSS */}
     <style>{`
@@ -30,7 +30,7 @@ const GalaxyBackground = () => (
                 radial-gradient(1.5px 1.5px at 80px 10px, white, transparent),
                 radial-gradient(1px 1px at 60px 70px, white, transparent);
             background-size: 150px 150px;
-            opacity: 0.6;
+            opacity: ${variant === 'subtle' ? 0.3 : 0.6};
             animation: star-move 60s linear infinite;
         }
         .star-field-2 {
@@ -39,7 +39,7 @@ const GalaxyBackground = () => (
                 radial-gradient(1px 1px at 85px 35px, white, transparent),
                 radial-gradient(1.5px 1.5px at 45px 85px, white, transparent);
             background-size: 200px 200px;
-            opacity: 0.4;
+            opacity: ${variant === 'subtle' ? 0.2 : 0.4};
             animation: star-move 100s linear infinite reverse;
         }
         @keyframes star-move {
@@ -193,8 +193,12 @@ const AppContent: React.FC = () => {
     }
 
     return (
-      <div className="bg-zinc-50 dark:bg-black font-sans text-zinc-900 dark:text-zinc-100 min-h-screen">
-        <Feed />
+      <div className="font-sans text-zinc-900 dark:text-zinc-100 min-h-screen relative">
+        {/* Subtle Galaxy Background for authenticated feed */}
+        <GalaxyBackground variant="subtle" />
+        <div className="relative z-10">
+            <Feed />
+        </div>
       </div>
     );
   };

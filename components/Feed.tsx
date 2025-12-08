@@ -298,7 +298,7 @@ const Feed: React.FC = () => {
         onOpenCreatePulseModal={() => setIsCreatePulseModalOpen(true)}
         onOpenMessages={handleOpenMessages}
       />
-      <main className="pt-20 bg-zinc-50 dark:bg-black min-h-screen">
+      <main className="pt-20 min-h-screen">
         {viewingProfileId ? (
           <UserProfile 
             userId={viewingProfileId} 
