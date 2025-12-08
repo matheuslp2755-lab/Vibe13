@@ -121,7 +121,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [posts, setPosts] = useState<Post[]>([]);
     const [pulses, setPulses] = useState<Pulse[]>([]);
     const [memories, setMemories] = useState<Memory[]>([]);
-    const [stats, setStats] = useState({ posts: 0, followers: 0, following: 0 });
+    const [stats, setStats] = useState({ posts: 0, pulses: 0, followers: 0, following: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
     const [followRequestSent, setFollowRequestSent] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -172,7 +172,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
             combinedPostDocs.forEach(doc => postsMap.set(doc.id, { id: doc.id, ...doc.data() } as Post));
             const allUserPosts = Array.from(postsMap.values());
             
-            setStats({ posts: allUserPosts.length, followers: followersSnap.size, following: followingSnap.size });
+            setStats({ 
+                posts: allUserPosts.length, 
+                pulses: pulsesSnap.size,
+                followers: followersSnap.size, 
+                following: followingSnap.size 
+            });
 
             const memoriesData = memoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Memory));
             setMemories(memoriesData);
@@ -601,8 +606,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                         <h2 className="text-2xl font-light">{user.username}</h2>
                         {renderFollowButton()}
                     </div>
-                    <div className="flex items-center gap-8 text-sm">
+                    <div className="flex items-center gap-4 sm:gap-8 text-sm flex-wrap justify-center sm:justify-start">
                         <span><span className="font-semibold">{stats.posts}</span> {t('profile.posts')}</span>
+                        <span><span className="font-semibold">{stats.pulses}</span> {t('profile.pulses')}</span>
                         <button onClick={() => { setFollowModalMode('followers'); setIsFollowModalOpen(true); }} className="hover:underline disabled:no-underline disabled:cursor-default" disabled={stats.followers === 0}>
                             <span className="font-semibold">{stats.followers}</span> {t('profile.followers')}
                         </button>
