@@ -68,6 +68,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
     const [isAddToMemoryOpen, setIsAddToMemoryOpen] = useState(false);
     const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
     const [initialContentForMemory, setInitialContentForMemory] = useState<any>(null);
+    const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | 'none'>('none');
     
     useEffect(() => {
         setLocalPulses([...pulses]);
@@ -132,11 +133,46 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
         }
     }
 
+    const goToNext = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (currentIndex < localPulses.length - 1) {
+            setSlideDirection('next');
+            setCurrentIndex(i => i + 1);
+        } else {
+            onClose();
+        }
+    };
+
+    const goToPrev = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (currentIndex > 0) {
+            setSlideDirection('prev');
+            setCurrentIndex(i => i - 1);
+        }
+    };
+
     const canGoNext = currentIndex < localPulses.length - 1;
     const canGoPrev = currentIndex > 0;
     
     return (
         <>
+            <style>{`
+                @keyframes cardSlideInRight {
+                    from { transform: translateX(100%) rotate(5deg) scale(0.9); opacity: 0.5; }
+                    to { transform: translateX(0) rotate(0) scale(1); opacity: 1; }
+                }
+                @keyframes cardSlideInLeft {
+                    from { transform: translateX(-100%) rotate(-5deg) scale(0.9); opacity: 0.5; }
+                    to { transform: translateX(0) rotate(0) scale(1); opacity: 1; }
+                }
+                .pulse-card-enter-next {
+                    animation: cardSlideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .pulse-card-enter-prev {
+                    animation: cardSlideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+            `}</style>
+
             <PulseViewsModal
                 isOpen={isViewsModalOpen}
                 onClose={() => setIsViewsModalOpen(false)}
@@ -175,13 +211,13 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 </>
             )}
             <div 
-                className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 select-none"
+                className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 select-none backdrop-blur-sm"
                 onClick={onClose}
             >
                 {canGoPrev && (
                     <button 
-                        onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => i - 1); }} 
-                        className="absolute left-2 md:left-4 text-white bg-black/40 rounded-full p-2 z-20 hover:bg-black/70 transition-colors"
+                        onClick={goToPrev} 
+                        className="absolute left-2 md:left-8 text-white bg-white/10 backdrop-blur-md rounded-full p-3 z-30 hover:bg-white/20 transition-all active:scale-95"
                         aria-label={t('pulseViewer.previous')}
                     >
                         <PrevIcon className="w-6 h-6" />
@@ -189,69 +225,83 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 )}
 
                 <div 
-                    className="relative w-full max-w-sm h-full max-h-[95vh] flex flex-col items-center justify-center" 
+                    className="relative w-full max-w-sm h-full max-h-[90vh] flex flex-col items-center justify-center perspective-[1000px]" 
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/50 to-transparent">
-                        <div className="flex items-center gap-2 mb-2">
+                    {/* Progress Bars */}
+                    <div className="absolute top-0 left-0 right-0 p-4 z-30 bg-gradient-to-b from-black/60 to-transparent pt-6 rounded-t-xl">
+                        <div className="flex items-center gap-1.5 mb-3">
                            {localPulses.map((_, index) => (
-                                <div key={index} className="flex-1 h-1 bg-white/30 rounded-full">
-                                    {index <= currentIndex && <div className="h-full bg-white rounded-full"/>}
+                                <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                                    {index <= currentIndex && <div className="h-full bg-white rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"/>}
                                 </div>
                             ))}
                         </div>
                         <div className="flex items-center justify-between">
-                            <button onClick={handleHeaderClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                                <img src={authorInfo.avatar} alt={authorInfo.username} className="w-8 h-8 rounded-full object-cover" />
-                                <p className="text-white font-semibold text-sm">{authorInfo.username}</p>
+                            <button onClick={handleHeaderClick} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                <img src={authorInfo.avatar} alt={authorInfo.username} className="w-9 h-9 rounded-full object-cover border border-white/20" />
+                                <p className="text-white font-semibold text-sm drop-shadow-md">{authorInfo.username}</p>
                             </button>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                                 {isOwner && (
                                     <>
                                         {viewsCount > 0 && (
                                             <button 
                                                 onClick={() => setIsViewsModalOpen(true)}
-                                                className="text-white p-2 rounded-full hover:bg-white/20 flex items-center gap-1 text-sm"
+                                                className="text-white p-2 rounded-full hover:bg-white/10 flex items-center gap-1.5 text-xs font-medium backdrop-blur-sm bg-black/20"
                                                 aria-label={`${viewsCount} ${viewsCount === 1 ? t('pulseViewer.viewSingular') : t('pulseViewer.viewPlural')}`}
                                             >
-                                                <EyeIcon className="w-5 h-5" />
+                                                <EyeIcon className="w-4 h-4" />
                                                 {viewsCount}
                                             </button>
                                         )}
-                                         <button onClick={() => setIsAddToMemoryOpen(true)} className="text-white p-2 rounded-full hover:bg-white/20" title={t('post.addToMemory')}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
+                                         <button onClick={() => setIsAddToMemoryOpen(true)} className="text-white p-2 rounded-full hover:bg-white/20 transition-colors" title={t('post.addToMemory')}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
                                         </button>
                                         <button 
                                             onClick={() => setIsDeleteConfirmOpen(true)} 
-                                            className="text-white p-2 rounded-full hover:bg-white/20"
+                                            className="text-white p-2 rounded-full hover:bg-white/20 transition-colors"
                                             aria-label={t('pulseViewer.delete')}
                                         >
-                                            <TrashIcon className="w-5 h-5" />
+                                            <TrashIcon className="w-6 h-6" />
                                         </button>
                                     </>
                                 )}
-                                <button onClick={onClose} className="text-white text-3xl">&times;</button>
+                                <button onClick={onClose} className="text-white p-1 hover:text-gray-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>
                    
+                    {/* Media Container with Animation */}
+                    <div 
+                        key={currentPulse.id}
+                        className={`relative w-full h-full rounded-2xl overflow-hidden flex items-center justify-center bg-zinc-900 shadow-2xl border border-white/5 
+                            ${slideDirection === 'next' ? 'pulse-card-enter-next' : ''} 
+                            ${slideDirection === 'prev' ? 'pulse-card-enter-prev' : ''}`}
+                    >
+                        {/* Tap zones for navigation */}
+                        <div className="absolute top-0 left-0 w-1/3 h-full z-20 cursor-pointer" onClick={goToPrev}></div>
+                        <div className="absolute top-0 right-0 w-1/3 h-full z-20 cursor-pointer" onClick={goToNext}></div>
 
-                    <div className="relative w-full h-full rounded-lg overflow-hidden flex items-center justify-center bg-black">
                         {currentPulse.mediaUrl.includes('.mp4') || currentPulse.mediaUrl.includes('.webm') ? (
-                            <video key={currentPulse.id} src={currentPulse.mediaUrl} controls autoPlay className="w-full h-full object-contain" />
+                            <video src={currentPulse.mediaUrl} controls autoPlay className="w-full h-full object-contain" />
                         ) : (
-                            <img key={currentPulse.id} src={currentPulse.mediaUrl} alt={currentPulse.legenda || 'Pulse'} className="w-full h-full object-contain" />
+                            <img src={currentPulse.mediaUrl} alt={currentPulse.legenda || 'Pulse'} className="w-full h-full object-contain" />
                         )}
 
                         {(currentPulse.legenda || currentPulse.musicInfo) && (
-                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 pointer-events-none">
                                 {currentPulse.musicInfo && (
-                                    <div className="mb-2 text-white">
+                                    <div className="mb-3 text-white pointer-events-auto">
                                         <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isMusicMuted} setIsMuted={setIsMusicMuted} />
                                     </div>
                                 )}
                                 {currentPulse.legenda && (
-                                    <p className="text-white text-center text-sm">{currentPulse.legenda}</p>
+                                    <p className="text-white text-center text-md font-medium drop-shadow-lg">{currentPulse.legenda}</p>
                                 )}
                             </div>
                         )}
@@ -260,8 +310,8 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
 
                 {canGoNext && (
                     <button 
-                        onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => i + 1); }} 
-                        className="absolute right-2 md:right-4 text-white bg-black/40 rounded-full p-2 z-20 hover:bg-black/70 transition-colors"
+                        onClick={goToNext} 
+                        className="absolute right-2 md:right-8 text-white bg-white/10 backdrop-blur-md rounded-full p-3 z-30 hover:bg-white/20 transition-all active:scale-95"
                         aria-label={t('pulseViewer.next')}
                     >
                         <NextIcon className="w-6 h-6" />
