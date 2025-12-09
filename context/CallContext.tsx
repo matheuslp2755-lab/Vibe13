@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import { auth, db, doc, addDoc, collection, onSnapshot, updateDoc, getDoc, deleteDoc, serverTimestamp } from '../firebase';
+import { auth, db, doc, addDoc, collection, onSnapshot, updateDoc, getDoc, deleteDoc, serverTimestamp, setDoc } from '../firebase';
 import type { Unsubscribe } from 'firebase/firestore';
 
 // WebRTC configuration - using public STUN servers
@@ -48,6 +48,7 @@ interface CallContextType {
     error: string | null;
     // Live Streaming
     activeLive: LiveSession | null;
+    liveStream: MediaStream | null; // Stream for viewers
     startLive: () => Promise<void>;
     joinLive: (liveId: string, host: UserInfo) => void;
     endLive: () => Promise<void>;
@@ -57,14 +58,24 @@ interface CallContextType {
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // 1:1 Call State
     const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [activeLive, setActiveLive] = useState<LiveSession | null>(null);
-
     const pc = useRef<RTCPeerConnection | null>(null);
+
+    // Live Streaming State
+    const [activeLive, setActiveLive] = useState<LiveSession | null>(null);
+    const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
     
+    // Host side: Keep track of all viewer connections (Mesh topology)
+    const hostConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+    // Viewer side: Single connection to host
+    const viewerPC = useRef<RTCPeerConnection | null>(null);
+    
+    const liveUnsubs = useRef<Unsubscribe[]>([]);
+
     const activeCallRef = useRef(activeCall);
     useEffect(() => {
         activeCallRef.current = activeCall;
@@ -74,10 +85,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const resetCallState = useCallback(() => {
         console.log("Resetting call state.");
         if (pc.current) {
-            pc.current.onicecandidate = null;
-            pc.current.ontrack = null;
-            pc.current.onconnectionstatechange = null;
-            pc.current.onsignalingstatechange = null;
             pc.current.close();
             pc.current = null;
         }
@@ -90,136 +97,91 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(null);
     }, [localStream]);
 
-    // Effect for managing Firestore listeners based on activeCall
+    // --- 1:1 Call Logic (Existing) ---
+    // (Kept mostly as is, but ensuring it doesn't conflict with Live)
     useEffect(() => {
         const currentUser = auth.currentUser;
         if (!activeCall?.callId || !pc.current || !currentUser) return;
         
         const callId = activeCall.callId;
-        console.log(`Setting up Firestore listeners for call ${callId}`);
         const callDocRef = doc(db, 'calls', callId);
         
         const unsubs: Unsubscribe[] = [];
 
-        // Listener for the main call document
         unsubs.push(onSnapshot(callDocRef, async (snapshot) => {
             const data = snapshot.data();
-            console.log("Firestore listener: Call document updated.", data);
-            
             if (!data) {
-                console.log("Firestore listener: Call document deleted, resetting state.");
                 resetCallState();
                 return;
             };
-
             const status = data.status as CallStatus;
 
-            // Handle call termination
             if (['ended', 'declined', 'cancelled'].includes(status) && activeCallRef.current?.status !== status) {
-                 console.log(`Firestore listener: Call status changed to ${status}.`);
                  setActiveCall(prev => prev ? { ...prev, status } : null);
                  return;
             }
-            
-            // Handle call connection (Important for the caller)
             if (status === 'connected' && activeCallRef.current?.status !== 'connected') {
-                console.log("Firestore listener: Call connected!");
                 setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null);
             }
-            
-            // For caller: set remote description when answer is available
             if (data.answer && pc.current?.remoteDescription?.type !== 'answer') {
                 try {
-                    console.log("Firestore listener: Received answer, setting remote description.");
                     await pc.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    console.log("Firestore listener: Remote description (answer) set successfully.");
                 } catch (e) {
-                    console.error("Firestore listener: Error setting remote description.", e);
+                    console.error("Error setting remote description.", e);
                 }
             }
         }));
         
-        // Listen for ICE candidates from the other party
         const isCaller = activeCall.caller.id === currentUser.uid;
         const candidatesCollectionName = isCaller ? 'receiverCandidates' : 'callerCandidates';
         const candidatesCollection = collection(db, 'calls', callId, candidatesCollectionName);
-        console.log(`Listening for candidates in: ${candidatesCollectionName}`);
         
         unsubs.push(onSnapshot(candidatesCollection, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
-                    // console.log("Firestore listener: Received new ICE candidate.", change.doc.data());
                     try {
                         const candidate = new RTCIceCandidate(change.doc.data());
-                        pc.current?.addIceCandidate(candidate).catch(e => console.error("Firestore listener: Error adding received ICE candidate.", e instanceof Error ? e.message : String(e)));
+                        pc.current?.addIceCandidate(candidate).catch(console.error);
                     } catch (e) {
-                        console.warn("Invalid ICE candidate received");
+                        console.warn("Invalid ICE candidate");
                     }
                 }
             });
         }));
 
         return () => {
-            console.log(`Cleaning up Firestore listeners for call ${callId}`);
             unsubs.forEach(unsub => unsub());
         };
     }, [activeCall, resetCallState]);
     
     const setupPeerConnection = (stream: MediaStream, callId: string, isCaller: boolean) => {
         pc.current = new RTCPeerConnection(servers);
-        console.log("Peer connection created.");
-    
         stream.getTracks().forEach(track => pc.current?.addTrack(track, stream));
-        console.log("Local stream tracks added to peer connection.");
     
         pc.current.onicecandidate = event => {
             if (event.candidate) {
-                // console.log("New ICE candidate found, sending to Firestore.", event.candidate);
                 const candidatesCollection = collection(db, 'calls', callId, isCaller ? 'callerCandidates' : 'receiverCandidates');
-                // Sanitize candidate before sending to avoid circular reference errors in logging or transmission
-                const candidateJSON = event.candidate.toJSON();
-                addDoc(candidatesCollection, candidateJSON);
+                addDoc(candidatesCollection, event.candidate.toJSON());
             }
         };
     
         pc.current.ontrack = event => {
-            console.log("Received remote track.");
             setRemoteStream(event.streams[0]);
         };
     
         pc.current.onconnectionstatechange = () => {
-            if(pc.current) {
-                 console.log(`Connection state change: ${pc.current.connectionState}`);
-                 if (pc.current.connectionState === 'failed') {
-                    setError("call.callError");
-                 }
-            }
-        };
-    
-        pc.current.onsignalingstatechange = () => {
-             if(pc.current) {
-                console.log(`Signaling state change: ${pc.current.signalingState}`);
-             }
+            if(pc.current && pc.current.connectionState === 'failed') setError("call.callError");
         };
     };
 
     const startCall = async (receiver: UserInfo, isVideo: boolean = false) => {
         const currentUser = auth.currentUser;
-        console.log("startCall: Initiating call to", receiver.id, "from user:", currentUser?.uid, "Video:", isVideo);
-        if (!currentUser || activeCallRef.current) {
-            console.error("startCall: Aborted. Pre-conditions not met.");
-            return;
-        }
+        if (!currentUser || activeCallRef.current) return;
         setError(null);
         
         try {
-            console.log("startCall: Requesting media access...");
-            const constraints = isVideo 
-                ? { audio: true, video: { facingMode: 'user' } } 
-                : { audio: true };
-            
+            const constraints = isVideo ? { audio: true, video: { facingMode: 'user' } } : { audio: true };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            console.log("startCall: Media access granted.");
             setLocalStream(stream);
             
             const callDocRef = await addDoc(collection(db, 'calls'), {
@@ -233,19 +195,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 type: isVideo ? 'video' : 'audio'
             });
             const callId = callDocRef.id;
-            console.log("startCall: Created call document in Firestore with ID:", callId);
             
             setupPeerConnection(stream, callId, true);
             
-            if (!pc.current) throw new Error("Peer connection not initialized");
-
-            const offerDescription = await pc.current.createOffer();
-            console.log("startCall: Offer created.");
-            await pc.current.setLocalDescription(offerDescription);
-            console.log("startCall: Local description (offer) set.");
+            const offerDescription = await pc.current!.createOffer();
+            await pc.current!.setLocalDescription(offerDescription);
 
             await updateDoc(callDocRef, { offer: { sdp: offerDescription.sdp, type: offerDescription.type } });
-            console.log("startCall: Offer sent to Firestore.");
 
             setActiveCall({
                 callId,
@@ -255,9 +211,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isVideo
             });
         } catch (err: any) {
-            console.error("startCall: Error during call initiation.", err.message || String(err));
+            console.error("Error starting call:", err);
             resetCallState();
-            setError("call.noMicrophone"); // Using generic error key, but logic handles media permission
+            setError("call.noMicrophone");
         }
     };
     
@@ -272,52 +228,34 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const answerCall = async () => {
-        const currentUser = auth.currentUser;
         const call = activeCallRef.current;
-        console.log("answerCall: Answering call...", call?.callId);
-        if (!currentUser || !call || call.status !== 'ringing-incoming') {
-            console.error("answerCall: Aborted. Pre-conditions not met.");
-            return;
-        }
+        if (!call || call.status !== 'ringing-incoming') return;
         setError(null);
         
         try {
-            const callId = call.callId;
-            const callDocRef = doc(db, 'calls', callId);
+            const callDocRef = doc(db, 'calls', call.callId);
             const callDocSnap = await getDoc(callDocRef);
-            if (!callDocSnap.exists()) throw new Error("Call document not found.");
+            if (!callDocSnap.exists()) throw new Error("Call not found");
             
             const callData = callDocSnap.data();
             const isVideo = callData.type === 'video';
-
-            console.log("answerCall: Requesting media access... Video:", isVideo);
-            const constraints = isVideo 
-                ? { audio: true, video: { facingMode: 'user' } } 
-                : { audio: true };
+            const constraints = isVideo ? { audio: true, video: { facingMode: 'user' } } : { audio: true };
 
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            console.log("answerCall: Media access granted.");
             setLocalStream(stream);
 
-            setupPeerConnection(stream, callId, false);
-
-            if (!pc.current) throw new Error("Peer connection not initialized");
+            setupPeerConnection(stream, call.callId, false);
             
-            await pc.current.setRemoteDescription(new RTCSessionDescription(callData.offer));
-            console.log("answerCall: Remote description (offer) set.");
-
-            const answerDescription = await pc.current.createAnswer();
-            console.log("answerCall: Answer created.");
-            await pc.current.setLocalDescription(answerDescription);
-            console.log("answerCall: Local description (answer) set.");
+            await pc.current!.setRemoteDescription(new RTCSessionDescription(callData.offer));
+            const answerDescription = await pc.current!.createAnswer();
+            await pc.current!.setLocalDescription(answerDescription);
 
             await updateDoc(callDocRef, { answer: { sdp: answerDescription.sdp, type: answerDescription.type }, status: 'connected' });
-            console.log("answerCall: Answer sent to Firestore.");
             
             setActiveCall(prev => prev ? ({ ...prev, status: 'connected', isVideo }) : null);
 
         } catch (err: any) {
-            console.error("answerCall: Error during call answering.", err.message || String(err));
+            console.error("Error answering call:", err);
             resetCallState();
             setError("call.callError");
         }
@@ -325,24 +263,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const hangUp = useCallback(async (isCleanupOnly = false) => {
         const call = activeCallRef.current;
-        console.log("hangUp called.", { callId: call?.callId, isCleanupOnly });
         if (call && !isCleanupOnly) {
             const callDocRef = doc(db, 'calls', call.callId);
-            const callDoc = await getDoc(callDocRef);
-            if(callDoc.exists() && !['ended', 'declined', 'cancelled'].includes(callDoc.data().status)) {
-                let newStatus: CallStatus = 'ended';
-                 if (call.status === 'ringing-outgoing') {
-                    newStatus = 'cancelled';
-                }
-                await updateDoc(callDocRef, { status: newStatus });
-            }
+            // Fire and forget update to prevent hanging UI
+            updateDoc(callDocRef, { status: call.status === 'ringing-outgoing' ? 'cancelled' : 'ended' }).catch(() => {});
         }
         resetCallState();
     }, [resetCallState]);
 
     const declineCall = useCallback(async () => {
         const call = activeCallRef.current;
-        console.log("declineCall called for call ID:", call?.callId);
         if(call) {
             const callDocRef = doc(db, 'calls', call.callId);
             await updateDoc(callDocRef, { status: 'declined' });
@@ -350,22 +280,40 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetCallState();
     }, [resetCallState]);
 
-    // --- Live Streaming Logic ---
+    // --- Live Streaming Logic (Mesh Topology) ---
+
+    // Clean up live listeners and connections
+    const cleanupLive = useCallback(() => {
+        liveUnsubs.current.forEach(u => u());
+        liveUnsubs.current = [];
+        
+        // Host cleanup
+        hostConnections.current.forEach(pc => pc.close());
+        hostConnections.current.clear();
+
+        // Viewer cleanup
+        if (viewerPC.current) {
+            viewerPC.current.close();
+            viewerPC.current = null;
+        }
+
+        if (localStream) {
+            localStream.getTracks().forEach(t => t.stop());
+            setLocalStream(null);
+        }
+        
+        setLiveStream(null);
+        setActiveLive(null);
+    }, [localStream]);
 
     const startLive = async () => {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
 
         try {
-            console.log("Starting live stream...");
-            // Get local stream first to ensure we have it before creating the doc
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'user' }, 
-                audio: true 
-            });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
             setLocalStream(stream);
 
-            // Create Live Document
             const liveDocRef = await addDoc(collection(db, 'lives'), {
                 hostId: currentUser.uid,
                 hostUsername: currentUser.displayName,
@@ -381,60 +329,164 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isHost: true
             });
 
+            // HOST LOGIC: Listen for new viewers in 'viewers' subcollection
+            const viewersCollection = collection(db, 'lives', liveDocRef.id, 'viewers');
+            const unsubViewers = onSnapshot(viewersCollection, (snapshot) => {
+                snapshot.docChanges().forEach(async (change) => {
+                    if (change.type === 'added') {
+                        const viewerId = change.doc.id;
+                        const data = change.doc.data();
+                        
+                        if (data.offer) {
+                            console.log(`Host: New viewer ${viewerId} joined. Creating PC.`);
+                            const pc = new RTCPeerConnection(servers);
+                            hostConnections.current.set(viewerId, pc);
+
+                            // Add local tracks to this viewer's PC
+                            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+                            // Handle ICE candidates from Viewer
+                            const candidatesColl = collection(db, 'lives', liveDocRef.id, 'viewers', viewerId, 'candidates');
+                            const unsubCandidates = onSnapshot(candidatesColl, (candSnap) => {
+                                candSnap.docChanges().forEach((cChange) => {
+                                    if (cChange.type === 'added') {
+                                        const candData = cChange.doc.data();
+                                        pc.addIceCandidate(new RTCIceCandidate(candData)).catch(console.error);
+                                    }
+                                });
+                            });
+                            liveUnsubs.current.push(unsubCandidates);
+
+                            // Send Host ICE candidates to Viewer
+                            pc.onicecandidate = (event) => {
+                                if (event.candidate) {
+                                    // Viewer listens to this specific doc update or subcollection?
+                                    // Let's put host candidates in the main viewer doc for simplicity or a 'hostCandidates' subcol
+                                    const hostCandColl = collection(db, 'lives', liveDocRef.id, 'viewers', viewerId, 'hostCandidates');
+                                    addDoc(hostCandColl, event.candidate.toJSON());
+                                }
+                            };
+
+                            // Set Remote Desc (Viewer's Offer)
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                            
+                            // Create Answer
+                            const answer = await pc.createAnswer();
+                            await pc.setLocalDescription(answer);
+
+                            // Send Answer back to Viewer
+                            await updateDoc(doc(db, 'lives', liveDocRef.id, 'viewers', viewerId), {
+                                answer: { type: answer.type, sdp: answer.sdp }
+                            });
+                        }
+                    }
+                });
+            });
+            liveUnsubs.current.push(unsubViewers);
+
         } catch (err: any) {
             console.error("Error starting live:", err);
-            if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                setLocalStream(null);
-            }
+            cleanupLive();
             setError("live.error");
         }
     };
 
-    const joinLive = (liveId: string, host: UserInfo) => {
-        setActiveLive({
-            liveId,
-            host,
-            status: 'live',
-            isHost: false
-        });
-        // In a real one-to-many implementation, we would initiate a WebRTC connection here.
-        // For this implementation, the viewer only "joins" the session to view the UI.
+    const joinLive = async (liveId: string, host: UserInfo) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        setActiveLive({ liveId, host, status: 'live', isHost: false });
+
+        try {
+            const pc = new RTCPeerConnection(servers);
+            viewerPC.current = pc;
+
+            // Receive tracks from Host
+            pc.ontrack = (event) => {
+                console.log("Viewer: Received remote track from host.");
+                setLiveStream(event.streams[0]);
+            };
+
+            // Create Viewer Document
+            const viewerDocRef = doc(db, 'lives', liveId, 'viewers', currentUser.uid);
+            
+            // Send ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candColl = collection(viewerDocRef, 'candidates');
+                    addDoc(candColl, event.candidate.toJSON());
+                }
+            };
+
+            // Add Transceiver (We want to receive video/audio)
+            pc.addTransceiver('video', { direction: 'recvonly' });
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+
+            // Create Offer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            // Write Offer to Firestore
+            await setDoc(viewerDocRef, {
+                userId: currentUser.uid,
+                username: currentUser.displayName,
+                offer: { type: offer.type, sdp: offer.sdp }
+            });
+
+            // Listen for Answer and Host Candidates
+            const unsubViewerDoc = onSnapshot(viewerDocRef, async (snapshot) => {
+                const data = snapshot.data();
+                if (data?.answer && !pc.currentRemoteDescription) {
+                    console.log("Viewer: Received answer from host.");
+                    const rtcSessionDescription = new RTCSessionDescription(data.answer);
+                    await pc.setRemoteDescription(rtcSessionDescription);
+                }
+            });
+            liveUnsubs.current.push(unsubViewerDoc);
+
+            const hostCandidatesColl = collection(viewerDocRef, 'hostCandidates');
+            const unsubHostCand = onSnapshot(hostCandidatesColl, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const data = change.doc.data();
+                        pc.addIceCandidate(new RTCIceCandidate(data)).catch(console.error);
+                    }
+                });
+            });
+            liveUnsubs.current.push(unsubHostCand);
+
+        } catch (err) {
+            console.error("Error joining live:", err);
+            setError("live.error");
+        }
     };
 
     const endLive = async () => {
         if (!activeLive || !activeLive.isHost) return;
-        
         try {
             const liveRef = doc(db, 'lives', activeLive.liveId);
             await updateDoc(liveRef, { status: 'ended' });
-            
-            if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                setLocalStream(null);
-            }
-            setActiveLive(null);
-        } catch (err) {
-            console.error("Error ending live:", err);
-        }
+        } catch (err) { console.error(err); }
+        cleanupLive();
     };
 
     const leaveLive = () => {
-        if (activeLive && activeLive.isHost) {
-            endLive();
-        } else {
-            setActiveLive(null);
+        if (activeLive && !activeLive.isHost) {
+            // Remove viewer doc to be polite
+            if (auth.currentUser) {
+                deleteDoc(doc(db, 'lives', activeLive.liveId, 'viewers', auth.currentUser.uid)).catch(console.error);
+            }
         }
+        cleanupLive();
     };
 
-    // Auto-hangup on window close
+    // Auto-cleanup
     useEffect(() => {
         const handleBeforeUnload = () => {
-            if (activeCallRef.current) {
-                hangUp();
-            }
-            if (activeLive && activeLive.isHost) {
-                endLive();
+            if (activeCallRef.current) hangUp();
+            if (activeLive) {
+                if (activeLive.isHost) endLive();
+                else leaveLive();
             }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -452,6 +504,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIncomingCall,
         error,
         activeLive,
+        liveStream, // Exported for the viewer modal
         startLive,
         joinLive,
         endLive,
