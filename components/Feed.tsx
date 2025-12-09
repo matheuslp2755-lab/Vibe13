@@ -442,7 +442,7 @@ const Feed: React.FC = () => {
             />
         )}
       <LiveViewerModal 
-        isOpen={!!activeLive && !activeLive.isHost} 
+        isOpen={!!activeLive} 
       />
     </>
   );
