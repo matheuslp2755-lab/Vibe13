@@ -9,7 +9,7 @@ import MessagesModal from './messages/MessagesModal';
 import PulseBar from './feed/PulseBar';
 import PulseViewerModal from './pulse/PulseViewerModal';
 import LiveViewerModal from './live/LiveViewerModal';
-import { auth, db, collection, query, where, getDocs, doc, getDoc, deleteDoc, storage, storageRef, deleteObject } from '../firebase';
+import { auth, db, collection, query, where, getDocs, doc, getDoc, deleteDoc, storage, storageRef, deleteObject, onSnapshot } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 import { useCall } from '../context/CallContext';
 
@@ -107,28 +107,87 @@ const Feed: React.FC = () => {
   const [playingMusicPostId, setPlayingMusicPostId] = useState<string | null>(null);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   
+  // State to hold the list of user IDs we are following + our own ID
+  const [followingList, setFollowingList] = useState<string[]>([]);
+  const [isFollowingListLoaded, setIsFollowingListLoaded] = useState(false);
+
   const { joinLive, activeLive } = useCall();
 
+  // 1. Fetch Following List (Prerequisite)
   useEffect(() => {
-    if (viewingProfileId || !auth.currentUser) return;
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      const fetchFollowing = async () => {
+          try {
+              const followingRef = collection(db, 'users', currentUser.uid, 'following');
+              const followingSnap = await getDocs(followingRef);
+              const ids = followingSnap.docs.map(doc => doc.id);
+              // Include current user to see own content
+              setFollowingList([currentUser.uid, ...ids]);
+              setIsFollowingListLoaded(true);
+          } catch (error) {
+              console.error("Error fetching following list:", error);
+              setFollowingList([currentUser.uid]);
+              setIsFollowingListLoaded(true);
+          }
+      };
+      fetchFollowing();
+  }, [auth.currentUser]);
+
+  // 2. Real-time Lives Listener (Depends on Following List)
+  useEffect(() => {
+      if (!isFollowingListLoaded || followingList.length === 0) return;
+
+      // Query ALL active lives
+      // Note: In a production app with millions of users, this should be paginated or queried by 'hostId' in chunks.
+      // For this scale, filtering client-side is acceptable and ensures real-time updates for any friend.
+      const q = query(
+          collection(db, 'lives'),
+          where('status', '==', 'live')
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const lives: LiveSession[] = [];
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              // Filter: Only show lives from people I follow (or myself)
+              if (followingList.includes(data.hostId)) {
+                  lives.push({
+                      liveId: doc.id,
+                      host: {
+                          id: data.hostId,
+                          username: data.hostUsername,
+                          avatar: data.hostAvatar
+                      },
+                      status: 'live'
+                  });
+              }
+          });
+          setActiveLives(lives);
+      }, (error) => {
+          console.error("Error listening to lives:", error);
+      });
+
+      return () => unsubscribe();
+  }, [isFollowingListLoaded, followingList]);
+
+  // 3. Fetch Feed Content (Posts & Pulses) - Static Fetching on Load/Refresh
+  useEffect(() => {
+    if (viewingProfileId || !auth.currentUser || !isFollowingListLoaded) return;
 
     const fetchFeedContent = async () => {
         setFeedLoading(true);
         try {
-            if (!auth.currentUser) return;
-
-            const followingRef = collection(db, 'users', auth.currentUser.uid, 'following');
-            const followingSnap = await getDocs(followingRef);
-            const followingIds = followingSnap.docs.map(doc => doc.id);
-            const userIdsToQuery = [auth.currentUser.uid, ...followingIds];
+            const userIdsToQuery = followingList;
             
-            // 1. Fetch Posts
             if (userIdsToQuery.length > 0) {
                 const userIdChunks: string[][] = [];
                 for (let i = 0; i < userIdsToQuery.length; i += 30) {
                     userIdChunks.push(userIdsToQuery.slice(i, i + 30));
                 }
 
+                // --- Fetch Posts ---
                 let allPosts: PostType[] = [];
                 for (const chunk of userIdChunks) {
                     if (chunk.length === 0) continue;
@@ -152,18 +211,9 @@ const Feed: React.FC = () => {
                 
                 allPosts.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 setFeedPosts(allPosts.slice(0, 20));
-            } else {
-                setFeedPosts([]);
-            }
 
-            // 2. Fetch Pulses
-            let allPulses: PulseType[] = [];
-            if (userIdsToQuery.length > 0) {
-                const userIdChunks: string[][] = [];
-                for (let i = 0; i < userIdsToQuery.length; i += 30) {
-                    userIdChunks.push(userIdsToQuery.slice(i, i + 30));
-                }
-
+                // --- Fetch Pulses ---
+                let allPulses: PulseType[] = [];
                 for (const chunk of userIdChunks) {
                     if (chunk.length === 0) continue;
                     const pulsesQuery = query(
@@ -174,83 +224,58 @@ const Feed: React.FC = () => {
                     const pulses = pulsesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PulseType));
                     allPulses.push(...pulses);
                 }
-            }
-            
-            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            const recentPulses = allPulses.filter(pulse => {
-                if (!pulse.createdAt?.seconds) return false;
-                const pulseDate = new Date(pulse.createdAt.seconds * 1000);
-                return pulseDate >= twentyFourHoursAgo;
-            });
-            
-            const filteredPulses = recentPulses.filter(pulse => {
-                if (!pulse.isVentMode) return true;
-                if (pulse.authorId === auth.currentUser?.uid) return true;
-                return pulse.allowedUsers?.includes(auth.currentUser!.uid);
-            });
 
-            const pulsesByAuthorId: { [key: string]: PulseType[] } = {};
-            const authorIds = new Set<string>();
-            filteredPulses.forEach(pulse => {
-                if (!pulsesByAuthorId[pulse.authorId]) pulsesByAuthorId[pulse.authorId] = [];
-                pulsesByAuthorId[pulse.authorId].push(pulse);
-                authorIds.add(pulse.authorId);
-            });
-
-            // 3. Fetch Lives
-            let activeLivesData: LiveSession[] = [];
-            if (userIdsToQuery.length > 0) {
-                const userIdChunks: string[][] = [];
-                for (let i = 0; i < userIdsToQuery.length; i += 30) {
-                    userIdChunks.push(userIdsToQuery.slice(i, i + 30));
-                }
+                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const recentPulses = allPulses.filter(pulse => {
+                    if (!pulse.createdAt?.seconds) return false;
+                    const pulseDate = new Date(pulse.createdAt.seconds * 1000);
+                    return pulseDate >= twentyFourHoursAgo;
+                });
                 
-                for (const chunk of userIdChunks) {
-                    if (chunk.length === 0) continue;
-                    const livesQuery = query(
-                        collection(db, 'lives'),
-                        where('hostId', 'in', chunk),
-                        where('status', '==', 'live')
-                    );
-                    const livesSnap = await getDocs(livesQuery);
-                    livesSnap.forEach(doc => {
-                        const data = doc.data();
-                        activeLivesData.push({
-                            liveId: doc.id,
-                            host: {
-                                id: data.hostId,
-                                username: data.hostUsername,
-                                avatar: data.hostAvatar
-                            },
-                            status: 'live'
-                        });
-                        authorIds.add(data.hostId);
-                    });
-                }
-            }
-            setActiveLives(activeLivesData);
+                const filteredPulses = recentPulses.filter(pulse => {
+                    if (!pulse.isVentMode) return true;
+                    if (pulse.authorId === auth.currentUser?.uid) return true;
+                    return pulse.allowedUsers?.includes(auth.currentUser!.uid);
+                });
 
-            // Fetch author info for pulses (lives already have info)
-            const authorInfoMap = new Map<string, { username: string, avatar: string }>();
-            if (authorIds.size > 0) {
-                for (const id of Array.from(authorIds)) {
-                    const userDoc = await getDoc(doc(db, 'users', id));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        authorInfoMap.set(id, { username: data.username, avatar: data.avatar });
+                const pulsesByAuthorId: { [key: string]: PulseType[] } = {};
+                const authorIds = new Set<string>();
+                filteredPulses.forEach(pulse => {
+                    if (!pulsesByAuthorId[pulse.authorId]) pulsesByAuthorId[pulse.authorId] = [];
+                    pulsesByAuthorId[pulse.authorId].push(pulse);
+                    authorIds.add(pulse.authorId);
+                });
+
+                // Fetch author info for pulses if needed
+                const authorInfoMap = new Map<string, { username: string, avatar: string }>();
+                if (authorIds.size > 0) {
+                    // We can reuse user info if available, or fetch
+                    const idsToFetch = Array.from(authorIds);
+                    // Optimization: We could check local cache or state, but for now simple fetch
+                    const userChunks = [];
+                    for(let i=0; i<idsToFetch.length; i+=30) userChunks.push(idsToFetch.slice(i,i+30));
+                    
+                    for(const chunk of userChunks) {
+                         const q = query(collection(db, 'users'), where('__name__', 'in', chunk));
+                         const snap = await getDocs(q);
+                         snap.forEach(d => authorInfoMap.set(d.id, { username: d.data().username, avatar: d.data().avatar }));
                     }
                 }
-            }
-            
-            const finalGroupedPulses = new Map<string, UserWithPulses>();
-            for (const [authorId, pulses] of Object.entries(pulsesByAuthorId)) {
-                const author = authorInfoMap.get(authorId);
-                if (author) {
-                    pulses.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-                    finalGroupedPulses.set(authorId, { author: { id: authorId, ...author }, pulses });
+                
+                const finalGroupedPulses = new Map<string, UserWithPulses>();
+                for (const [authorId, pulses] of Object.entries(pulsesByAuthorId)) {
+                    const author = authorInfoMap.get(authorId);
+                    if (author) {
+                        pulses.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                        finalGroupedPulses.set(authorId, { author: { id: authorId, ...author }, pulses });
+                    }
                 }
+                setPulsesByAuthor(finalGroupedPulses);
+
+            } else {
+                setFeedPosts([]);
+                setPulsesByAuthor(new Map());
             }
-            setPulsesByAuthor(finalGroupedPulses);
 
         } catch (error) {
             console.error("Error fetching feed content:", error);
@@ -259,7 +284,7 @@ const Feed: React.FC = () => {
         }
     };
     fetchFeedContent();
-  }, [viewingProfileId, feedKey, auth.currentUser]);
+  }, [viewingProfileId, feedKey, auth.currentUser, isFollowingListLoaded, followingList]);
 
   const handleSelectUser = (userId: string) => {
     setViewingProfileId(userId);

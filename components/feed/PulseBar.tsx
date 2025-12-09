@@ -47,7 +47,7 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                 {activeLives.map((live) => (
                     <div 
                         key={`live-${live.liveId}`}
-                        className="relative flex-shrink-0 w-28 h-44 cursor-pointer group rounded-xl overflow-hidden shadow-md border-2 border-red-500 animate-pulse transition-transform duration-200 hover:scale-[1.02]"
+                        className="relative flex-shrink-0 w-28 h-44 cursor-pointer group rounded-xl overflow-hidden shadow-md border-[3px] border-red-500 transition-transform duration-200 hover:scale-[1.02]"
                         onClick={() => onJoinLive && onJoinLive(live.liveId, live.host)}
                         role="button"
                         aria-label={t('pulseBar.viewLive', { username: live.host.username })}
@@ -60,7 +60,7 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                                 className="w-full h-full object-cover opacity-60 blur-sm" 
                             />
                             {/* Live Badge */}
-                            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10 animate-pulse">
                                 {t('pulseBar.live')}
                             </div>
                             {/* Dark Gradient Overlay for text readability */}
