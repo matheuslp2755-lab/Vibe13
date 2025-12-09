@@ -125,7 +125,13 @@ const ptMessages = {
     "followersModalTitle": "Seguidores",
     "followingModalTitle": "Seguindo",
     "noFollowers": "Nenhum seguidor ainda.",
-    "notFollowingAnyone": "Não segue ninguém."
+    "notFollowingAnyone": "Não segue ninguém.",
+    "block": "Cancelar amizade",
+    "unblock": "Desbloquear",
+    "blockConfirmTitle": "Cancelar amizade?",
+    "blockConfirmBody": "Eles não poderão enviar mensagens ou encontrar seu perfil ou conteúdo no Vibe.",
+    "blockedMessage": "Você cancelou a amizade com este usuário.",
+    "userUnavailable": "Usuário indisponível."
   },
   "editProfile": {
     "title": "Editar Perfil",
@@ -385,6 +391,20 @@ const ptMessages = {
     "added": "Adicionado!",
     "uploadPhoto": "Carregar Foto"
   },
+  "live": {
+    "title": "Transmissão ao vivo",
+    "start": "Transmitir ao vivo",
+    "starting": "Verificando conexão...",
+    "end": "Encerrar vídeo ao vivo",
+    "endNow": "Encerrar Agora",
+    "confirmEndTitle": "Encerrar vídeo ao vivo?",
+    "confirmEndBody": "Tem certeza que deseja encerrar seu vídeo ao vivo?",
+    "viewers": "espectadores",
+    "viewer": "espectador",
+    "ended": "Vídeo ao vivo encerrado",
+    "leave": "Sair",
+    "error": "Erro de conexão"
+  },
   "gallery": {
     "title": "Nova Publicação",
     "selectPhotos": "Selecionar da Galeria",
@@ -398,17 +418,6 @@ const ptMessages = {
     "title": "O que você quer criar?",
     "post": "Publicação",
     "pulse": "Pulse"
-  },
-  "live": {
-    "title": "Transmissão ao vivo",
-    "start": "Transmitir ao vivo",
-    "starting": "Verificando conexão...",
-    "end": "Encerrar vídeo ao vivo",
-    "viewers": "espectadores",
-    "viewer": "espectador",
-    "ended": "Vídeo ao vivo encerrado",
-    "leave": "Sair",
-    "error": "Erro de conexão"
   }
 };
 
@@ -534,7 +543,13 @@ const enMessages = {
     "followersModalTitle": "Followers",
     "followingModalTitle": "Following",
     "noFollowers": "No followers yet.",
-    "notFollowingAnyone": "Not following anyone."
+    "notFollowingAnyone": "Not following anyone.",
+    "block": "Block",
+    "unblock": "Unblock",
+    "blockConfirmTitle": "Block User?",
+    "blockConfirmBody": "They won't be able to message you or find your profile or content on Vibe.",
+    "blockedMessage": "You have blocked this user.",
+    "userUnavailable": "User unavailable."
   },
   "editProfile": {
     "title": "Edit Profile",
@@ -608,7 +623,7 @@ const enMessages = {
     "deleteConversationTitle": "Delete Conversation?",
     "deleteConversationBody": "This will permanently delete the conversation for everyone and cannot be undone.",
     "deleteConversationConfirm": "Delete",
-    "recordingError": "Could not start recording. Please check microphone permissions.",
+    "recordingError": "Could not start recording. Please check microphone permissions in your device's settings.",
     "diariesTitle": "Notes",
     "addNote": "Your Note",
     "replyToNote": "Reply to {username}'s note...",
@@ -618,7 +633,7 @@ const enMessages = {
   "diary": {
     "title": "Diary",
     "publish": "Publish",
-    "publishing": "Publishing...",
+    "publishing": "Publicando...",
     "placeholder": "What's on your mind today?",
     "empty": "The diary is empty.",
     "emptySuggestion": "Follow people to see their diary entries here or write your own!",
@@ -715,6 +730,7 @@ const enMessages = {
     "call": "Call",
     "calling": "Calling {username}...",
     "incomingCall": "Incoming call from {username}",
+    "incomingVideoCall": "Incoming video call from {username}",
     "answer": "Answer",
     "decline": "Decline",
     "hangUp": "Hang Up",
@@ -728,7 +744,7 @@ const enMessages = {
     "copyCallId": "Copy ID",
     "copied": "Copied!",
     "callInProgress": "Call in progress...",
-    "noMicrophone": "Microphone access denied. Please enable it in your browser settings.",
+    "noMicrophone": "Microphone access denied. Please enable microphone permissions for Vibe in your device's settings.",
     "callError": "An error occurred during the call.",
     "videoCall": "Video Call",
     "voiceCall": "Voice Call"
@@ -786,7 +802,8 @@ const enMessages = {
     "error": "An error occurred. Please try again.",
     "addToMemoryTitle": "Add to Memory",
     "createNew": "Create New Memory",
-    "added": "Added!"
+    "added": "Added!",
+    "uploadPhoto": "Upload Photo"
   },
   "gallery": {
     "title": "Create new post",
@@ -807,6 +824,9 @@ const enMessages = {
     "start": "Go Live",
     "starting": "Starting...",
     "end": "End Live",
+    "endNow": "End Now",
+    "confirmEndTitle": "End Live Video?",
+    "confirmEndBody": "Are you sure you want to end your live video?",
     "viewers": "viewers",
     "viewer": "viewer",
     "ended": "The broadcast has ended.",

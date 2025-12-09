@@ -120,7 +120,13 @@
     "followersModalTitle": "Seguidores",
     "followingModalTitle": "Seguindo",
     "noFollowers": "Nenhum seguidor ainda.",
-    "notFollowingAnyone": "Não segue ninguém."
+    "notFollowingAnyone": "Não segue ninguém.",
+    "block": "Bloquear",
+    "unblock": "Desbloquear",
+    "blockConfirmTitle": "Bloquear usuário?",
+    "blockConfirmBody": "Eles não poderão enviar mensagens ou encontrar seu perfil ou conteúdo no Vibe.",
+    "blockedMessage": "Você bloqueou este usuário.",
+    "userUnavailable": "Usuário indisponível."
   },
   "editProfile": {
     "title": "Editar Perfil",
@@ -393,5 +399,14 @@
     "ended": "Vídeo ao vivo encerrado",
     "leave": "Sair",
     "error": "Erro de conexão"
+  },
+  "gallery": {
+    "title": "Nova Publicação",
+    "selectPhotos": "Selecionar da Galeria",
+    "next": "Avançar",
+    "galleryTab": "Galeria",
+    "cameraTab": "Câmera",
+    "capture": "Capturar",
+    "cameraError": "Não foi possível acessar a câmera. Verifique as permissões."
   }
 }

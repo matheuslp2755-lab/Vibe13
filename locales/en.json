@@ -121,7 +121,13 @@
     "followersModalTitle": "Followers",
     "followingModalTitle": "Following",
     "noFollowers": "No followers yet.",
-    "notFollowingAnyone": "Not following anyone."
+    "notFollowingAnyone": "Not following anyone.",
+    "block": "Block",
+    "unblock": "Unblock",
+    "blockConfirmTitle": "Block User?",
+    "blockConfirmBody": "They won't be able to message you or find your profile or content on Vibe.",
+    "blockedMessage": "You have blocked this user.",
+    "userUnavailable": "User unavailable."
   },
   "editProfile": {
     "title": "Edit Profile",
@@ -376,6 +382,20 @@
     "createNew": "Create New Memory",
     "added": "Added!",
     "uploadPhoto": "Upload Photo"
+  },
+  "gallery": {
+    "title": "Create new post",
+    "selectPhotos": "Select Photos from Gallery",
+    "next": "Next",
+    "galleryTab": "Gallery",
+    "cameraTab": "Camera",
+    "capture": "Capture",
+    "cameraError": "Could not access camera. Please check permissions."
+  },
+  "choiceModal": {
+    "title": "What do you want to create?",
+    "post": "Post",
+    "pulse": "Pulse"
   },
   "live": {
     "title": "Start Broadcast",

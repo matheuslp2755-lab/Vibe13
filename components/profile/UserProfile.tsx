@@ -61,6 +61,12 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const MoreHorizontalIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+    </svg>
+);
+
 
 interface UserProfileProps {
     userId: string;
@@ -133,11 +139,38 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [followModalMode, setFollowModalMode] = useState<'followers' | 'following'>('followers');
     const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
     const [viewingMemory, setViewingMemory] = useState<Memory | null>(null);
+    
+    // Blocking Logic
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [isBlockedByTarget, setIsBlockedByTarget] = useState(false);
+    const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
+    const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
+
     const currentUser = auth.currentUser;
 
     useEffect(() => {
         setLoading(true);
+        // Check if user exists
         const userDocRef = doc(db, 'users', userId);
+
+        const checkBlockStatus = async () => {
+            if (!currentUser) return;
+            try {
+                // Check if I blocked them
+                const myBlockRef = doc(db, 'users', currentUser.uid, 'blocked', userId);
+                const myBlockSnap = await getDoc(myBlockRef);
+                setIsBlocked(myBlockSnap.exists());
+
+                // Check if they blocked me
+                const theirBlockRef = doc(db, 'users', userId, 'blocked', currentUser.uid);
+                const theirBlockSnap = await getDoc(theirBlockRef);
+                setIsBlockedByTarget(theirBlockSnap.exists());
+            } catch (error) {
+                console.error("Error checking block status:", error);
+            }
+        };
+
+        checkBlockStatus();
 
         const unsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
             if (!userDocSnap.exists()) {
@@ -339,6 +372,50 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
             setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
         }
     };
+
+    const handleBlockUser = async () => {
+        if (!currentUser) return;
+        setIsBlockConfirmOpen(false);
+        setIsBlocked(true);
+        setIsFollowing(false); // Optimistically unfollow
+
+        try {
+            const batch = writeBatch(db);
+            
+            // 1. Add to blocked list
+            const blockRef = doc(db, 'users', currentUser.uid, 'blocked', userId);
+            batch.set(blockRef, { timestamp: serverTimestamp() });
+
+            // 2. Remove Following (Me following Them)
+            const myFollowingRef = doc(db, 'users', currentUser.uid, 'following', userId);
+            const theirFollowersRef = doc(db, 'users', userId, 'followers', currentUser.uid);
+            batch.delete(myFollowingRef);
+            batch.delete(theirFollowersRef);
+
+            // 3. Remove Followers (Them following Me)
+            const theirFollowingRef = doc(db, 'users', userId, 'following', currentUser.uid);
+            const myFollowersRef = doc(db, 'users', currentUser.uid, 'followers', userId);
+            batch.delete(theirFollowingRef);
+            batch.delete(myFollowersRef);
+
+            await batch.commit();
+        } catch (error) {
+            console.error("Error blocking user:", error);
+            setIsBlocked(false); // Revert
+        }
+    };
+
+    const handleUnblockUser = async () => {
+        if (!currentUser) return;
+        setIsBlocked(false);
+
+        try {
+            await deleteDoc(doc(db, 'users', currentUser.uid, 'blocked', userId));
+        } catch (error) {
+            console.error("Error unblocking user:", error);
+            setIsBlocked(true);
+        }
+    };
     
     const updateDenormalizedAvatar = async (userId: string, newAvatarUrl: string) => {
         console.log(`Starting background avatar update for user ${userId}.`);
@@ -471,6 +548,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         if (currentUser?.uid === userId) {
             return <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white hover:!bg-zinc-300 dark:hover:!bg-zinc-600">{t('profile.editProfile')}</Button>;
         }
+        if (isBlocked) {
+            return <Button onClick={handleUnblockUser} className="!w-auto !bg-red-500 hover:!bg-red-600 !text-white">{t('profile.unblock')}</Button>;
+        }
         return (
             <div className="flex items-center gap-2">
                 {isFollowing ? (
@@ -505,11 +585,50 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                  >
                     <VideoIcon className="w-5 h-5" />
                  </Button>
+                 {currentUser && currentUser.uid !== userId && (
+                    <div className="relative">
+                        <button onClick={() => setIsMoreOptionsOpen(prev => !prev)} className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600">
+                            <MoreHorizontalIcon className="w-5 h-5 text-black dark:text-white" />
+                        </button>
+                        {isMoreOptionsOpen && (
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
+                                <button 
+                                    onClick={() => {
+                                        setIsBlockConfirmOpen(true);
+                                        setIsMoreOptionsOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                                >
+                                    {t('profile.block')}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                 )}
             </div>
         );
     };
 
     const renderContent = () => {
+        // If blocked by the target user, treat as user not found (standard social media behavior)
+        if (isBlockedByTarget) {
+             return (
+                <div className="flex flex-col justify-center items-center p-16 text-center border-t border-zinc-300 dark:border-zinc-700">
+                    <h3 className="text-xl font-semibold">{t('profile.userUnavailable')}</h3>
+                </div>
+            );
+        }
+
+        // If I blocked them, show message
+        if (isBlocked) {
+            return (
+                <div className="flex flex-col justify-center items-center p-16 text-center border-t border-zinc-300 dark:border-zinc-700">
+                    <h3 className="text-xl font-semibold">{t('profile.blockedMessage')}</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-2">{t('profile.unblock')} para ver posts.</p>
+                </div>
+            );
+        }
+
         if (user?.isPrivate && !isFollowing && currentUser?.uid !== userId) {
             return (
                 <div className="flex flex-col justify-center items-center p-16 text-center border-t border-zinc-300 dark:border-zinc-700">
@@ -587,7 +706,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         return <div className="flex justify-center items-center p-8"><Spinner /></div>;
     }
     
-    if (!user) {
+    // If I blocked them or they blocked me, we can still see the avatar/username generally on Instagram,
+    // but typically if they blocked me, I see "User not found".
+    // If I blocked them, I see their profile but empty content.
+    
+    if (!user || isBlockedByTarget) {
         return <p className="text-center p-8 text-zinc-500 dark:text-zinc-400">{t('profile.notFound')}</p>;
     }
 
@@ -606,16 +729,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                         <h2 className="text-2xl font-light">{user.username}</h2>
                         {renderFollowButton()}
                     </div>
-                    <div className="flex items-center gap-4 sm:gap-8 text-sm flex-wrap justify-center sm:justify-start">
-                        <span><span className="font-semibold">{stats.posts}</span> {t('profile.posts')}</span>
-                        <span><span className="font-semibold">{stats.pulses}</span> {t('profile.pulses')}</span>
-                        <button onClick={() => { setFollowModalMode('followers'); setIsFollowModalOpen(true); }} className="hover:underline disabled:no-underline disabled:cursor-default" disabled={stats.followers === 0}>
-                            <span className="font-semibold">{stats.followers}</span> {t('profile.followers')}
-                        </button>
-                        <button onClick={() => { setFollowModalMode('following'); setIsFollowModalOpen(true); }} className="hover:underline disabled:no-underline disabled:cursor-default" disabled={stats.following === 0}>
-                            <span className="font-semibold">{stats.following}</span> {t('profile.followingCount')}
-                        </button>
-                    </div>
+                    {!isBlocked && !isBlockedByTarget && (
+                        <div className="flex items-center gap-4 sm:gap-8 text-sm flex-wrap justify-center sm:justify-start">
+                            <span><span className="font-semibold">{stats.posts}</span> {t('profile.posts')}</span>
+                            <span><span className="font-semibold">{stats.pulses}</span> {t('profile.pulses')}</span>
+                            <button onClick={() => { setFollowModalMode('followers'); setIsFollowModalOpen(true); }} className="hover:underline disabled:no-underline disabled:cursor-default" disabled={stats.followers === 0}>
+                                <span className="font-semibold">{stats.followers}</span> {t('profile.followers')}
+                            </button>
+                            <button onClick={() => { setFollowModalMode('following'); setIsFollowModalOpen(true); }} className="hover:underline disabled:no-underline disabled:cursor-default" disabled={stats.following === 0}>
+                                <span className="font-semibold">{stats.following}</span> {t('profile.followingCount')}
+                            </button>
+                        </div>
+                    )}
                     <div className="text-sm pt-2 text-center sm:text-left w-full">
                         {user.profileMusic && <ProfileMusicPlayer musicInfo={user.profileMusic} />}
                         {user.bio && (
@@ -680,6 +805,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setMemories(prev => prev.filter(m => m.id !== deletedId));
                 }}
             />
+        )}
+        {isBlockConfirmOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[70]" onClick={() => setIsBlockConfirmOpen(false)}>
+                <div className="bg-white dark:bg-black rounded-lg shadow-xl p-6 w-full max-w-sm text-center border dark:border-zinc-800" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold mb-2">{t('profile.blockConfirmTitle')}</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{t('profile.blockConfirmBody')}</p>
+                    <div className="flex flex-col gap-2">
+                        <button onClick={handleBlockUser} className="w-full px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold">
+                            {t('profile.block')}
+                        </button>
+                        <button onClick={() => setIsBlockConfirmOpen(false)} className="w-full px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold">
+                            {t('common.cancel')}
+                        </button>
+                    </div>
+                </div>
+            </div>
         )}
         </>
     );
