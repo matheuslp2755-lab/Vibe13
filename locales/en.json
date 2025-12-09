@@ -57,7 +57,8 @@
     "duoAcceptedNotification": "<b>{username}</b> accepted your duo photo request.",
     "duoRefusedNotification": "<b>{username}</b> refused your duo photo request.",
     "accept": "Accept",
-    "decline": "Decline"
+    "decline": "Decline",
+    "live": "Start Live"
   },
   "feed": {
     "welcome": "Welcome to Vibe",
@@ -141,7 +142,7 @@
     "sharing": "Sharing...",
     "captionLabel": "Write a caption...",
     "dragPhotos": "Drag photos here",
-    "selectFromComputer": "Select from computer",
+    "selectFrom computer": "Select from computer",
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this post.",
     "searchFollowers": "Search followers...",
@@ -269,7 +270,9 @@
     "deleteBody": "Are you sure you want to delete this pulse? This cannot be undone."
   },
   "pulseBar": {
-    "viewPulse": "View {username}'s pulse"
+    "viewPulse": "View {username}'s pulse",
+    "viewLive": "Watch {username}'s Live",
+    "live": "LIVE"
   },
   "welcome": {
     "title": "Welcome to Vibe"
@@ -371,5 +374,16 @@
     "createNew": "Create New Memory",
     "added": "Added!",
     "uploadPhoto": "Upload Photo"
+  },
+  "live": {
+    "title": "Start Broadcast",
+    "start": "Go Live",
+    "starting": "Starting...",
+    "end": "End Live",
+    "viewers": "viewers",
+    "viewer": "viewer",
+    "ended": "The broadcast has ended.",
+    "leave": "Leave",
+    "error": "Error starting live"
   }
 }

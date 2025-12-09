@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 // Embedding JSON content to avoid module resolution issues
@@ -61,7 +62,8 @@ const ptMessages = {
     "duoAcceptedNotification": "<b>{username}</b> aceitou sua solicitação de foto em dupla.",
     "duoRefusedNotification": "<b>{username}</b> recusou sua solicitação de foto em dupla.",
     "accept": "Aceitar",
-    "decline": "Recusar"
+    "decline": "Recusar",
+    "live": "Iniciar Live"
   },
   "feed": {
     "welcome": "Bem-vindo ao Vibe",
@@ -108,6 +110,7 @@ const ptMessages = {
     "follow": "Seguir",
     "message": "Mensagem",
     "posts": "publicações",
+    "pulses": "pulses",
     "followers": "seguidores",
     "followingCount": "seguindo",
     "postsTab": "PUBLICAÇÕES",
@@ -196,7 +199,7 @@ const ptMessages = {
     "deleteConversationTitle": "Excluir Conversa?",
     "deleteConversationBody": "Isso excluirá permanentemente a conversa para todos e não poderá ser desfeito.",
     "deleteConversationConfirm": "Excluir",
-    "recordingError": "Não foi possível iniciar a gravação. Verifique as permissões do microfone.",
+    "recordingError": "Não foi possível iniciar a gravação. Verifique as permissões do microfone nas configurações do seu dispositivo.",
     "diariesTitle": "Notas",
     "addNote": "Sua Nota",
     "replyToNote": "Responder à nota de {username}...",
@@ -277,7 +280,9 @@ const ptMessages = {
     "viewPlural": "visualizações"
   },
   "pulseBar": {
-    "viewPulse": "Ver o pulso de {username}"
+    "viewPulse": "Ver o pulso de {username}",
+    "viewLive": "Assistir Live de {username}",
+    "live": "AO VIVO"
   },
   "welcome": {
     "title": "Bem vindo ao Vibe"
@@ -305,6 +310,7 @@ const ptMessages = {
     "call": "Ligar",
     "calling": "Ligando para {username}...",
     "incomingCall": "Chamada de {username}",
+    "incomingVideoCall": "Chamada de vídeo de {username}",
     "answer": "Atender",
     "decline": "Recusar",
     "hangUp": "Desligar",
@@ -376,7 +382,8 @@ const ptMessages = {
     "error": "Ocorreu um erro. Tente novamente.",
     "addToMemoryTitle": "Adicionar à Lembrança",
     "createNew": "Criar nova Lembrança",
-    "added": "Adicionado!"
+    "added": "Adicionado!",
+    "uploadPhoto": "Carregar Foto"
   },
   "gallery": {
     "title": "Nova Publicação",
@@ -391,6 +398,17 @@ const ptMessages = {
     "title": "O que você quer criar?",
     "post": "Publicação",
     "pulse": "Pulse"
+  },
+  "live": {
+    "title": "Transmissão ao vivo",
+    "start": "Transmitir ao vivo",
+    "starting": "Verificando conexão...",
+    "end": "Encerrar vídeo ao vivo",
+    "viewers": "espectadores",
+    "viewer": "espectador",
+    "ended": "Vídeo ao vivo encerrado",
+    "leave": "Sair",
+    "error": "Erro de conexão"
   }
 };
 
@@ -454,7 +472,8 @@ const enMessages = {
     "duoAcceptedNotification": "<b>{username}</b> accepted your duo photo request.",
     "duoRefusedNotification": "<b>{username}</b> refused your duo photo request.",
     "accept": "Accept",
-    "decline": "Decline"
+    "decline": "Decline",
+    "live": "Start Live"
   },
   "feed": {
     "welcome": "Welcome to Vibe",
@@ -500,6 +519,7 @@ const enMessages = {
     "follow": "Follow",
     "message": "Message",
     "posts": "posts",
+    "pulses": "pulses",
     "followers": "followers",
     "followingCount": "following",
     "postsTab": "POSTS",
@@ -537,7 +557,7 @@ const enMessages = {
     "sharing": "Sharing...",
     "captionLabel": "Write a caption...",
     "dragPhotos": "Drag photos here",
-    "selectFromComputer": "Select from computer",
+    "selectFrom computer": "Select from computer",
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this post.",
     "searchFollowers": "Search followers...",
@@ -665,7 +685,9 @@ const enMessages = {
     "deleteBody": "Are you sure you want to delete this pulse? This cannot be undone."
   },
   "pulseBar": {
-    "viewPulse": "View {username}'s pulse"
+    "viewPulse": "View {username}'s pulse",
+    "viewLive": "Watch {username}'s Live",
+    "live": "LIVE"
   },
   "welcome": {
     "title": "Welcome to Vibe"
@@ -779,6 +801,17 @@ const enMessages = {
     "title": "What do you want to create?",
     "post": "Post",
     "pulse": "Pulse"
+  },
+  "live": {
+    "title": "Start Broadcast",
+    "start": "Go Live",
+    "starting": "Starting...",
+    "end": "End Live",
+    "viewers": "viewers",
+    "viewer": "viewer",
+    "ended": "The broadcast has ended.",
+    "leave": "Leave",
+    "error": "Error starting live"
   }
 };
 

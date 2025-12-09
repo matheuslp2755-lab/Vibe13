@@ -72,32 +72,21 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const requestMicrophonePermission = async () => {
+    const requestMediaPermissions = async () => {
       try {
-        // Directly requesting microphone access. This will trigger a prompt if the user 
-        // hasn't made a choice yet. If permission was already granted, it will succeed 
-        // without a prompt. If it was denied, it will fail.
-        console.log("Attempting to get microphone permissions on app load...");
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        // If we get here, permission is granted. We don't need to use the stream
-        // right now, so we can stop the tracks to release the microphone.
+        console.log("Requesting camera and microphone permissions...");
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        
+        // Stop tracks immediately after granting permission
         stream.getTracks().forEach(track => track.stop());
-        console.log("Microphone permission is available.");
+        console.log("Media permissions granted.");
       } catch (err: any) {
-        // Handle cases where the user denies permission or no microphone is available.
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          console.warn("Microphone access was denied by the user. Some features may not work.");
-        } else if (err.name === 'NotFoundError') {
-            console.warn("No microphone was found on this device.");
-        } else {
-          console.error("An error occurred while requesting microphone permission:", err);
-        }
+        console.warn("Media permissions denied or error:", err);
       }
     };
 
-    requestMicrophonePermission();
-  }, []); // The empty dependency array ensures this runs only once when the component mounts.
+    requestMediaPermissions();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {

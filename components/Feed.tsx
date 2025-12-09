@@ -8,8 +8,10 @@ import CreatePulseModal from './pulse/CreatePulseModal';
 import MessagesModal from './messages/MessagesModal';
 import PulseBar from './feed/PulseBar';
 import PulseViewerModal from './pulse/PulseViewerModal';
+import LiveViewerModal from './live/LiveViewerModal';
 import { auth, db, collection, query, where, getDocs, doc, getDoc, deleteDoc, storage, storageRef, deleteObject } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
+import { useCall } from '../context/CallContext';
 
 const Spinner: React.FC = () => (
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500"></div>
@@ -56,6 +58,16 @@ type UserWithPulses = {
     pulses: PulseType[];
 }
 
+type LiveSession = {
+    liveId: string;
+    host: {
+        id: string;
+        username: string;
+        avatar: string;
+    };
+    status: 'live' | 'ended';
+};
+
 
 const EmptyFeed: React.FC = () => {
     const { t } = useLanguage();
@@ -84,6 +96,7 @@ const Feed: React.FC = () => {
   const [feedPosts, setFeedPosts] = useState<PostType[]>([]);
   const [pulsesByAuthor, setPulsesByAuthor] = useState<Map<string, UserWithPulses>>(new Map());
   const [viewingUserWithPulses, setViewingUserWithPulses] = useState<UserWithPulses | null>(null);
+  const [activeLives, setActiveLives] = useState<LiveSession[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedKey, setFeedKey] = useState(0);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
@@ -92,8 +105,9 @@ const Feed: React.FC = () => {
   const [initialMessageTarget, setInitialMessageTarget] = useState<{ id: string, username: string, avatar: string } | null>(null);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [playingMusicPostId, setPlayingMusicPostId] = useState<string | null>(null);
-  // FIX: Add state for isMusicMuted to be passed down to Post components.
   const [isMusicMuted, setIsMusicMuted] = useState(false);
+  
+  const { joinLive, activeLive } = useCall();
 
   useEffect(() => {
     if (viewingProfileId || !auth.currentUser) return;
@@ -145,7 +159,6 @@ const Feed: React.FC = () => {
             // 2. Fetch Pulses
             let allPulses: PulseType[] = [];
             if (userIdsToQuery.length > 0) {
-                // Firestore 'in' queries are limited to 30 elements. Chunk the user IDs to avoid errors.
                 const userIdChunks: string[][] = [];
                 for (let i = 0; i < userIdsToQuery.length; i += 30) {
                     userIdChunks.push(userIdsToQuery.slice(i, i + 30));
@@ -153,8 +166,6 @@ const Feed: React.FC = () => {
 
                 for (const chunk of userIdChunks) {
                     if (chunk.length === 0) continue;
-                    // Query without the time filter to avoid the composite index requirement.
-                    // Filtering will be done on the client side.
                     const pulsesQuery = query(
                         collection(db, 'pulses'),
                         where('authorId', 'in', chunk)
@@ -165,7 +176,6 @@ const Feed: React.FC = () => {
                 }
             }
             
-            // Client-side filtering for pulses from the last 24 hours.
             const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const recentPulses = allPulses.filter(pulse => {
                 if (!pulse.createdAt?.seconds) return false;
@@ -179,8 +189,6 @@ const Feed: React.FC = () => {
                 return pulse.allowedUsers?.includes(auth.currentUser!.uid);
             });
 
-
-            // Group pulses by author and collect unique author IDs
             const pulsesByAuthorId: { [key: string]: PulseType[] } = {};
             const authorIds = new Set<string>();
             filteredPulses.forEach(pulse => {
@@ -189,7 +197,40 @@ const Feed: React.FC = () => {
                 authorIds.add(pulse.authorId);
             });
 
-            // Fetch author info
+            // 3. Fetch Lives
+            let activeLivesData: LiveSession[] = [];
+            if (userIdsToQuery.length > 0) {
+                const userIdChunks: string[][] = [];
+                for (let i = 0; i < userIdsToQuery.length; i += 30) {
+                    userIdChunks.push(userIdsToQuery.slice(i, i + 30));
+                }
+                
+                for (const chunk of userIdChunks) {
+                    if (chunk.length === 0) continue;
+                    const livesQuery = query(
+                        collection(db, 'lives'),
+                        where('hostId', 'in', chunk),
+                        where('status', '==', 'live')
+                    );
+                    const livesSnap = await getDocs(livesQuery);
+                    livesSnap.forEach(doc => {
+                        const data = doc.data();
+                        activeLivesData.push({
+                            liveId: doc.id,
+                            host: {
+                                id: data.hostId,
+                                username: data.hostUsername,
+                                avatar: data.hostAvatar
+                            },
+                            status: 'live'
+                        });
+                        authorIds.add(data.hostId);
+                    });
+                }
+            }
+            setActiveLives(activeLivesData);
+
+            // Fetch author info for pulses (lives already have info)
             const authorInfoMap = new Map<string, { username: string, avatar: string }>();
             if (authorIds.size > 0) {
                 for (const id of Array.from(authorIds)) {
@@ -201,7 +242,6 @@ const Feed: React.FC = () => {
                 }
             }
             
-            // Combine author info with grouped pulses
             const finalGroupedPulses = new Map<string, UserWithPulses>();
             for (const [authorId, pulses] of Object.entries(pulsesByAuthorId)) {
                 const author = authorInfoMap.get(authorId);
@@ -223,7 +263,7 @@ const Feed: React.FC = () => {
 
   const handleSelectUser = (userId: string) => {
     setViewingProfileId(userId);
-    setProfileKey(prev => prev + 1); // Force re-render of profile
+    setProfileKey(prev => prev + 1); 
   };
 
   const handleGoHome = () => {
@@ -252,6 +292,10 @@ const Feed: React.FC = () => {
     }
   };
   
+  const handleJoinLive = (liveId: string, host: any) => {
+      joinLive(liveId, host);
+  };
+  
   const handlePulseDeleted = async (pulseToDelete: PulseType) => {
     try {
         const pulseRef = doc(db, 'pulses', pulseToDelete.id);
@@ -260,7 +304,6 @@ const Feed: React.FC = () => {
         await deleteDoc(pulseRef);
         await deleteObject(mediaRef);
         
-        // FIX: Explicitly type the 'prev' parameter to 'UserWithPulses | null' to resolve TypeScript inference issues.
         setViewingUserWithPulses((prev: UserWithPulses | null) => {
             if (!prev) return null;
             const updatedPulses = prev.pulses.filter(p => p.id !== pulseToDelete.id);
@@ -268,7 +311,6 @@ const Feed: React.FC = () => {
             return { author: prev.author, pulses: updatedPulses };
         });
         
-        // FIX: Explicitly type the 'prevMap' parameter to resolve TypeScript inference issues.
         setPulsesByAuthor((prevMap: Map<string, UserWithPulses>) => {
             const newMap = new Map(prevMap);
             const authorData = newMap.get(pulseToDelete.authorId);
@@ -277,7 +319,6 @@ const Feed: React.FC = () => {
                 if (updatedPulses.length === 0) {
                     newMap.delete(pulseToDelete.authorId);
                 } else {
-                    // FIX: Reconstruct object to avoid spread operator issue with inferred types.
                     newMap.set(pulseToDelete.authorId, { author: authorData.author, pulses: updatedPulses });
                 }
             }
@@ -312,14 +353,16 @@ const Feed: React.FC = () => {
               <div className="flex justify-center"><Spinner/></div>
             ) : (
                 <>
-                    {pulsesByAuthor.size > 0 && (
+                    {(pulsesByAuthor.size > 0 || activeLives.length > 0) && (
                         <PulseBar
                             usersWithPulses={Array.from(pulsesByAuthor.values())}
                             onViewPulses={handleViewUserPulses}
+                            activeLives={activeLives}
+                            onJoinLive={handleJoinLive}
                         />
                     )}
                     {feedPosts.length > 0 ? (
-                        <div className={`flex flex-col gap-8 ${pulsesByAuthor.size > 0 ? 'mt-4' : ''}`}>
+                        <div className={`flex flex-col gap-8 ${(pulsesByAuthor.size > 0 || activeLives.length > 0) ? 'mt-4' : ''}`}>
                             {feedPosts.map(post => <Post key={post.id} post={post} onPostDeleted={handlePostDeleted} playingMusicPostId={playingMusicPostId} setPlayingMusicPostId={setPlayingMusicPostId} isMusicMuted={isMusicMuted} setIsMusicMuted={setIsMusicMuted} />)}
                         </div>
                     ) : (
@@ -373,6 +416,9 @@ const Feed: React.FC = () => {
                 onViewProfile={handleSelectUser}
             />
         )}
+      <LiveViewerModal 
+        isOpen={!!activeLive && !activeLive.isHost} 
+      />
     </>
   );
 };

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import { auth, db, doc, addDoc, collection, onSnapshot, updateDoc, getDoc } from '../firebase';
+import { auth, db, doc, addDoc, collection, onSnapshot, updateDoc, getDoc, deleteDoc, serverTimestamp } from '../firebase';
 import type { Unsubscribe } from 'firebase/firestore';
 
 // WebRTC configuration - using public STUN servers
@@ -29,6 +29,13 @@ interface ActiveCall {
     isVideo: boolean;
 }
 
+interface LiveSession {
+    liveId: string;
+    host: UserInfo;
+    status: 'live' | 'ended';
+    isHost: boolean;
+}
+
 interface CallContextType {
     activeCall: ActiveCall | null;
     localStream: MediaStream | null;
@@ -39,6 +46,12 @@ interface CallContextType {
     declineCall: () => Promise<void>;
     setIncomingCall: (callData: any) => void;
     error: string | null;
+    // Live Streaming
+    activeLive: LiveSession | null;
+    startLive: () => Promise<void>;
+    joinLive: (liveId: string, host: UserInfo) => void;
+    endLive: () => Promise<void>;
+    leaveLive: () => void;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -48,6 +61,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [activeLive, setActiveLive] = useState<LiveSession | null>(null);
 
     const pc = useRef<RTCPeerConnection | null>(null);
     
@@ -336,16 +350,96 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetCallState();
     }, [resetCallState]);
 
+    // --- Live Streaming Logic ---
+
+    const startLive = async () => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        try {
+            console.log("Starting live stream...");
+            // Get local stream first to ensure we have it before creating the doc
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user' }, 
+                audio: true 
+            });
+            setLocalStream(stream);
+
+            // Create Live Document
+            const liveDocRef = await addDoc(collection(db, 'lives'), {
+                hostId: currentUser.uid,
+                hostUsername: currentUser.displayName,
+                hostAvatar: currentUser.photoURL,
+                status: 'live',
+                startedAt: serverTimestamp(),
+            });
+
+            setActiveLive({
+                liveId: liveDocRef.id,
+                host: { id: currentUser.uid, username: currentUser.displayName || '', avatar: currentUser.photoURL || '' },
+                status: 'live',
+                isHost: true
+            });
+
+        } catch (err: any) {
+            console.error("Error starting live:", err);
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                setLocalStream(null);
+            }
+            setError("live.error");
+        }
+    };
+
+    const joinLive = (liveId: string, host: UserInfo) => {
+        setActiveLive({
+            liveId,
+            host,
+            status: 'live',
+            isHost: false
+        });
+        // In a real one-to-many implementation, we would initiate a WebRTC connection here.
+        // For this implementation, the viewer only "joins" the session to view the UI.
+    };
+
+    const endLive = async () => {
+        if (!activeLive || !activeLive.isHost) return;
+        
+        try {
+            const liveRef = doc(db, 'lives', activeLive.liveId);
+            await updateDoc(liveRef, { status: 'ended' });
+            
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                setLocalStream(null);
+            }
+            setActiveLive(null);
+        } catch (err) {
+            console.error("Error ending live:", err);
+        }
+    };
+
+    const leaveLive = () => {
+        if (activeLive && activeLive.isHost) {
+            endLive();
+        } else {
+            setActiveLive(null);
+        }
+    };
+
     // Auto-hangup on window close
     useEffect(() => {
         const handleBeforeUnload = () => {
             if (activeCallRef.current) {
                 hangUp();
             }
+            if (activeLive && activeLive.isHost) {
+                endLive();
+            }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [hangUp]);
+    }, [hangUp, activeLive]);
 
     const value = {
         activeCall,
@@ -356,7 +450,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hangUp,
         declineCall,
         setIncomingCall,
-        error
+        error,
+        activeLive,
+        startLive,
+        joinLive,
+        endLive,
+        leaveLive
     };
 
     return (

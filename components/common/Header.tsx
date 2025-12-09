@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth, db, collection, query, where, getDocs, limit, doc, setDoc, deleteDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, addDoc, updateDoc } from '../../firebase';
 import OnlineIndicator from './OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
+import CreateLiveModal from '../live/CreateLiveModal';
 
 type UserSearchResult = {
     id: string;
@@ -68,6 +70,12 @@ const PulseIcon: React.FC<{className?: string}> = ({className = "h-6 w-6"}) => (
     </svg>
 );
 
+const LiveIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+);
+
 const SpinnerIcon: React.FC = () => (
     <div className="flex justify-center items-center p-4">
         <svg className="animate-spin h-5 w-5 text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -86,16 +94,20 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
+    const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
     const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     const [following, setFollowing] = useState<string[]>([]);
     const [requestedIds, setRequestedIds] = useState<string[]>([]);
     const [isMobileSearchVisible, setIsMobileSearchVisible] = useState(false);
-    const [forceUpdate, setForceUpdate] = useState(0); // Dummy state to force re-render on profile update
+    const [forceUpdate, setForceUpdate] = useState(0); 
+    const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
+
     const searchRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
     const activityRef = useRef<HTMLDivElement>(null);
+    const createRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
 
     // Force re-render on profile update to show new avatar
@@ -226,10 +238,13 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
             if (activityRef.current && !activityRef.current.contains(event.target as Node)) {
                 setIsActivityDropdownOpen(false);
             }
+            if (createRef.current && !createRef.current.contains(event.target as Node)) {
+                setIsCreateDropdownOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [searchRef, profileRef, activityRef]);
+    }, [searchRef, profileRef, activityRef, createRef]);
 
 
     const handleLogout = () => {
@@ -570,6 +585,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
     };
 
     return (
+        <>
         <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-300 dark:border-zinc-800 z-10">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-4xl gap-4">
                 
@@ -611,9 +627,34 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                         <PulseIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
                     </button>
                     
-                    <button onClick={onOpenCreatePostModal} className="relative">
-                        <PlusCircleIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                    </button>
+                    <div ref={createRef} className="relative">
+                        <button onClick={() => setIsCreateDropdownOpen(prev => !prev)} className="relative block">
+                            <PlusCircleIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
+                        </button>
+                        {isCreateDropdownOpen && (
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
+                                <button 
+                                    onClick={() => {
+                                        onOpenCreatePostModal();
+                                        setIsCreateDropdownOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                                >
+                                    {t('header.createPost')}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setIsLiveModalOpen(true);
+                                        setIsCreateDropdownOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 flex items-center gap-2"
+                                >
+                                    <LiveIcon className="w-4 h-4" />
+                                    {t('header.live')}
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <button onClick={() => onOpenMessages()} className="relative" title={t('header.messages')}>
                         <MessagesIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
@@ -699,6 +740,11 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                 </div>
             </div>
         </header>
+        <CreateLiveModal 
+            isOpen={isLiveModalOpen}
+            onClose={() => setIsLiveModalOpen(false)}
+        />
+        </>
     );
 };
 

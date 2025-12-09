@@ -56,7 +56,8 @@
     "duoAcceptedNotification": "<b>{username}</b> aceitou sua solicitação de foto em dupla.",
     "duoRefusedNotification": "<b>{username}</b> recusou sua solicitação de foto em dupla.",
     "accept": "Aceitar",
-    "decline": "Recusar"
+    "decline": "Recusar",
+    "live": "Iniciar Live"
   },
   "feed": {
     "welcome": "Bem-vindo ao Vibe",
@@ -273,7 +274,9 @@
     "viewPlural": "visualizações"
   },
   "pulseBar": {
-    "viewPulse": "Ver o pulso de {username}"
+    "viewPulse": "Ver o pulso de {username}",
+    "viewLive": "Assistir Live de {username}",
+    "live": "AO VIVO"
   },
   "welcome": {
     "title": "Bem vindo ao Vibe"
@@ -375,5 +378,16 @@
     "createNew": "Criar nova Lembrança",
     "added": "Adicionado!",
     "uploadPhoto": "Carregar Foto"
+  },
+  "live": {
+    "title": "Transmissão ao vivo",
+    "start": "Transmitir ao vivo",
+    "starting": "Verificando conexão...",
+    "end": "Encerrar vídeo ao vivo",
+    "viewers": "espectadores",
+    "viewer": "espectador",
+    "ended": "Vídeo ao vivo encerrado",
+    "leave": "Sair",
+    "error": "Erro de conexão"
   }
 }

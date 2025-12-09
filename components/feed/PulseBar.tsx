@@ -19,18 +19,72 @@ type UserWithPulses = {
     pulses: Pulse[];
 };
 
+type LiveSession = {
+    liveId: string;
+    host: {
+        id: string;
+        username: string;
+        avatar: string;
+    };
+    status: 'live' | 'ended';
+};
+
 interface PulseBarProps {
     usersWithPulses: UserWithPulses[];
     onViewPulses: (authorId: string) => void;
+    activeLives?: LiveSession[];
+    onJoinLive?: (liveId: string, host: any) => void;
 }
 
-const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses }) => {
+const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, activeLives = [], onJoinLive }) => {
     const { t } = useLanguage();
 
     return (
         <div className="w-full border-b border-zinc-300 dark:border-zinc-800 pb-2">
             {/* Scrollable container with padding */}
             <div className="flex items-center gap-3 px-4 py-4 overflow-x-auto no-scrollbar">
+                {/* Render Lives First */}
+                {activeLives.map((live) => (
+                    <div 
+                        key={`live-${live.liveId}`}
+                        className="relative flex-shrink-0 w-28 h-44 cursor-pointer group rounded-xl overflow-hidden shadow-md border-2 border-red-500 animate-pulse transition-transform duration-200 hover:scale-[1.02]"
+                        onClick={() => onJoinLive && onJoinLive(live.liveId, live.host)}
+                        role="button"
+                        aria-label={t('pulseBar.viewLive', { username: live.host.username })}
+                    >
+                        {/* Background Media - User Avatar blurred or generic */}
+                        <div className="absolute inset-0 bg-zinc-900">
+                            <img 
+                                src={live.host.avatar} 
+                                alt={live.host.username} 
+                                className="w-full h-full object-cover opacity-60 blur-sm" 
+                            />
+                            {/* Live Badge */}
+                            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                                {t('pulseBar.live')}
+                            </div>
+                            {/* Dark Gradient Overlay for text readability */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80"></div>
+                        </div>
+
+                        {/* User Info Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-2 flex flex-col items-center">
+                            <div className="w-10 h-10 rounded-full p-0.5 bg-red-600 mb-1 ring-2 ring-black/50">
+                                <div className="bg-white dark:bg-black p-0.5 rounded-full h-full w-full">
+                                    <img 
+                                        src={live.host.avatar} 
+                                        alt={live.host.username} 
+                                        className="w-full h-full rounded-full object-cover" 
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-white text-xs font-semibold truncate w-full text-center drop-shadow-md">
+                                {live.host.username}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+
                 {usersWithPulses.map(({ author, pulses }) => {
                     // Get the latest pulse to show as preview background
                     const latestPulse = pulses[pulses.length - 1];
