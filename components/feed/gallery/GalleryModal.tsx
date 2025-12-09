@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
-import Button from '../common/Button';
+import { useLanguage } from '../../../context/LanguageContext';
+import Button from '../../common/Button';
 
 interface GalleryImage {
     file: File;
@@ -36,7 +37,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 setCameraStream(null);
             }
         }
-    }, [isOpen, cameraStream]);
+    }, [isOpen]); // Depend on isOpen
 
     useEffect(() => {
         if (activeTab === 'camera' && isOpen) {
@@ -58,6 +59,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                     setCameraStream(stream);
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
+                        // Important: Play the video to ensure dimensions are loaded
+                        videoRef.current.play().catch(e => console.error("Error playing video stream:", e));
                     }
                     setCameraError(null);
                 } catch (err) {
@@ -79,6 +82,12 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                     videoRef.current.srcObject = null;
                 }
             };
+        } else {
+            // Stop camera if switching away from camera tab or closing modal
+             if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                setCameraStream(null);
+            }
         }
     }, [activeTab, isOpen, t]);
 
@@ -113,10 +122,20 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
 
         const video = videoRef.current;
         const canvas = canvasRef.current;
+        
+        // Ensure video has dimensions
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            console.warn("Video dimensions not ready yet");
+            return;
+        }
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const context = canvas.getContext('2d');
-        context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        if (!context) return;
+
+        // Flip if using user-facing camera (optional, keeping standard for now)
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
         canvas.toBlob((blob) => {
             if (blob) {
@@ -141,7 +160,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
 
     return (
         <div 
-            className="fixed inset-0 bg-white dark:bg-black z-50 flex flex-col"
+            className="fixed inset-0 bg-white dark:bg-black z-[60] flex flex-col"
             role="dialog"
             aria-modal="true"
         >
@@ -162,13 +181,35 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
             </header>
             
             <div className="flex-grow flex flex-col overflow-hidden">
-                <div className="w-full aspect-square bg-black flex items-center justify-center">
-                    {selectedImage ? (
-                        <img src={selectedImage.preview} alt="Selected" className="max-h-full max-w-full object-contain" />
-                    ) : (
-                        <div className="text-zinc-500">{t('gallery.selectPhotos')}</div>
-                    )}
-                </div>
+                {activeTab === 'gallery' ? (
+                    <div className="w-full aspect-square bg-black flex items-center justify-center flex-shrink-0">
+                        {selectedImage ? (
+                            <img src={selectedImage.preview} alt="Selected" className="max-h-full max-w-full object-contain" />
+                        ) : (
+                            <div className="text-zinc-500">{t('gallery.selectPhotos')}</div>
+                        )}
+                    </div>
+                ) : (
+                     <div className="relative w-full flex-grow bg-black flex flex-col items-center justify-center">
+                        {cameraError ? (
+                            <p className="text-red-500 p-4">{cameraError}</p>
+                        ) : (
+                            <>
+                                <video 
+                                    ref={videoRef} 
+                                    autoPlay 
+                                    playsInline 
+                                    className="w-full h-full object-cover"
+                                ></video>
+                                <div className="absolute bottom-6 flex justify-center w-full z-20">
+                                    <button onClick={handleCapture} className="w-16 h-16 rounded-full bg-white/30 border-4 border-white flex items-center justify-center hover:bg-white/50 transition-colors" aria-label={t('gallery.capture')}>
+                                        <div className="w-12 h-12 rounded-full bg-white"></div>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex-shrink-0 border-b border-zinc-200 dark:border-zinc-800">
                     <div className="flex justify-around">
@@ -177,9 +218,9 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                     </div>
                 </div>
 
-                <div className="flex-grow overflow-y-auto">
-                    {activeTab === 'gallery' && (
-                        galleryImages.length === 0 ? (
+                {activeTab === 'gallery' && (
+                    <div className="flex-grow overflow-y-auto">
+                        {galleryImages.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                                 <h3 className="text-xl mt-4 mb-2">{t('createPost.dragPhotos')}</h3>
                                 <Button onClick={() => fileInputRef.current?.click()}>
@@ -188,6 +229,14 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                             </div>
                         ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-0.5">
+                                <div 
+                                    className="relative aspect-square cursor-pointer flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-500"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </div>
                                 {galleryImages.map((image, index) => (
                                     <div
                                         key={`${image.file.name}-${index}`}
@@ -199,25 +248,9 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                                     </div>
                                 ))}
                             </div>
-                        )
-                    )}
-                    {activeTab === 'camera' && (
-                        <div className="relative w-full h-full bg-black flex flex-col items-center justify-center">
-                            {cameraError ? (
-                                <p className="text-red-500 p-4">{cameraError}</p>
-                            ) : (
-                                <>
-                                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
-                                    <div className="absolute bottom-6 flex justify-center">
-                                        <button onClick={handleCapture} className="w-16 h-16 rounded-full bg-white/30 border-4 border-white flex items-center justify-center" aria-label={t('gallery.capture')}>
-                                            <div className="w-12 h-12 rounded-full bg-white"></div>
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}

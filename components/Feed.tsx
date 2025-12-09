@@ -9,6 +9,7 @@ import MessagesModal from './messages/MessagesModal';
 import PulseBar from './feed/PulseBar';
 import PulseViewerModal from './pulse/PulseViewerModal';
 import LiveViewerModal from './live/LiveViewerModal';
+import GalleryModal from './feed/gallery/GalleryModal';
 import { auth, db, collection, query, where, getDocs, doc, getDoc, deleteDoc, storage, storageRef, deleteObject, onSnapshot } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 import { useCall } from '../context/CallContext';
@@ -99,7 +100,9 @@ const Feed: React.FC = () => {
   const [activeLives, setActiveLives] = useState<LiveSession[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedKey, setFeedKey] = useState(0);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [selectedImageForPost, setSelectedImageForPost] = useState<{ file: File; preview: string } | null>(null);
   const [isCreatePulseModalOpen, setIsCreatePulseModalOpen] = useState(false);
   const [isMessagesModalOpen, setIsMessagesModalOpen] = useState(false);
   const [initialMessageTarget, setInitialMessageTarget] = useState<{ id: string, username: string, avatar: string } | null>(null);
@@ -353,12 +356,21 @@ const Feed: React.FC = () => {
     }
 };
 
+  const handleGalleryImageSelected = (image: { file: File, preview: string }) => {
+      setSelectedImageForPost(image);
+      setIsGalleryModalOpen(false);
+      setIsCreatePostModalOpen(true);
+  };
+
   return (
     <>
       <Header 
         onSelectUser={handleSelectUser} 
         onGoHome={handleGoHome}
-        onOpenCreatePostModal={() => setIsCreatePostModalOpen(true)}
+        onOpenCreatePostModal={() => {
+            setSelectedImageForPost(null); // Reset prev selection
+            setIsGalleryModalOpen(true);
+        }}
         onOpenCreatePulseModal={() => setIsCreatePulseModalOpen(true)}
         onOpenMessages={handleOpenMessages}
       />
@@ -396,18 +408,28 @@ const Feed: React.FC = () => {
           </div>
         )}
       </main>
+      
+      <GalleryModal
+        isOpen={isGalleryModalOpen}
+        onClose={() => setIsGalleryModalOpen(false)}
+        onImageSelected={handleGalleryImageSelected}
+      />
+
       <CreatePostModal
         isOpen={isCreatePostModalOpen}
         onClose={() => {
             setIsCreatePostModalOpen(false);
+            setSelectedImageForPost(null);
         }}
         onPostCreated={() => {
             setIsCreatePostModalOpen(false);
+            setSelectedImageForPost(null);
             setFeedKey(prev => prev + 1); // Refreshes the feed
             if(viewingProfileId === auth.currentUser?.uid) {
                 setProfileKey(prev => prev + 1);
             }
         }}
+        initialImage={selectedImageForPost}
       />
       <CreatePulseModal
         isOpen={isCreatePulseModalOpen}
