@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
     auth,
@@ -37,7 +38,7 @@ type MusicInfo = {
 };
 
 const MediaIcon: React.FC = () => (
-    <svg aria-label="Icon to represent media" className="w-24 h-24 text-zinc-800 dark:text-zinc-200" fill="currentColor" role="img" viewBox="0 0 97.6 77.3"><path d="M16.3 24h.3c2.8-.2 4.9-2.6 4.8-5.4A4.9 4.9 0 0 0 16 13.6c-2.8.2-4.9 2.6-4.8 5.4.1 2.7 2.4 4.8 5.1 5zM42.4 28.9c-2.8.2-5.4-2-5.6-4.8-.2-2.8 2-5.4 4.8-5.6 2.8-.2 5.4-4.8 5.6z" fill="currentColor"></path><path d="M84.7 18.4 58 16.9l-.2-3.2c-.3-5.7-5.2-10.1-11-9.8L12.9 6c-5.7.3-10.1 5.2-9.8 11L5 51.1v.8c.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4l-14.4 1.1c-1.2.1-2.2-1-2.1-2.2l-.2-3.2 14.5-1.2c5.7-.3 10.1-5.2 9.8-11L51 15.1l18.7 1.4c1.2.1 2.2 1 2.1 2.2l.2 3.2-18.7-1.4c-5.7.3-10.1 5.2-9.8 11l-1.9 24.7c.1 1.2 1 2.2 2.2 2.1l14.4-1.1v9.4l-24.7 1.9c-5.7-.3-10.1-5.2-9.8-11L18.4 25.6v-.8c-.3-5.7 5.2-10.1 11-9.8l24.7 1.9v9.4l14.4-1.1c1.2-.1 2.2 1 2.1 2.2l.2 3.2-14.5 1.2c-5.7.3-10.1 5.2-9.8 11L49 60.3l-18.7-1.4c-1.2-.1-2.2-1-2.1-2.2l-.2-3.2 18.7 1.4c5.7-.3 10.1-5.2 9.8-11l1.9-24.7c-.1-1.2-1-2.2-2.2-2.1L31.2 20.1v-9.4l24.7-1.9c5.7.3 10.1 5.2 9.8 11l-2.1 28.9.2.6c.3 5.7-5.2-10.1-11 9.8L31.2 68.1v.8c.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4l-14.4 1.1c-1.2.1-2.2-1-2.1-2.2l-.2-3.2 14.5-1.2c5.7-.3 10.1-5.2 9.8-11L72.2 19l14.5-1.2c1.2-.1 2.2 1 2.1 2.2l-.2 3.2-14.5 1.2c-5.7.3-10.1 5.2-9.8 11l-1.9 24.7c.1 1.2 1 2.2 2.2 2.1l14.4-1.1v9.4l-24.7 1.9c-5.7-.3-10.1-5.2-9.8-11l2.1-28.9-.2-.6c-.3-5.7 5.2-10.1 11-9.8l21.5 1.7 2.1-28.9c-.3-5.7-5.2-10.1-11-9.8L21.5 4.9v.8c-.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4L31.2 6C25.5 5.7 21.1.8 21.4-5l2.1-28.9c.3-5.7 5.2-10.1 11-9.8l42.2-3.2c5.7-.3 10.1 5.2 9.8 11z" fill="currentColor"></path></svg>
+    <svg aria-label="Icon to represent media" className="w-24 h-24 text-zinc-800 dark:text-zinc-200" fill="currentColor" role="img" viewBox="0 0 97.6 77.3"><path d="M16.3 24h.3c2.8-.2 4.9-2.6 4.8-5.4A4.9 4.9 0 0 0 16 13.6c-2.8.2-4.9 2.6-4.8 5.4.1 2.7 2.4 4.8 5.1 5zM42.4 28.9c-2.8.2-5.4-2-5.6-4.8-.2-2.8 2-5.4 4.8-5.6 2.8-.2 5.4 2 5.6 4.8.2 2.8-2 5.4-4.8 5.6z" fill="currentColor"></path><path d="M84.7 18.4 58 16.9l-.2-3.2c-.3-5.7-5.2-10.1-11-9.8L12.9 6c-5.7.3-10.1 5.2-9.8 11L5 51.1v.8c.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4l-14.4 1.1c-1.2.1-2.2-1-2.1-2.2l-.2-3.2 14.5-1.2c5.7-.3 10.1-5.2 9.8-11L51 15.1l18.7 1.4c1.2.1 2.2 1 2.1 2.2l.2 3.2-18.7-1.4c-5.7.3-10.1 5.2-9.8 11l-1.9 24.7c.1 1.2 1 2.2 2.2 2.1l14.4-1.1v9.4l-24.7 1.9c-5.7-.3-10.1-5.2-9.8-11L18.4 25.6v-.8c-.3-5.7 5.2-10.1 11-9.8l24.7 1.9v9.4l14.4-1.1c1.2-.1 2.2 1 2.1 2.2l.2 3.2-14.5 1.2c-5.7.3-10.1 5.2-9.8 11L49 60.3l-18.7-1.4c-1.2-.1-2.2-1-2.1-2.2l-.2-3.2 18.7 1.4c5.7-.3 10.1-5.2 9.8-11l1.9-24.7c-.1-1.2-1-2.2-2.2-2.1L31.2 20.1v-9.4l24.7-1.9c5.7.3 10.1 5.2 9.8 11l-2.1 28.9.2.6c.3 5.7-5.2-10.1-11 9.8L31.2 68.1v.8c.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4l-14.4 1.1c-1.2.1-2.2-1-2.1-2.2l-.2-3.2 14.5-1.2c5.7-.3 10.1-5.2 9.8-11L72.2 19l14.5-1.2c1.2-.1 2.2 1 2.1 2.2l-.2 3.2-14.5 1.2c-5.7.3-10.1 5.2-9.8 11l-1.9 24.7c.1 1.2 1 2.2 2.2 2.1l14.4-1.1v9.4l-24.7 1.9c-5.7-.3-10.1-5.2-9.8-11l2.1-28.9-.2-.6c-.3-5.7 5.2-10.1 11-9.8l21.5 1.7 2.1-28.9c-.3-5.7-5.2-10.1-11-9.8L21.5 4.9v.8c-.3 5.7 5.2 10.1 11 9.8l24.7-1.9v-9.4L31.2 6C25.5 5.7 21.1.8 21.4-5l2.1-28.9c.3-5.7 5.2-10.1 11-9.8l42.2-3.2c5.7-.3 10.1 5.2 9.8 11z" fill="currentColor"></path></svg>
 );
 
 
@@ -56,8 +57,14 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
     const [loadingFollowers, setLoadingFollowers] = useState(false);
     const [selectedMusic, setSelectedMusic] = useState<MusicInfo | null>(null);
     const [showMusicSearch, setShowMusicSearch] = useState(false);
+    const [showMusicCover, setShowMusicCover] = useState(false);
+    const [stickerPos, setStickerPos] = useState({ x: 50, y: 50 }); // Percentage 0-100
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const previewContainerRef = useRef<HTMLDivElement>(null);
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const initialPos = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
         if (!isOpen) {
@@ -72,6 +79,8 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
             setFollowerSearch('');
             setSelectedMusic(null);
             setShowMusicSearch(false);
+            setShowMusicCover(false);
+            setStickerPos({ x: 50, y: 50 });
         }
     }, [isOpen]);
 
@@ -151,6 +160,8 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
             
             if (selectedMusic) {
                 pulseData.musicInfo = selectedMusic;
+                pulseData.showMusicCover = showMusicCover;
+                pulseData.musicCoverPosition = stickerPos;
             }
 
             if (isVentMode) {
@@ -168,6 +179,38 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging.current = true;
+        dragStart.current = { x: e.clientX, y: e.clientY };
+        initialPos.current = { ...stickerPos };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging.current || !previewContainerRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = previewContainerRef.current.getBoundingClientRect();
+        const deltaX = e.clientX - dragStart.current.x;
+        const deltaY = e.clientY - dragStart.current.y;
+
+        const deltaXPercent = (deltaX / rect.width) * 100;
+        const deltaYPercent = (deltaY / rect.height) * 100;
+
+        const newX = Math.max(0, Math.min(100, initialPos.current.x + deltaXPercent));
+        const newY = Math.max(0, Math.min(100, initialPos.current.y + deltaYPercent));
+
+        setStickerPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        isDragging.current = false;
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
     const filteredFollowers = followers.filter(f => f.username.toLowerCase().includes(followerSearch.toLowerCase()));
@@ -194,15 +237,43 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                         <MusicSearch
                           onSelectMusic={(track) => {
                             setSelectedMusic(track);
+                            setShowMusicCover(true); // Default to showing cover when music is added to pulse
                             setShowMusicSearch(false);
                           }}
                           onBack={() => setShowMusicSearch(false)}
                         />
                     ) : mediaPreview ? (
                         <div className="flex flex-col md:flex-row">
-                            <div className="w-full md:w-1/2 aspect-[9/16] bg-black flex items-center justify-center">
-                                {mediaType === 'image' && <img src={mediaPreview} alt="Pulse preview" className="max-h-full max-w-full object-contain" />}
-                                {mediaType === 'video' && <video src={mediaPreview} controls className="max-h-full max-w-full object-contain" />}
+                            <div 
+                                ref={previewContainerRef}
+                                className="w-full md:w-1/2 aspect-[9/16] bg-black flex items-center justify-center relative overflow-hidden touch-none"
+                            >
+                                {mediaType === 'image' && <img src={mediaPreview} alt="Pulse preview" className="w-full h-full object-contain pointer-events-none" />}
+                                {mediaType === 'video' && <video src={mediaPreview} controls={!isDragging.current} className="w-full h-full object-contain pointer-events-none" />}
+                                
+                                {/* Music Cover Overlay Preview - Draggable */}
+                                {selectedMusic && showMusicCover && (
+                                    <div 
+                                        className="absolute z-20 cursor-move touch-none"
+                                        style={{ 
+                                            left: `${stickerPos.x}%`, 
+                                            top: `${stickerPos.y}%`,
+                                            transform: 'translate(-50%, -50%)'
+                                        }}
+                                        onPointerDown={handlePointerDown}
+                                        onPointerMove={handlePointerMove}
+                                        onPointerUp={handlePointerUp}
+                                        onPointerCancel={handlePointerUp}
+                                    >
+                                        <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30 shadow-lg flex flex-col items-center gap-2 w-32 select-none">
+                                            <img src={selectedMusic.capa} alt="Album Art" className="w-28 h-28 rounded-lg shadow-sm pointer-events-none" />
+                                            <div className="text-center w-full">
+                                                <p className="text-white text-xs font-bold truncate w-full pointer-events-none">{selectedMusic.nome}</p>
+                                                <p className="text-white/80 text-[10px] truncate w-full pointer-events-none">{selectedMusic.artista}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="w-full md:w-1/2 p-4 flex flex-col">
                                 <div className="flex items-center mb-4">
@@ -218,15 +289,31 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                                 />
                                 <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                                 {selectedMusic ? (
-                                    <div className="flex items-center gap-3">
-                                        <img src={selectedMusic.capa} alt={selectedMusic.nome} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
-                                        <div className="flex-grow overflow-hidden">
-                                            <p className="font-semibold text-sm truncate">{selectedMusic.nome}</p>
-                                            <p className="text-xs text-zinc-500 truncate">{selectedMusic.artista}</p>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <img src={selectedMusic.capa} alt={selectedMusic.nome} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
+                                            <div className="flex-grow overflow-hidden">
+                                                <p className="font-semibold text-sm truncate">{selectedMusic.nome}</p>
+                                                <p className="text-xs text-zinc-500 truncate">{selectedMusic.artista}</p>
+                                            </div>
+                                            <button type="button" onClick={() => setShowMusicSearch(true)} className="text-sky-500 font-semibold text-sm ml-auto flex-shrink-0">
+                                                {t('createPost.changeMusic')}
+                                            </button>
                                         </div>
-                                        <button type="button" onClick={() => setShowMusicSearch(true)} className="text-sky-500 font-semibold text-sm ml-auto flex-shrink-0">
-                                            {t('createPost.changeMusic')}
-                                        </button>
+                                        
+                                        {/* Toggle for showing album art */}
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className="text-sm font-medium">{t('createPulse.showMusicCover')}</span>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="sr-only peer"
+                                                    checked={showMusicCover}
+                                                    onChange={() => setShowMusicCover(!showMusicCover)}
+                                                />
+                                                <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-600"></div>
+                                            </label>
+                                        </div>
                                     </div>
                                 ) : (
                                     <button type="button" onClick={() => setShowMusicSearch(true)} className="w-full text-zinc-600 dark:text-zinc-300 font-semibold text-sm flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">

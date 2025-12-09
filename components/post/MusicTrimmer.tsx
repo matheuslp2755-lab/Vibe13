@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
@@ -44,25 +45,28 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [startTime, setStartTime] = useState(0);
-  const [trackDuration, setTrackDuration] = useState(30); // iTunes previews are 30s
+  const [trackDuration, setTrackDuration] = useState(30); // iTunes previews are usually 30s
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     
-    // Auto-play when component mounts or start time changes
-    audio.currentTime = startTime;
-    audio.play().catch(() => setIsPlaying(false));
-    setIsPlaying(true);
-
-    const handleTimeUpdate = () => {
-        if (audio.currentTime >= startTime + SNIPPET_DURATION) {
-            audio.currentTime = startTime; // Loop the snippet
-        }
-    };
+    // Set volume to max
+    audio.volume = 1.0;
 
     const handleLoadedMetadata = () => {
         setTrackDuration(audio.duration);
+        // Start playing when loaded
+        audio.currentTime = startTime;
+        audio.play().catch(() => setIsPlaying(false));
+        setIsPlaying(true);
+    };
+
+    const handleTimeUpdate = () => {
+        // Loop logic: if current playhead exceeds selected window, restart from start of window
+        if (audio.currentTime >= startTime + SNIPPET_DURATION) {
+            audio.currentTime = startTime; 
+        }
     };
 
     const handlePlay = () => setIsPlaying(true);
@@ -80,7 +84,20 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
     };
-  }, [startTime]); 
+  }, [startTime]); // Re-run effect when window start changes to ensure loop is correct
+
+  // When user drags, update start time and seek audio immediately
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStartTime = parseFloat(e.target.value);
+    setStartTime(newStartTime);
+    if (audioRef.current) {
+        audioRef.current.currentTime = newStartTime;
+        if (!isPlaying) {
+            audioRef.current.play().catch(() => setIsPlaying(false));
+            setIsPlaying(true);
+        }
+    }
+  };
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -88,15 +105,11 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     if (isPlaying) {
       audio.pause();
     } else {
+      // Ensure we start playing from the selected start time if stopped
+      if (audio.currentTime < startTime || audio.currentTime > startTime + SNIPPET_DURATION) {
+          audio.currentTime = startTime;
+      }
       audio.play();
-    }
-  };
-
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newStartTime = parseFloat(e.target.value);
-    setStartTime(newStartTime);
-    if (audioRef.current) {
-        audioRef.current.currentTime = newStartTime;
     }
   };
 
@@ -110,7 +123,12 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     });
   };
 
+  // Max valid start time to ensure we always have 15s remaining
   const maxStartTime = Math.max(0, trackDuration - SNIPPET_DURATION);
+  
+  // Visual calculation for the "window"
+  const windowPercentage = (SNIPPET_DURATION / trackDuration) * 100;
+  const leftPositionPercentage = (startTime / trackDuration) * 100;
 
   return (
     <div className="p-4 flex flex-col items-center gap-6 text-center">
@@ -122,21 +140,50 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
       </div>
 
       <div className="w-full flex items-center gap-4">
-        <button onClick={togglePlayPause} className="text-sky-500">
+        <button onClick={togglePlayPause} className="text-sky-500 flex-shrink-0">
           {isPlaying ? <PauseIcon className="w-10 h-10" /> : <PlayIcon className="w-10 h-10" />}
         </button>
-        <div className="flex-grow">
-            <p className="text-xs text-zinc-400 mb-1 text-left">{t('musicSearch.trimInstructions')}</p>
-            <input
-                type="range"
-                min="0"
-                max={maxStartTime}
-                step="0.1"
-                value={startTime}
-                onChange={handleSliderChange}
-                className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
-            />
-             <div className="flex justify-between text-xs text-zinc-500 mt-1">
+        
+        <div className="flex-grow flex flex-col gap-2">
+            <p className="text-xs text-zinc-400 text-left">{t('musicSearch.trimInstructions')}</p>
+            
+            {/* Custom Visual Timeline Control */}
+            <div className="relative h-12 w-full bg-zinc-200 dark:bg-zinc-800 rounded-md overflow-hidden flex items-center">
+                {/* Simulated Waveform Background (Static pattern for visual cue) */}
+                <div className="absolute inset-0 opacity-20 flex items-center justify-center gap-[2px]">
+                    {Array.from({ length: 40 }).map((_, i) => (
+                        <div 
+                            key={i} 
+                            className="bg-zinc-500 dark:bg-zinc-400 w-1 rounded-full" 
+                            style={{ height: `${Math.random() * 80 + 20}%` }}
+                        />
+                    ))}
+                </div>
+
+                {/* Highlighted Window (The selected 15s) */}
+                <div 
+                    className="absolute h-full border-2 border-sky-500 bg-sky-500/20 backdrop-blur-sm z-10 pointer-events-none rounded-md transition-all duration-75 ease-linear"
+                    style={{ 
+                        left: `${leftPositionPercentage}%`, 
+                        width: `${windowPercentage}%` 
+                    }}
+                >
+                    {/* Optional: Add grab handles visuals if desired */}
+                </div>
+
+                {/* Invisible Range Input on top for interaction */}
+                <input
+                    type="range"
+                    min="0"
+                    max={maxStartTime}
+                    step="0.1"
+                    value={startTime}
+                    onChange={handleSliderChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                />
+            </div>
+
+             <div className="flex justify-between text-xs text-zinc-500 mt-1 font-mono">
                 <span>0:00</span>
                 <span>0:{Math.floor(trackDuration)}</span>
             </div>

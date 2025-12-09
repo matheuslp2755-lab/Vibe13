@@ -121,11 +121,11 @@
     "followingModalTitle": "Seguindo",
     "noFollowers": "Nenhum seguidor ainda.",
     "notFollowingAnyone": "Não segue ninguém.",
-    "block": "Bloquear",
+    "block": "Cancelar amizade",
     "unblock": "Desbloquear",
-    "blockConfirmTitle": "Bloquear usuário?",
+    "blockConfirmTitle": "Cancelar amizade?",
     "blockConfirmBody": "Eles não poderão enviar mensagens ou encontrar seu perfil ou conteúdo no Vibe.",
-    "blockedMessage": "Você bloqueou este usuário.",
+    "blockedMessage": "Você cancelou a amizade com este usuário.",
     "userUnavailable": "Usuário indisponível."
   },
   "editProfile": {
@@ -267,7 +267,9 @@
     "invalidFileError": "Por favor, selecione um arquivo de imagem ou vídeo válido.",
     "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
-    "ventModeInfo": "Apenas seguidores selecionados verão este pulso."
+    "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
+    "showMusicCover": "Mostrar capa da música",
+    "selectFromComputer": "Selecionar do computador"
   },
   "pulseViewer": {
     "previous": "Pulso anterior",
@@ -408,5 +410,10 @@
     "cameraTab": "Câmera",
     "capture": "Capturar",
     "cameraError": "Não foi possível acessar a câmera. Verifique as permissões."
+  },
+  "choiceModal": {
+    "title": "O que você quer criar?",
+    "post": "Publicação",
+    "pulse": "Pulse"
   }
 }

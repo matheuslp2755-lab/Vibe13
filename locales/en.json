@@ -268,7 +268,9 @@
     "invalidFileError": "Please select a valid image or video file.",
     "publishError": "Failed to create pulse. Please try again.",
     "ventMode": "Vent Mode",
-    "ventModeInfo": "Only selected followers will see this pulse."
+    "ventModeInfo": "Only selected followers will see this pulse.",
+    "showMusicCover": "Show music cover",
+    "selectFromComputer": "Select from computer"
   },
   "pulseViewer": {
     "previous": "Previous pulse",

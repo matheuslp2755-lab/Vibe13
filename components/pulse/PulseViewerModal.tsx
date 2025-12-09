@@ -20,6 +20,8 @@ type Pulse = {
       preview: string;
       startTime?: number;
     };
+    showMusicCover?: boolean;
+    musicCoverPosition?: { x: number, y: number };
 };
 
 interface PulseViewerModalProps {
@@ -291,6 +293,26 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                             <video src={currentPulse.mediaUrl} controls autoPlay className="w-full h-full object-contain" />
                         ) : (
                             <img src={currentPulse.mediaUrl} alt={currentPulse.legenda || 'Pulse'} className="w-full h-full object-contain" />
+                        )}
+
+                        {/* Music Cover Sticker */}
+                        {currentPulse.musicInfo && currentPulse.showMusicCover && (
+                            <div 
+                                className="absolute z-10 pointer-events-none"
+                                style={{
+                                    left: `${currentPulse.musicCoverPosition?.x || 50}%`,
+                                    top: `${currentPulse.musicCoverPosition?.y || 50}%`,
+                                    transform: 'translate(-50%, -50%)'
+                                }}
+                            >
+                                <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30 shadow-lg flex flex-col items-center gap-2 w-32 animate-pulse-slow">
+                                    <img src={currentPulse.musicInfo.capa} alt="Album Art" className="w-28 h-28 rounded-lg shadow-sm" />
+                                    <div className="text-center w-full">
+                                        <p className="text-white text-xs font-bold truncate w-full">{currentPulse.musicInfo.nome}</p>
+                                        <p className="text-white/80 text-[10px] truncate w-full">{currentPulse.musicInfo.artista}</p>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {(currentPulse.legenda || currentPulse.musicInfo) && (

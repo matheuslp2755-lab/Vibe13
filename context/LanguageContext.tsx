@@ -272,7 +272,8 @@ const ptMessages = {
     "invalidFileError": "Por favor, selecione um arquivo de imagem ou vídeo válido.",
     "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
-    "ventModeInfo": "Apenas seguidores selecionados verão este pulso."
+    "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
+    "showMusicCover": "Mostrar capa da música"
   },
   "pulseViewer": {
     "previous": "Pulso anterior",
@@ -690,7 +691,8 @@ const enMessages = {
     "invalidFileError": "Please select a valid image or video file.",
     "publishError": "Failed to create pulse. Please try again.",
     "ventMode": "Vent Mode",
-    "ventModeInfo": "Only selected followers will see this pulse."
+    "ventModeInfo": "Only selected followers will see this pulse.",
+    "showMusicCover": "Show music cover"
   },
   "pulseViewer": {
     "previous": "Previous pulse",
