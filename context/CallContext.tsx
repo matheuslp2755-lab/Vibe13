@@ -337,7 +337,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
             setLocalStream(stream);
 
-            const liveDocRef = await addDoc(collection(db, 'lives'), {
+            // Renamed collection to 'live_sessions' to clear old lives
+            const liveDocRef = await addDoc(collection(db, 'live_sessions'), {
                 hostId: currentUser.uid,
                 hostUsername: currentUser.displayName,
                 hostAvatar: currentUser.photoURL,
@@ -353,7 +354,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             // HOST LOGIC: Listen for new viewers in 'viewers' subcollection
-            const viewersCollection = collection(db, 'lives', liveDocRef.id, 'viewers');
+            const viewersCollection = collection(db, 'live_sessions', liveDocRef.id, 'viewers');
             const unsubViewers = onSnapshot(viewersCollection, (snapshot) => {
                 snapshot.docChanges().forEach(async (change) => {
                     if (change.type === 'added') {
@@ -370,7 +371,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
                             // Handle ICE candidates from Viewer
-                            const candidatesColl = collection(db, 'lives', liveDocRef.id, 'viewers', viewerId, 'candidates');
+                            const candidatesColl = collection(db, 'live_sessions', liveDocRef.id, 'viewers', viewerId, 'candidates');
                             const unsubCandidates = onSnapshot(candidatesColl, (candSnap) => {
                                 candSnap.docChanges().forEach((cChange) => {
                                     if (cChange.type === 'added') {
@@ -391,7 +392,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 if (event.candidate) {
                                     // Viewer listens to this specific doc update or subcollection?
                                     // Let's put host candidates in the main viewer doc for simplicity or a 'hostCandidates' subcol
-                                    const hostCandColl = collection(db, 'lives', liveDocRef.id, 'viewers', viewerId, 'hostCandidates');
+                                    const hostCandColl = collection(db, 'live_sessions', liveDocRef.id, 'viewers', viewerId, 'hostCandidates');
                                     addDoc(hostCandColl, event.candidate.toJSON());
                                 }
                             };
@@ -409,7 +410,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             await pc.setLocalDescription(answer);
 
                             // Send Answer back to Viewer
-                            await updateDoc(doc(db, 'lives', liveDocRef.id, 'viewers', viewerId), {
+                            await updateDoc(doc(db, 'live_sessions', liveDocRef.id, 'viewers', viewerId), {
                                 answer: { type: answer.type, sdp: answer.sdp }
                             });
                         }
@@ -443,7 +444,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
             // Create Viewer Document
-            const viewerDocRef = doc(db, 'lives', liveId, 'viewers', currentUser.uid);
+            const viewerDocRef = doc(db, 'live_sessions', liveId, 'viewers', currentUser.uid);
             
             // Send ICE candidates
             pc.onicecandidate = (event) => {
@@ -509,7 +510,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const endLive = async () => {
         if (!activeLive || !activeLive.isHost) return;
         try {
-            const liveRef = doc(db, 'lives', activeLive.liveId);
+            const liveRef = doc(db, 'live_sessions', activeLive.liveId);
             // "Apagar" - Delete the document
             await deleteDoc(liveRef);
         } catch (err) { console.error(err); }
@@ -520,7 +521,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (activeLive && !activeLive.isHost) {
             // Remove viewer doc to be polite
             if (auth.currentUser) {
-                deleteDoc(doc(db, 'lives', activeLive.liveId, 'viewers', auth.currentUser.uid)).catch(console.error);
+                deleteDoc(doc(db, 'live_sessions', activeLive.liveId, 'viewers', auth.currentUser.uid)).catch(console.error);
             }
         }
         cleanupLive();

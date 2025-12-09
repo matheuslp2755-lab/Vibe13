@@ -139,11 +139,9 @@ const Feed: React.FC = () => {
   useEffect(() => {
       if (!isFollowingListLoaded || followingList.length === 0) return;
 
-      // Query ALL active lives
-      // Note: In a production app with millions of users, this should be paginated or queried by 'hostId' in chunks.
-      // For this scale, filtering client-side is acceptable and ensures real-time updates for any friend.
+      // Renamed collection to 'live_sessions' to ignore old stuck lives
       const q = query(
-          collection(db, 'lives'),
+          collection(db, 'live_sessions'),
           where('status', '==', 'live')
       );
 

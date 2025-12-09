@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -8,7 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 const AppLogo: React.FC = () => {
     const { t } = useLanguage();
     return (
-        <h1 className="text-4xl font-serif text-center mb-8">
+        <h1 className="text-6xl font-serif text-center mb-10 font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text drop-shadow-sm tracking-tight">
             {t('login.title')}
         </h1>
     )
