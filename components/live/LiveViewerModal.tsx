@@ -13,6 +13,7 @@ const LiveViewerModal: React.FC<LiveViewerModalProps> = ({ isOpen }) => {
     const { activeLive, leaveLive, endLive, localStream, liveStream } = useCall();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [viewerCount, setViewerCount] = useState(1);
+    const [showConfirmEnd, setShowConfirmEnd] = useState(false);
 
     // Effect to attach the correct stream to the video element
     useEffect(() => {
@@ -43,6 +44,14 @@ const LiveViewerModal: React.FC<LiveViewerModalProps> = ({ isOpen }) => {
     if (!isOpen || !activeLive) return null;
 
     const isLoading = !activeLive.isHost && !liveStream;
+
+    const handleCloseAttempt = () => {
+        if (activeLive.isHost) {
+            setShowConfirmEnd(true);
+        } else {
+            leaveLive();
+        }
+    };
 
     return (
         <div className="fixed inset-0 bg-black z-[70] flex flex-col">
@@ -90,7 +99,7 @@ const LiveViewerModal: React.FC<LiveViewerModalProps> = ({ isOpen }) => {
                 </div>
 
                 <button 
-                    onClick={activeLive.isHost ? endLive : leaveLive}
+                    onClick={handleCloseAttempt}
                     className="absolute top-4 right-4 z-20 text-white text-3xl font-light hover:text-red-500 transition-colors drop-shadow-lg"
                 >
                     &times;
@@ -109,7 +118,7 @@ const LiveViewerModal: React.FC<LiveViewerModalProps> = ({ isOpen }) => {
                     {activeLive.isHost && (
                         <div className="mt-4">
                             <Button 
-                                onClick={endLive} 
+                                onClick={() => setShowConfirmEnd(true)} 
                                 className="!bg-red-600 hover:!bg-red-700 !w-full !rounded-full font-bold"
                             >
                                 {t('live.end')}
@@ -118,6 +127,30 @@ const LiveViewerModal: React.FC<LiveViewerModalProps> = ({ isOpen }) => {
                     )}
                 </div>
             </div>
+
+            {/* End Confirmation Modal */}
+            {showConfirmEnd && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[80]">
+                    <div className="bg-zinc-900 border border-zinc-700 p-6 rounded-2xl max-w-sm w-full mx-4 text-center">
+                        <h3 className="text-white text-lg font-bold mb-2">{t('live.confirmEndTitle')}</h3>
+                        <p className="text-zinc-400 mb-6">{t('live.confirmEndBody')}</p>
+                        <div className="flex flex-col gap-3">
+                            <Button 
+                                onClick={endLive} 
+                                className="!bg-red-600 hover:!bg-red-700 font-bold"
+                            >
+                                {t('live.endNow')}
+                            </Button>
+                            <button 
+                                onClick={() => setShowConfirmEnd(false)}
+                                className="text-white font-semibold py-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

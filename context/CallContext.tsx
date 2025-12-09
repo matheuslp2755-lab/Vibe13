@@ -64,6 +64,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const pc = useRef<RTCPeerConnection | null>(null);
+    const candidatesQueue = useRef<RTCIceCandidate[]>([]);
 
     // Live Streaming State
     const [activeLive, setActiveLive] = useState<LiveSession | null>(null);
@@ -88,6 +89,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             pc.current.close();
             pc.current = null;
         }
+        candidatesQueue.current = [];
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             setLocalStream(null);
@@ -126,6 +128,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (data.answer && pc.current?.remoteDescription?.type !== 'answer') {
                 try {
                     await pc.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    // Flush queued candidates
+                    while (candidatesQueue.current.length > 0) {
+                        const candidate = candidatesQueue.current.shift();
+                        if (candidate) {
+                            pc.current.addIceCandidate(candidate).catch(e => console.warn("Error adding queued candidate:", e));
+                        }
+                    }
                 } catch (e) {
                     console.error("Error setting remote description.", e);
                 }
@@ -141,7 +150,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (change.type === 'added') {
                     try {
                         const candidate = new RTCIceCandidate(change.doc.data());
-                        pc.current?.addIceCandidate(candidate).catch(console.error);
+                        if (pc.current && pc.current.remoteDescription) {
+                            pc.current.addIceCandidate(candidate).catch(console.error);
+                        } else {
+                            candidatesQueue.current.push(candidate);
+                        }
                     } catch (e) {
                         console.warn("Invalid ICE candidate");
                     }
@@ -178,6 +191,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const currentUser = auth.currentUser;
         if (!currentUser || activeCallRef.current) return;
         setError(null);
+        candidatesQueue.current = [];
         
         try {
             const constraints = isVideo ? { audio: true, video: { facingMode: 'user' } } : { audio: true };
@@ -231,6 +245,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const call = activeCallRef.current;
         if (!call || call.status !== 'ringing-incoming') return;
         setError(null);
+        candidatesQueue.current = [];
         
         try {
             const callDocRef = doc(db, 'calls', call.callId);
@@ -247,6 +262,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setupPeerConnection(stream, call.callId, false);
             
             await pc.current!.setRemoteDescription(new RTCSessionDescription(callData.offer));
+            // Queue should be processed here if any (though usually empty for receiver at this point if useEffect hasn't run)
+             while (candidatesQueue.current.length > 0) {
+                const candidate = candidatesQueue.current.shift();
+                if (candidate) {
+                    pc.current!.addIceCandidate(candidate).catch(console.error);
+                }
+            }
+
             const answerDescription = await pc.current!.createAnswer();
             await pc.current!.setLocalDescription(answerDescription);
 
@@ -341,6 +364,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             console.log(`Host: New viewer ${viewerId} joined. Creating PC.`);
                             const pc = new RTCPeerConnection(servers);
                             hostConnections.current.set(viewerId, pc);
+                            const candidateQueue: RTCIceCandidate[] = [];
 
                             // Add local tracks to this viewer's PC
                             stream.getTracks().forEach(track => pc.addTrack(track, stream));
@@ -351,7 +375,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 candSnap.docChanges().forEach((cChange) => {
                                     if (cChange.type === 'added') {
                                         const candData = cChange.doc.data();
-                                        pc.addIceCandidate(new RTCIceCandidate(candData)).catch(console.error);
+                                        const candidate = new RTCIceCandidate(candData);
+                                        if (pc.remoteDescription) {
+                                            pc.addIceCandidate(candidate).catch(console.error);
+                                        } else {
+                                            candidateQueue.push(candidate);
+                                        }
                                     }
                                 });
                             });
@@ -369,6 +398,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                             // Set Remote Desc (Viewer's Offer)
                             await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                            
+                            // Process queued candidates
+                            while (candidateQueue.length > 0) {
+                                pc.addIceCandidate(candidateQueue.shift()!).catch(console.error);
+                            }
                             
                             // Create Answer
                             const answer = await pc.createAnswer();
@@ -400,6 +434,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const pc = new RTCPeerConnection(servers);
             viewerPC.current = pc;
+            const candidateQueue: RTCIceCandidate[] = [];
 
             // Receive tracks from Host
             pc.ontrack = (event) => {
@@ -440,6 +475,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     console.log("Viewer: Received answer from host.");
                     const rtcSessionDescription = new RTCSessionDescription(data.answer);
                     await pc.setRemoteDescription(rtcSessionDescription);
+                    
+                    // Process queued candidates
+                    while (candidateQueue.length > 0) {
+                        pc.addIceCandidate(candidateQueue.shift()!).catch(console.error);
+                    }
                 }
             });
             liveUnsubs.current.push(unsubViewerDoc);
@@ -449,7 +489,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === 'added') {
                         const data = change.doc.data();
-                        pc.addIceCandidate(new RTCIceCandidate(data)).catch(console.error);
+                        const candidate = new RTCIceCandidate(data);
+                        if (pc.remoteDescription) {
+                            pc.addIceCandidate(candidate).catch(console.error);
+                        } else {
+                            candidateQueue.push(candidate);
+                        }
                     }
                 });
             });
@@ -465,7 +510,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!activeLive || !activeLive.isHost) return;
         try {
             const liveRef = doc(db, 'lives', activeLive.liveId);
-            await updateDoc(liveRef, { status: 'ended' });
+            // "Apagar" - Delete the document
+            await deleteDoc(liveRef);
         } catch (err) { console.error(err); }
         cleanupLive();
     };

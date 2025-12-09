@@ -1,3 +1,4 @@
+
 {
   "common": {
     "online": "Online",
@@ -384,6 +385,9 @@
     "start": "Transmitir ao vivo",
     "starting": "Verificando conexão...",
     "end": "Encerrar vídeo ao vivo",
+    "endNow": "Encerrar Agora",
+    "confirmEndTitle": "Encerrar vídeo ao vivo?",
+    "confirmEndBody": "Tem certeza que deseja encerrar seu vídeo ao vivo?",
     "viewers": "espectadores",
     "viewer": "espectador",
     "ended": "Vídeo ao vivo encerrado",
