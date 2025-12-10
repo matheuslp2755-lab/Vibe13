@@ -420,6 +420,7 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
   const [viewsCount, setViewsCount] = useState(0);
   const postRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
   const [isDuoPhotoModalOpen, setIsDuoPhotoModalOpen] = useState(false);
   const [isAddCaptionModalOpen, setIsAddCaptionModalOpen] = useState(false);
@@ -427,6 +428,9 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
   const [isAddToMemoryOpen, setIsAddToMemoryOpen] = useState(false);
   const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
   const [initialContentForMemory, setInitialContentForMemory] = useState<any>(null);
+  
+  // Video Loop Control State
+  const [playCount, setPlayCount] = useState(0);
 
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -434,6 +438,8 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
   const [isMentionLoading, setIsMentionLoading] = useState(false);
   const mentionStartPosition = useRef<number | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  const isVideo = postData.mediaType === 'video' || postData.imageUrl.includes('.mp4') || postData.imageUrl.includes('.webm');
 
   useEffect(() => {
     setPostData(post);
@@ -457,6 +463,7 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
     return () => unsubscribe();
   }, [postData.id]);
   
+  // Post visibility for Views count
   useEffect(() => {
     if (!postRef.current || !currentUser || currentUser.uid === postData.userId) {
         return;
@@ -489,6 +496,44 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
     };
   }, [postData.id, postData.userId, currentUser]);
 
+  // Video Autoplay and Pausing logic
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+
+    const observer = new IntersectionObserver(
+        ([entry]) => {
+            if (entry.isIntersecting) {
+                // Play only if playCount < 2 (Initial play + 1 restart)
+                if (playCount < 2) {
+                    videoRef.current?.play().catch(e => {
+                        console.warn("Video play failed (likely due to unmuted autoplay policy):", e);
+                    });
+                }
+            } else {
+                videoRef.current?.pause();
+            }
+        },
+        { threshold: 0.6 } // 60% visibility required
+    );
+
+    observer.observe(videoRef.current);
+
+    return () => observer.disconnect();
+  }, [isVideo, playCount]);
+
+  const handleVideoEnded = () => {
+      // 0 means finished first play. We want 1 restart (total 2 plays).
+      // If count is 0, play again. If count becomes 1 (finished second time), stop.
+      if (playCount < 1) {
+          setPlayCount(prev => prev + 1);
+          if (videoRef.current) {
+              videoRef.current.currentTime = 0;
+              videoRef.current.play().catch(console.error);
+          }
+      }
+  };
+
+  // Music Player Visibility
   useEffect(() => {
     if (!postData.musicInfo) return;
 
@@ -742,8 +787,6 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
     });
   };
 
-  const isVideo = postData.mediaType === 'video' || postData.imageUrl.includes('.mp4') || postData.imageUrl.includes('.webm');
-
   return (
     <>
         <article ref={postRef} className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg">
@@ -820,7 +863,15 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
         
         <div>
             {isVideo ? (
-                <video src={postData.imageUrl} controls playsInline className="w-full object-cover max-h-[600px]" />
+                <video 
+                    ref={videoRef}
+                    src={postData.imageUrl} 
+                    controls 
+                    muted // Essential for autoplay
+                    playsInline 
+                    onEnded={handleVideoEnded}
+                    className="w-full object-cover max-h-[600px]" 
+                />
             ) : (
                 <img src={postData.imageUrl} alt="Post content" className="w-full object-cover" />
             )}
