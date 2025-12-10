@@ -96,8 +96,8 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
         if (e.target.files) {
             const files = Array.from(e.target.files);
             const imagePromises = files
-                // FIX: Explicitly type 'file' as File to resolve type inference issue.
-                .filter((file: File) => file.type.startsWith('image/'))
+                // Allow images and videos
+                .filter((file: File) => file.type.startsWith('image/') || file.type.startsWith('video/'))
                 .map((file: File) => {
                     return new Promise<GalleryImage>((resolve) => {
                         const reader = new FileReader();
@@ -184,7 +184,11 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 {activeTab === 'gallery' ? (
                     <div className="w-full aspect-square bg-black flex items-center justify-center flex-shrink-0">
                         {selectedImage ? (
-                            <img src={selectedImage.preview} alt="Selected" className="max-h-full max-w-full object-contain" />
+                            selectedImage.file.type.startsWith('video/') ? (
+                                <video src={selectedImage.preview} controls className="max-h-full max-w-full object-contain" />
+                            ) : (
+                                <img src={selectedImage.preview} alt="Selected" className="max-h-full max-w-full object-contain" />
+                            )
                         ) : (
                             <div className="text-zinc-500">{t('gallery.selectPhotos')}</div>
                         )}
@@ -243,7 +247,18 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                                         className="relative aspect-square cursor-pointer group"
                                         onClick={() => setSelectedImage(image)}
                                     >
-                                        <img src={image.preview} alt="Gallery item" className="w-full h-full object-cover" />
+                                        {image.file.type.startsWith('video/') ? (
+                                            <>
+                                                <video src={image.preview} className="w-full h-full object-cover" />
+                                                <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l4 2A1 1 0 0020 14V6a1 1 0 00-1.447-.894l-4 2z" />
+                                                    </svg>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <img src={image.preview} alt="Gallery item" className="w-full h-full object-cover" />
+                                        )}
                                         <div className={`absolute inset-0 transition-colors ${selectedImage?.preview === image.preview ? 'bg-black/30' : 'bg-black/0 group-hover:bg-black/10'}`}></div>
                                     </div>
                                 ))}
@@ -259,7 +274,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
                 style={{ opacity: 0, width: '0.1px', height: '0.1px', position: 'absolute', overflow: 'hidden', zIndex: -1 }} 
-                accept="image/*" 
+                accept="image/*,video/*" 
                 multiple 
             />
             <canvas ref={canvasRef} className="hidden"></canvas>

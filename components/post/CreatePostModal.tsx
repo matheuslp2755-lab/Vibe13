@@ -46,8 +46,9 @@ const ImageUploadIcon: React.FC = () => (
 
 
 const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPostCreated, initialImage }) => {
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [mediaFile, setMediaFile] = useState<File | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+    const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
     const [caption, setCaption] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -64,8 +65,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
 
     useEffect(() => {
         if (!isOpen) {
-            setImageFile(null);
-            setImagePreview(null);
+            setMediaFile(null);
+            setMediaPreview(null);
+            setMediaType(null);
             setCaption('');
             setError('');
             setIsVentMode(false);
@@ -75,9 +77,15 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             setSelectedMusic(null);
             setShowMusicSearch(false);
         } else if (initialImage) {
-            // Load initial image if provided
-            setImageFile(initialImage.file);
-            setImagePreview(initialImage.preview);
+            // Load initial image if provided (Assuming image for now from GalleryModal)
+            // If GalleryModal is updated to support video, this needs to check type
+            setMediaFile(initialImage.file);
+            setMediaPreview(initialImage.preview);
+            if (initialImage.file.type.startsWith('video/')) {
+                setMediaType('video');
+            } else {
+                setMediaType('image');
+            }
         }
     }, [isOpen, initialImage]);
     
@@ -103,15 +111,40 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
 
     if (!isOpen) return null;
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setImageFile(file);
             setError('');
-    
+
             const reader = new FileReader();
             reader.onload = (event) => {
-                setImagePreview(event.target?.result as string);
+                const dataUrl = event.target?.result as string;
+
+                if (file.type.startsWith('video/')) {
+                    // Create a video element to check duration
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    video.onloadedmetadata = function() {
+                        window.URL.revokeObjectURL(video.src);
+                        if (video.duration > 30) {
+                            setError(t('createPost.videoTooLong'));
+                            return;
+                        }
+                        setMediaType('video');
+                        setMediaFile(file);
+                        setMediaPreview(dataUrl);
+                    };
+                    video.onerror = function() {
+                        setError("Invalid video file.");
+                    };
+                    video.src = URL.createObjectURL(file);
+                } else if (file.type.startsWith('image/')) {
+                    setMediaType('image');
+                    setMediaFile(file);
+                    setMediaPreview(dataUrl);
+                } else {
+                    setError("Unsupported file type.");
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -130,7 +163,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const currentUser = auth.currentUser;
-        if (!imageFile || !currentUser || !imagePreview) return;
+        if (!mediaFile || !currentUser || !mediaPreview || !mediaType) return;
 
         setSubmitting(true);
         setError('');
@@ -142,15 +175,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             }
             const userData = userDocSnap.data();
 
-            const imageUploadRef = storageRef(storage, `posts/${currentUser.uid}/${Date.now()}-${imageFile.name}`);
-            await uploadString(imageUploadRef, imagePreview, 'data_url');
-            const downloadURL = await getDownloadURL(imageUploadRef);
+            const mediaUploadRef = storageRef(storage, `posts/${currentUser.uid}/${Date.now()}-${mediaFile.name}`);
+            await uploadString(mediaUploadRef, mediaPreview, 'data_url');
+            const downloadURL = await getDownloadURL(mediaUploadRef);
 
             const postData: { [key: string]: any } = {
                 userId: currentUser.uid,
                 username: userData.username,
                 userAvatar: userData.avatar,
-                imageUrl: downloadURL,
+                imageUrl: downloadURL, // Legacy name, works for video URL too
+                mediaType: mediaType, // New field to distinguish
                 caption,
                 likes: [],
                 timestamp: serverTimestamp(),
@@ -190,7 +224,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             >
                 <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
                     <h2 className="text-lg font-semibold">{showMusicSearch ? t('createPost.addMusic') : t('createPost.title')}</h2>
-                    {imagePreview && !showMusicSearch && (
+                    {mediaPreview && !showMusicSearch && (
                          <Button onClick={handleSubmit} disabled={submitting} className="!w-auto !py-0 !px-3 !text-sm">
                             {t('createPost.share')}
                         </Button>
@@ -205,10 +239,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                           }}
                           onBack={() => setShowMusicSearch(false)}
                         />
-                    ) : imagePreview ? (
+                    ) : mediaPreview ? (
                         <div className="flex flex-col md:flex-row">
                             <div className="w-full md:w-1/2 aspect-square bg-black flex items-center justify-center">
-                                <img src={imagePreview} alt="Post preview" className="max-h-full max-w-full object-contain" />
+                                {mediaType === 'video' ? (
+                                    <video src={mediaPreview} controls className="max-h-full max-w-full object-contain" />
+                                ) : (
+                                    <img src={mediaPreview} alt="Post preview" className="max-h-full max-w-full object-contain" />
+                                )}
                             </div>
                             <div className="w-full md:w-1/2 p-4 flex flex-col">
                                 <div className="flex items-center mb-4">
@@ -305,12 +343,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
-                                onChange={handleImageChange} 
+                                onChange={handleMediaChange} 
                                 style={{ opacity: 0, width: '0.1px', height: '0.1px', position: 'absolute', overflow: 'hidden', zIndex: -1 }} 
-                                accept="image/*" 
+                                accept="image/*,video/*" 
                             />
                             <Button onClick={triggerFileInput}>
-                                {t('createPost.selectFrom computer')}
+                                {t('createPost.selectFromComputer')}
                             </Button>
                         </div>
                     )}

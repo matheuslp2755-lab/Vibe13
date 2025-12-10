@@ -19,6 +19,8 @@
     "signUpLink": "Cadastre-se",
     "getTheApp": "Obtenha o aplicativo.",
     "error": "Falha ao entrar. Verifique seu e-mail e senha.",
+    "appStoreAlt": "Baixar na App Store",
+    "googlePlayAlt": "Disponível no Google Play",
     "installHere": "Instale aqui"
   },
   "signup": {
@@ -148,7 +150,7 @@
     "share": "Compartilhar",
     "sharing": "Compartilhando...",
     "captionLabel": "Escreva uma legenda...",
-    "dragPhotos": "Arraste as fotos aqui",
+    "dragPhotos": "Arraste fotos ou vídeos aqui",
     "selectFromComputer": "Selecionar do computador",
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão esta publicação.",
@@ -163,7 +165,8 @@
     "search": "Buscar",
     "searching": "Buscando...",
     "musicNoResults": "Nenhuma música encontrada.",
-    "selectMusic": "Selecionar música"
+    "selectMusic": "Selecionar música",
+    "videoTooLong": "O vídeo não pode ter mais de 30 segundos."
   },
   "messages": {
     "title": "Mensagens",
@@ -268,8 +271,7 @@
     "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
-    "showMusicCover": "Mostrar capa da música",
-    "selectFromComputer": "Selecionar do computador"
+    "showMusicCover": "Mostrar capa da música"
   },
   "pulseViewer": {
     "previous": "Pulso anterior",

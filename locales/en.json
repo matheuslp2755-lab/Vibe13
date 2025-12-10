@@ -149,7 +149,7 @@
     "share": "Share",
     "sharing": "Sharing...",
     "captionLabel": "Write a caption...",
-    "dragPhotos": "Drag photos here",
+    "dragPhotos": "Drag photos or videos here",
     "selectFrom computer": "Select from computer",
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this post.",
@@ -164,7 +164,8 @@
     "search": "Search",
     "searching": "Searching...",
     "musicNoResults": "No songs found.",
-    "selectMusic": "Select"
+    "selectMusic": "Select",
+    "videoTooLong": "Video cannot be longer than 30 seconds."
   },
   "messages": {
     "title": "Messages",
@@ -269,8 +270,7 @@
     "publishError": "Failed to create pulse. Please try again.",
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this pulse.",
-    "showMusicCover": "Show music cover",
-    "selectFromComputer": "Select from computer"
+    "showMusicCover": "Show music cover"
   },
   "pulseViewer": {
     "previous": "Previous pulse",

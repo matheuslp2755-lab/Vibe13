@@ -17,7 +17,8 @@ type PostType = {
     userId: string;
     username: string;
     userAvatar: string;
-    imageUrl: string;
+    imageUrl: string; // Used for both Image and Video URL
+    mediaType?: 'image' | 'video';
     caption: string;
     likes: string[];
     timestamp: { seconds: number; nanoseconds: number };
@@ -741,6 +742,8 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
     });
   };
 
+  const isVideo = postData.mediaType === 'video' || postData.imageUrl.includes('.mp4') || postData.imageUrl.includes('.webm');
+
   return (
     <>
         <article ref={postRef} className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg">
@@ -789,7 +792,7 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
                                 </button>
                             )}
                              <button onClick={() => { setIsAddToMemoryOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.addToMemory')}</button>
-                            {!postData.duoPartner && !postData.pendingDuoPartner && (
+                            {!postData.duoPartner && !postData.pendingDuoPartner && !isVideo && (
                                 <button
                                     onClick={() => {
                                         setIsDuoPhotoModalOpen(true);
@@ -816,7 +819,11 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
         </div>
         
         <div>
-            <img src={postData.imageUrl} alt="Post content" className="w-full object-cover" />
+            {isVideo ? (
+                <video src={postData.imageUrl} controls playsInline className="w-full object-cover max-h-[600px]" />
+            ) : (
+                <img src={postData.imageUrl} alt="Post content" className="w-full object-cover" />
+            )}
         </div>
         
         {postData.musicInfo && (
