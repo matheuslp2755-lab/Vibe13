@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -42,7 +43,7 @@ const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const SNIPPET_DURATION = 15;
+const SNIPPET_DURATION = 25;
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted, setIsMuted }) => {
     const { t } = useLanguage();

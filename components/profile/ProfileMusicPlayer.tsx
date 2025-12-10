@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -25,7 +26,7 @@ const PauseIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const SNIPPET_DURATION = 15;
+const SNIPPET_DURATION = 25;
 
 const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) => {
     const { t } = useLanguage();
@@ -66,7 +67,7 @@ const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) =>
         const handlePlay = () => setIsAudioPlaying(true);
         const handlePause = () => setIsAudioPlaying(false);
         const handleEnded = () => {
-             // When the 30s preview ends naturally, restart from the desired startTime
+             // When the preview ends naturally, restart from the desired startTime
             setIsAudioPlaying(false);
             setCurrentTime(startTime);
             audio.currentTime = startTime;

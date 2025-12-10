@@ -38,7 +38,7 @@ const PauseIcon: React.FC<{className?: string}> = ({ className }) => (
 );
 
 
-const SNIPPET_DURATION = 15; // 15 seconds snippet
+const SNIPPET_DURATION = 25; // Updated to 25 seconds
 
 const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack }) => {
   const { t } = useLanguage();
@@ -123,11 +123,13 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     });
   };
 
-  // Max valid start time to ensure we always have 15s remaining
+  // Max valid start time to ensure we always have SNIPPET_DURATION remaining
+  // If track is shorter than snippet, max start is 0
   const maxStartTime = Math.max(0, trackDuration - SNIPPET_DURATION);
   
   // Visual calculation for the "window"
-  const windowPercentage = (SNIPPET_DURATION / trackDuration) * 100;
+  // If track is shorter than snippet, window is 100%
+  const windowPercentage = Math.min(100, (SNIPPET_DURATION / trackDuration) * 100);
   const leftPositionPercentage = (startTime / trackDuration) * 100;
 
   return (
@@ -180,6 +182,7 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
                     value={startTime}
                     onChange={handleSliderChange}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                    disabled={maxStartTime <= 0}
                 />
             </div>
 
