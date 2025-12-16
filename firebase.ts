@@ -19,7 +19,8 @@ import {
   arrayUnion,
   arrayRemove,
   onSnapshot,
-  writeBatch
+  writeBatch,
+  increment
 } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, uploadString } from 'firebase/storage';
 
@@ -64,5 +65,6 @@ export {
   arrayRemove,
   onSnapshot,
   writeBatch,
-  deleteObject
+  deleteObject,
+  increment
 };

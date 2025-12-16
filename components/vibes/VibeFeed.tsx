@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, where, addDoc, serverTimestamp, deleteDoc, storage, storageRef, deleteObject, setDoc, writeBatch, onSnapshot } from '../../firebase';
+import { db, collection, query, orderBy, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, where, addDoc, serverTimestamp, deleteDoc, storage, storageRef, deleteObject, setDoc, writeBatch, onSnapshot, increment } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
@@ -103,12 +103,9 @@ const VibeCommentsModal: React.FC<{
                 timestamp: serverTimestamp()
             });
             
-            // Update comment count on parent doc (could be done via cloud function triggers ideally)
+            // Atomically increment comment count
             const vibeRef = doc(db, 'vibes', vibeId);
-            const vibeDoc = await getDoc(vibeRef);
-            if (vibeDoc.exists()) {
-                await updateDoc(vibeRef, { commentsCount: (vibeDoc.data().commentsCount || 0) + 1 });
-            }
+            await updateDoc(vibeRef, { commentsCount: increment(1) });
 
             setNewComment('');
         } catch (error) {
@@ -147,7 +144,7 @@ const VibeCommentsModal: React.FC<{
                     placeholder={t('vibe.addComment')}
                     className="flex-grow bg-zinc-100 dark:bg-zinc-800 rounded-full px-4 py-2 outline-none"
                 />
-                <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-semibold disabled:opacity-50">Post</button>
+                <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-semibold disabled:opacity-50">{t('post.postButton')}</button>
             </form>
         </div>
     );
