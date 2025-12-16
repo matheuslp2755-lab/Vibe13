@@ -187,6 +187,8 @@
     "deleteBody": "Tem certeza que deseja excluir esta mensagem? Esta ação não pode ser desfeita.",
     "newMessageTitle": "Nova Mensagem",
     "searchUsers": "Procurar usuários...",
+    "typing": "Digitando...",
+    "recordingAudio": "Gravando áudio...",
     "media": {
       "photo": "Foto",
       "video": "Vídeo",

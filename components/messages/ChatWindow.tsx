@@ -169,6 +169,7 @@ interface ConversationData {
             username: string;
             avatar: string;
             lastSeenMessageTimestamp?: any;
+            activity?: 'typing' | 'recording' | null;
         }
     };
     crystal?: CrystalData;
@@ -261,6 +262,26 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const ActivityIndicator: React.FC<{ type: 'typing' | 'recording' }> = ({ type }) => {
+    const { t } = useLanguage();
+    return (
+        <div className="flex items-center gap-2 p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full w-fit">
+            {type === 'typing' ? (
+                <div className="flex space-x-1 h-2 items-center px-1">
+                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"></div>
+                </div>
+            ) : (
+                <MicrophoneIcon className="w-4 h-4 text-red-500 animate-pulse" />
+            )}
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {type === 'typing' ? t('messages.typing') : t('messages.recordingAudio')}
+            </span>
+        </div>
+    );
+};
+
 const FALLBACK_AVATAR_URL = "https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.appspot.com/o/avatars%2Fdefault%2Favatar.png?alt=media";
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurrentUserAnonymous }) => {
@@ -310,6 +331,29 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const inputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const callDropdownRef = useRef<HTMLDivElement>(null);
+    const typingTimeoutRef = useRef<any>(null);
+
+    // Function to update user activity status in Firestore
+    const updateActivity = async (status: 'typing' | 'recording' | null) => {
+        if (!conversationId || !currentUser) return;
+        try {
+            const convRef = doc(db, 'conversations', conversationId);
+            await updateDoc(convRef, {
+                [`participantInfo.${currentUser.uid}.activity`]: status
+            });
+        } catch (error) {
+            console.error("Error updating activity status:", error);
+        }
+    };
+
+    // Cleanup activity on unmount
+    useEffect(() => {
+        return () => {
+            if (conversationId && currentUser) {
+                updateActivity(null);
+            }
+        };
+    }, [conversationId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -325,7 +369,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    }, [messages]);
+    }, [messages, conversationData]); // Scroll when messages change or activity updates
 
     useEffect(() => {
         if (replyingTo) {
@@ -547,6 +591,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
             mediaRecorder.start(); 
             setIsRecording(true);
+            updateActivity('recording');
             setRecordingTime(0);
 
             recordingTimerRef.current = setInterval(() => {
@@ -575,6 +620,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 clearInterval(recordingTimerRef.current);
             }
             setIsRecording(false);
+            updateActivity(null);
             setRecordingTime(0);
         }
     };
@@ -588,6 +634,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 clearInterval(recordingTimerRef.current);
             }
             setIsRecording(false);
+            updateActivity(null);
             setRecordingTime(0);
             audioChunksRef.current = [];
         }
@@ -658,6 +705,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         
         setIsUploading(true);
         setUploadError('');
+        
+        // Clear typing activity immediately when sending
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        updateActivity(null);
 
         const tempMessageText = newMessage;
         const tempReplyingTo = replyingTo;
@@ -823,6 +876,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         }
     }
 
+    const otherUserActivity = otherUser && conversationData?.participantInfo?.[otherUser.id]?.activity;
+
     if (loading) {
         return <div className="h-full flex items-center justify-center">{t('messages.loading')}</div>;
     }
@@ -976,6 +1031,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                             </div>
                         </div>
                     ))}
+                    
+                    {/* Activity Indicator (Typing/Recording) */}
+                    {otherUserActivity && (
+                        <div className="self-start pl-2 mb-2 animate-fade-in">
+                            <ActivityIndicator type={otherUserActivity} />
+                        </div>
+                    )}
+
                     {shouldShowSeen && (
                          <div className="flex justify-end pr-12">
                              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('messages.seen')}</p>
@@ -1056,7 +1119,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 ref={inputRef}
                                 type="text"
                                 value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
+                                onChange={(e) => {
+                                    setNewMessage(e.target.value);
+                                    
+                                    // Typing logic: Set state then debounce clear
+                                    if (e.target.value.trim().length > 0) {
+                                        updateActivity('typing');
+                                        
+                                        if (typingTimeoutRef.current) {
+                                            clearTimeout(typingTimeoutRef.current);
+                                        }
+                                        
+                                        typingTimeoutRef.current = setTimeout(() => {
+                                            updateActivity(null);
+                                        }, 3000); // Stop showing typing after 3s of inactivity
+                                    } else {
+                                        updateActivity(null);
+                                    }
+                                }}
                                 placeholder={t('messages.messagePlaceholder')}
                                 disabled={isUploading}
                                 className={`w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 py-2 pl-4 pr-4 text-sm focus:outline-none focus:border-sky-500 ${replyingTo || mediaPreview ? 'rounded-b-full rounded-t-none' : 'rounded-full'}`}
