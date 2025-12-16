@@ -34,6 +34,9 @@ interface HeaderProps {
     onOpenCreatePostModal: () => void;
     onOpenCreatePulseModal: () => void;
     onOpenMessages: (conversationId?: string) => void;
+    currentView: 'feed' | 'vibes';
+    onToggleView: (view: 'feed' | 'vibes') => void;
+    onOpenCreateVibeModal: () => void;
 }
 
 const SearchIcon: React.FC<{className?: string}> = ({className = "h-4 w-4 text-zinc-400 dark:text-zinc-500"}) => (
@@ -76,6 +79,18 @@ const LiveIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
+const VibeIcon: React.FC<{className?: string, filled?: boolean}> = ({ className, filled }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+    </svg>
+);
+
+const ClapperboardIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+);
+
 const SpinnerIcon: React.FC = () => (
     <div className="flex justify-center items-center p-4">
         <svg className="animate-spin h-5 w-5 text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -86,7 +101,7 @@ const SpinnerIcon: React.FC = () => (
 );
 
 
-const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePostModal, onOpenCreatePulseModal, onOpenMessages }) => {
+const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePostModal, onOpenCreatePulseModal, onOpenMessages, currentView, onToggleView, onOpenCreateVibeModal }) => {
     const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -623,6 +638,14 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                         <SearchIcon className="h-6 w-6 text-zinc-800 dark:text-zinc-200" />
                     </button>
                     
+                    <button 
+                        onClick={() => onToggleView(currentView === 'feed' ? 'vibes' : 'feed')} 
+                        className="relative p-1"
+                        title={t('header.vibes')}
+                    >
+                       <VibeIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400" filled={currentView === 'vibes'}/>
+                    </button>
+
                     <button onClick={onOpenCreatePulseModal} className="relative">
                         <PulseIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
                     </button>
@@ -641,6 +664,16 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                                     className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
                                 >
                                     {t('header.createPost')}
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        onOpenCreateVibeModal();
+                                        setIsCreateDropdownOpen(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 flex items-center gap-2"
+                                >
+                                    <ClapperboardIcon className="w-4 h-4" />
+                                    {t('header.createVibe')}
                                 </button>
                                 <button 
                                     onClick={() => {

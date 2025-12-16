@@ -48,6 +48,8 @@
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
     "createPost": "Criar Publicação",
+    "createVibe": "Publicar Vibe",
+    "vibes": "Vibes",
     "logOut": "Sair",
     "cancel": "Cancelar",
     "messages": "Direct",
@@ -274,6 +276,15 @@
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
     "showMusicCover": "Mostrar capa da música"
+  },
+  "createVibe": {
+    "title": "Nova Vibe",
+    "publishing": "Publicando...",
+    "publish": "Publicar Vibe",
+    "captionLabel": "Descreva sua vibe...",
+    "selectVideo": "Selecione um vídeo vertical",
+    "videoTooLong": "O vídeo deve ter menos de 60 segundos.",
+    "invalidFileError": "Por favor, selecione um arquivo de vídeo válido."
   },
   "pulseViewer": {
     "previous": "Pulso anterior",

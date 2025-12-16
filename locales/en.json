@@ -48,6 +48,8 @@
     "noActivity": "No new activity.",
     "profile": "Profile",
     "createPost": "Create Post",
+    "createVibe": "Post Vibe",
+    "vibes": "Vibes",
     "logOut": "Log Out",
     "cancel": "Cancel",
     "messages": "Direct",
@@ -273,6 +275,15 @@
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this pulse.",
     "showMusicCover": "Show music cover"
+  },
+  "createVibe": {
+    "title": "New Vibe",
+    "publishing": "Publishing...",
+    "publish": "Publish Vibe",
+    "captionLabel": "Describe your vibe...",
+    "selectVideo": "Select a vertical video",
+    "videoTooLong": "Video must be under 60 seconds.",
+    "invalidFileError": "Please select a valid video file."
   },
   "pulseViewer": {
     "previous": "Previous pulse",

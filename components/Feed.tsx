@@ -10,6 +10,8 @@ import PulseBar from './feed/PulseBar';
 import PulseViewerModal from './pulse/PulseViewerModal';
 import LiveViewerModal from './live/LiveViewerModal';
 import GalleryModal from './feed/gallery/GalleryModal';
+import CreateVibeModal from './vibes/CreateVibeModal';
+import VibeFeed from './vibes/VibeFeed';
 import { auth, db, collection, query, where, getDocs, doc, getDoc, deleteDoc, storage, storageRef, deleteObject, onSnapshot } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 import { useCall } from '../context/CallContext';
@@ -109,6 +111,8 @@ const Feed: React.FC = () => {
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [playingMusicPostId, setPlayingMusicPostId] = useState<string | null>(null);
   const [isMusicMuted, setIsMusicMuted] = useState(false);
+  const [viewMode, setViewMode] = useState<'feed' | 'vibes'>('feed');
+  const [isCreateVibeModalOpen, setIsCreateVibeModalOpen] = useState(false);
   
   // State to hold the list of user IDs we are following + our own ID
   const [followingList, setFollowingList] = useState<string[]>([]);
@@ -175,7 +179,7 @@ const Feed: React.FC = () => {
 
   // 3. Fetch Feed Content (Posts & Pulses) - Static Fetching on Load/Refresh
   useEffect(() => {
-    if (viewingProfileId || !auth.currentUser || !isFollowingListLoaded) return;
+    if (viewingProfileId || viewMode === 'vibes' || !auth.currentUser || !isFollowingListLoaded) return;
 
     const fetchFeedContent = async () => {
         setFeedLoading(true);
@@ -285,7 +289,7 @@ const Feed: React.FC = () => {
         }
     };
     fetchFeedContent();
-  }, [viewingProfileId, feedKey, auth.currentUser, isFollowingListLoaded, followingList]);
+  }, [viewingProfileId, feedKey, auth.currentUser, isFollowingListLoaded, followingList, viewMode]);
 
   const handleSelectUser = (userId: string) => {
     setViewingProfileId(userId);
@@ -294,6 +298,7 @@ const Feed: React.FC = () => {
 
   const handleGoHome = () => {
     setViewingProfileId(null);
+    setViewMode('feed');
   };
   
   const handleStartMessage = (targetUser: { id: string, username: string, avatar: string }) => {
@@ -373,6 +378,12 @@ const Feed: React.FC = () => {
         }}
         onOpenCreatePulseModal={() => setIsCreatePulseModalOpen(true)}
         onOpenMessages={handleOpenMessages}
+        currentView={viewingProfileId ? 'feed' : viewMode}
+        onToggleView={(view) => {
+            setViewMode(view);
+            setViewingProfileId(null);
+        }}
+        onOpenCreateVibeModal={() => setIsCreateVibeModalOpen(true)}
       />
       <main className="pt-20 min-h-screen">
         {viewingProfileId ? (
@@ -382,6 +393,8 @@ const Feed: React.FC = () => {
             onStartMessage={handleStartMessage} 
             onSelectUser={handleSelectUser}
           />
+        ) : viewMode === 'vibes' ? (
+            <VibeFeed />
         ) : (
           <div className="container mx-auto max-w-lg py-8">
             {feedLoading ? (
@@ -439,6 +452,14 @@ const Feed: React.FC = () => {
         onPulseCreated={() => {
             setIsCreatePulseModalOpen(false);
             setFeedKey(prev => prev + 1); // Also refresh feed to show new pulse
+        }}
+      />
+      <CreateVibeModal
+        isOpen={isCreateVibeModalOpen}
+        onClose={() => setIsCreateVibeModalOpen(false)}
+        onVibeCreated={() => {
+            // Maybe switch to vibes view or show toast
+            setViewMode('vibes');
         }}
       />
       <MessagesModal
