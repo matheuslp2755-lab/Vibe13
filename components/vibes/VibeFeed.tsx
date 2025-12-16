@@ -366,7 +366,7 @@ const VibeItem: React.FC<{
             <video
                 ref={videoRef}
                 src={vibe.videoUrl}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 loop
                 playsInline
                 onClick={togglePlay}
