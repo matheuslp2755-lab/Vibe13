@@ -263,21 +263,17 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const ActivityIndicator: React.FC<{ type: 'typing' | 'recording' }> = ({ type }) => {
-    const { t } = useLanguage();
     return (
-        <div className="flex items-center gap-2 p-2 bg-zinc-100 dark:bg-zinc-800 rounded-full w-fit">
+        <div className="flex items-center justify-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-full w-fit transition-all duration-200">
             {type === 'typing' ? (
-                <div className="flex space-x-1 h-2 items-center px-1">
-                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"></div>
+                <div className="flex space-x-1">
+                    <div className="w-1.5 h-1.5 bg-zinc-500 dark:bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                    <div className="w-1.5 h-1.5 bg-zinc-500 dark:bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                    <div className="w-1.5 h-1.5 bg-zinc-500 dark:bg-zinc-400 rounded-full animate-bounce"></div>
                 </div>
             ) : (
                 <MicrophoneIcon className="w-4 h-4 text-red-500 animate-pulse" />
             )}
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {type === 'typing' ? t('messages.typing') : t('messages.recordingAudio')}
-            </span>
         </div>
     );
 };
