@@ -238,6 +238,7 @@ const ShareVibeModal: React.FC<{
                  if (navigator.canShare({ files: [file] })) {
                      await navigator.share({
                          files: [file],
+                         title: 'Vibe',
                          text: vibe.caption || 'Confira essa Vibe!'
                      });
                      onClose();
