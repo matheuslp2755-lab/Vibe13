@@ -4,7 +4,6 @@ import { signOut } from 'firebase/auth';
 import { auth, db, collection, query, where, getDocs, limit, doc, setDoc, deleteDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, addDoc, updateDoc } from '../../firebase';
 import OnlineIndicator from './OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
-import CreateLiveModal from '../live/CreateLiveModal';
 
 type UserSearchResult = {
     id: string;
@@ -31,12 +30,7 @@ type Notification = {
 interface HeaderProps {
     onSelectUser: (userId: string) => void;
     onGoHome: () => void;
-    onOpenCreatePostModal: () => void;
-    onOpenCreatePulseModal: () => void;
     onOpenMessages: (conversationId?: string) => void;
-    currentView: 'feed' | 'vibes';
-    onToggleView: (view: 'feed' | 'vibes') => void;
-    onOpenCreateVibeModal: () => void;
 }
 
 const SearchIcon: React.FC<{className?: string}> = ({className = "h-4 w-4 text-zinc-400 dark:text-zinc-500"}) => (
@@ -54,43 +48,6 @@ const HeartIcon: React.FC<{className?: string}> = ({className = "h-6 w-6"}) => (
     <svg aria-label="Notifications" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><title>Notifications</title><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-6.12 8.351C12.89 20.72 12.434 21 12 21s-.89-.28-1.38-.627C7.152 14.08 4.5 12.192 4.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.118-1.763a4.21 4.21 0 0 1 3.675-1.941Z"></path></svg>
 );
 
-const ProfileIcon: React.FC<{className?: string}> = ({className = "h-5 w-5 mr-3"}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
-const PlusCircleIcon: React.FC<{className?: string}> = ({className = "h-6 w-6"}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
-const PulseIcon: React.FC<{className?: string}> = ({className = "h-6 w-6"}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 1.5a8.5 8.5 0 110 17 8.5 8.5 0 010-17z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5v9M7.5 12h9" />
-    </svg>
-);
-
-const LiveIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-);
-
-const VibeIcon: React.FC<{className?: string, filled?: boolean}> = ({ className, filled }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-    </svg>
-);
-
-const ClapperboardIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-    </svg>
-);
-
 const SpinnerIcon: React.FC = () => (
     <div className="flex justify-center items-center p-4">
         <svg className="animate-spin h-5 w-5 text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -101,53 +58,36 @@ const SpinnerIcon: React.FC = () => (
 );
 
 
-const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePostModal, onOpenCreatePulseModal, onOpenMessages, currentView, onToggleView, onOpenCreateVibeModal }) => {
+const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages }) => {
     const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
-    const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
     const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     const [following, setFollowing] = useState<string[]>([]);
     const [requestedIds, setRequestedIds] = useState<string[]>([]);
     const [isMobileSearchVisible, setIsMobileSearchVisible] = useState(false);
-    const [forceUpdate, setForceUpdate] = useState(0); 
-    const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
-
+    
     const searchRef = useRef<HTMLDivElement>(null);
-    const profileRef = useRef<HTMLDivElement>(null);
     const activityRef = useRef<HTMLDivElement>(null);
-    const createRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
-
-    // Force re-render on profile update to show new avatar
-    useEffect(() => {
-        const handleProfileUpdate = () => {
-            setForceUpdate(c => c + 1);
-        };
-        window.addEventListener('profileUpdated', handleProfileUpdate);
-        return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-    }, []);
 
     // Listen for notifications
     useEffect(() => {
         if (!currentUser) return;
 
         const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
-        // Removed orderBy to prevent index-related permission errors. Sorting is handled client-side.
         const q = query(notificationsRef, limit(20));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedNotifications = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
-                .filter(notification => notification.type !== 'message'); // Do not show message notifications in activity feed
+                .filter(notification => notification.type !== 'message'); 
             
-            // Client-side sorting
             fetchedNotifications.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
             setNotifications(fetchedNotifications);
             const hasUnread = fetchedNotifications.some(n => !n.read);
@@ -247,37 +187,18 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setIsSearchFocused(false);
             }
-            if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-                setIsProfileDropdownOpen(false);
-            }
             if (activityRef.current && !activityRef.current.contains(event.target as Node)) {
                 setIsActivityDropdownOpen(false);
-            }
-            if (createRef.current && !createRef.current.contains(event.target as Node)) {
-                setIsCreateDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [searchRef, profileRef, activityRef, createRef]);
-
-
-    const handleLogout = () => {
-        signOut(auth).catch(error => console.error("Error signing out: ", error));
-    };
-    
-    const handleProfileLink = () => {
-        if (currentUser) {
-            onSelectUser(currentUser.uid);
-            setIsProfileDropdownOpen(false);
-        }
-    }
+    }, [searchRef, activityRef]);
 
     const handleFollow = async (targetUser: UserSearchResult) => {
         if (!auth.currentUser) return;
 
         if (targetUser.isPrivate) {
-            // Send follow request
             setRequestedIds(prev => [...prev, targetUser.id]);
             const targetUserRequestRef = doc(db, 'users', targetUser.id, 'followRequests', auth.currentUser.uid);
             const currentUserSentRequestRef = doc(db, 'users', auth.currentUser.uid, 'sentFollowRequests', targetUser.id);
@@ -308,7 +229,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                 setRequestedIds(prev => prev.filter(id => id !== targetUser.id));
             }
         } else {
-            // Follow directly
             setFollowing(prev => [...prev, targetUser.id]);
             const currentUserFollowingRef = doc(db, 'users', auth.currentUser.uid, 'following', targetUser.id);
             const targetUserFollowersRef = doc(db, 'users', targetUser.id, 'followers', auth.currentUser.uid);
@@ -401,7 +321,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
         const requesterId = notification.fromUserId;
         const batch = writeBatch(db);
     
-        // 1. Add to current user's followers
         const followerRef = doc(db, 'users', currentUser.uid, 'followers', requesterId);
         batch.set(followerRef, {
             username: notification.fromUsername,
@@ -409,7 +328,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
             timestamp: serverTimestamp()
         });
     
-        // 2. Add to requester's following
         const followingRef = doc(db, 'users', requesterId, 'following', currentUser.uid);
         batch.set(followingRef, {
             username: currentUser.displayName,
@@ -417,13 +335,11 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
             timestamp: serverTimestamp()
         });
     
-        // 3. Delete the follow request
         const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', requesterId);
         batch.delete(requestRef);
         const sentRequestRef = doc(db, 'users', requesterId, 'sentFollowRequests', currentUser.uid);
         batch.delete(sentRequestRef);
     
-        // 4. Delete the 'follow_request' notification
         const notificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
         batch.delete(notificationRef);
     
@@ -441,13 +357,11 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
     
         const batch = writeBatch(db);
         
-        // 1. Delete the follow request
         const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', requesterId);
         batch.delete(requestRef);
         const sentRequestRef = doc(db, 'users', requesterId, 'sentFollowRequests', currentUser.uid);
         batch.delete(sentRequestRef);
     
-        // 2. Delete the notification
         const notificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
         batch.delete(notificationRef);
     
@@ -465,7 +379,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
         const requesterId = notification.fromUserId;
         const batch = writeBatch(db);
     
-        // 1. Update the post with duo partner info
         const postRef = doc(db, 'posts', notification.postId);
         batch.update(postRef, {
             duoPartner: {
@@ -476,11 +389,9 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
             pendingDuoPartner: null
         });
     
-        // 2. Delete the 'duo_request' notification for the current user
         const requestNotificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
         batch.delete(requestNotificationRef);
     
-        // 3. Create a 'duo_accepted' notification for the original poster
         const acceptedNotificationRef = doc(collection(db, 'users', requesterId, 'notifications'));
         batch.set(acceptedNotificationRef, {
             type: 'duo_accepted',
@@ -506,15 +417,12 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
         const requesterId = notification.fromUserId;
         const batch = writeBatch(db);
     
-        // 1. Update the post to remove the pending request
         const postRef = doc(db, 'posts', notification.postId);
         batch.update(postRef, { pendingDuoPartner: null });
     
-        // 2. Delete the 'duo_request' notification for the current user
         const requestNotificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
         batch.delete(requestNotificationRef);
     
-        // 3. Create a 'duo_refused' notification for the original poster
         const refusedNotificationRef = doc(collection(db, 'users', requesterId, 'notifications'));
         batch.set(refusedNotificationRef, {
             type: 'duo_refused',
@@ -540,7 +448,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
         } else if (['follow', 'mention_comment', 'duo_accepted', 'duo_refused'].includes(notification.type)) {
             onSelectUser(notification.fromUserId);
         }
-        // For request types, actions are handled by buttons, so no general click action
         if(!['follow_request', 'duo_request'].includes(notification.type)) {
              setIsActivityDropdownOpen(false);
         }
@@ -600,16 +507,15 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
     };
 
     return (
-        <>
         <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-300 dark:border-zinc-800 z-10">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-4xl gap-4">
+            <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-lg gap-4">
                 
-                <h1 onClick={onGoHome} className={`text-2xl font-serif cursor-pointer transition-all duration-300 ${isMobileSearchVisible ? 'hidden sm:block' : 'block'}`}>
+                <h1 onClick={onGoHome} className={`text-2xl font-serif cursor-pointer transition-all duration-300 ${isMobileSearchVisible ? 'hidden' : 'block'}`}>
                     {t('header.title')}
                 </h1>
 
                 <div 
-                    className={`relative flex-grow sm:flex-grow-0 ${isMobileSearchVisible ? 'block' : 'hidden sm:block'}`}
+                    className={`relative flex-grow ${isMobileSearchVisible ? 'block' : 'hidden'}`}
                     ref={searchRef}
                 >
                     <div className="relative">
@@ -622,78 +528,20 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => setIsSearchFocused(true)}
-                            className={`bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md py-1.5 pl-10 pr-4 w-full sm:w-64 text-sm focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 dark:text-zinc-100`}
+                            className={`bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md py-1.5 pl-10 pr-4 w-full text-sm focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 dark:text-zinc-100`}
                             autoFocus={isMobileSearchVisible}
                         />
                     </div>
                     {isSearchFocused && (
-                        <div className={`absolute top-full mt-2 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-80 overflow-y-auto w-full sm:w-80`}>
+                        <div className={`absolute top-full mt-2 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-80 overflow-y-auto w-full`}>
                            {searchResultContent}
                         </div>
                     )}
                 </div>
 
-                <nav className={`flex items-center gap-4 ${isMobileSearchVisible ? 'hidden sm:flex' : 'flex'}`}>
-                    <button onClick={() => setIsMobileSearchVisible(true)} className="sm:hidden">
+                <nav className={`flex items-center gap-4 ${isMobileSearchVisible ? 'hidden' : 'flex'}`}>
+                    <button onClick={() => setIsMobileSearchVisible(true)}>
                         <SearchIcon className="h-6 w-6 text-zinc-800 dark:text-zinc-200" />
-                    </button>
-                    
-                    <button 
-                        onClick={() => onToggleView(currentView === 'feed' ? 'vibes' : 'feed')} 
-                        className="relative p-1"
-                        title={t('header.vibes')}
-                    >
-                       <VibeIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400" filled={currentView === 'vibes'}/>
-                    </button>
-
-                    <button onClick={onOpenCreatePulseModal} className="relative">
-                        <PulseIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                    </button>
-                    
-                    <div ref={createRef} className="relative">
-                        <button onClick={() => setIsCreateDropdownOpen(prev => !prev)} className="relative block">
-                            <PlusCircleIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                        </button>
-                        {isCreateDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
-                                <button 
-                                    onClick={() => {
-                                        onOpenCreatePostModal();
-                                        setIsCreateDropdownOpen(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                                >
-                                    {t('header.createPost')}
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        onOpenCreateVibeModal();
-                                        setIsCreateDropdownOpen(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 flex items-center gap-2"
-                                >
-                                    <ClapperboardIcon className="w-4 h-4" />
-                                    {t('header.createVibe')}
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        setIsLiveModalOpen(true);
-                                        setIsCreateDropdownOpen(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 flex items-center gap-2"
-                                >
-                                    <LiveIcon className="w-4 h-4" />
-                                    {t('header.live')}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    <button onClick={() => onOpenMessages()} className="relative" title={t('header.messages')}>
-                        <MessagesIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                        {hasUnreadMessages && (
-                            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white dark:ring-black"></span>
-                        )}
                     </button>
                     
                     <div ref={activityRef} className="relative">
@@ -704,7 +552,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                             )}
                         </button>
                         {isActivityDropdownOpen && (
-                             <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-96 overflow-y-auto">
+                             <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-96 overflow-y-auto">
                                 {notifications.length > 0 ? (
                                     notifications.map(notification => (
                                         <div 
@@ -741,25 +589,15 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                         )}
                     </div>
 
-                    <div ref={profileRef} className="relative">
-                        <button onClick={() => setIsProfileDropdownOpen(prev => !prev)} className="w-8 h-8 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-white dark:focus:ring-offset-black">
-                             <img src={currentUser?.photoURL || `https://i.pravatar.cc/150?u=${currentUser?.uid}`} alt={t('header.profile')} className="w-full h-full rounded-full object-cover" />
-                        </button>
-                        {isProfileDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 py-1">
-                                <button onClick={handleProfileLink} className="w-full flex items-center text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                                    <ProfileIcon /> {t('header.profile')}
-                                </button>
-                                <div className="border-t border-zinc-200 dark:border-zinc-800 my-1"></div>
-                                <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                                    {t('header.logOut')}
-                                </button>
-                            </div>
+                    <button onClick={() => onOpenMessages()} className="relative" title={t('header.messages')}>
+                        <MessagesIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
+                        {hasUnreadMessages && (
+                            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white dark:ring-black"></span>
                         )}
-                    </div>
+                    </button>
                 </nav>
 
-                <div className={`${isMobileSearchVisible ? 'flex sm:hidden' : 'hidden'} items-center`}>
+                <div className={`${isMobileSearchVisible ? 'flex' : 'hidden'} items-center`}>
                     <button 
                         onClick={() => {
                             setIsMobileSearchVisible(false);
@@ -773,11 +611,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenCreatePos
                 </div>
             </div>
         </header>
-        <CreateLiveModal 
-            isOpen={isLiveModalOpen}
-            onClose={() => setIsLiveModalOpen(false)}
-        />
-        </>
     );
 };
 
