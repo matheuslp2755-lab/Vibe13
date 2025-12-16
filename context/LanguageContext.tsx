@@ -51,6 +51,8 @@ const ptMessages = {
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
     "createPost": "Criar Publicação",
+    "createVibe": "Publicar Vibe",
+    "vibes": "Vibes",
     "logOut": "Sair",
     "cancel": "Cancelar",
     "messages": "Direct",
@@ -153,7 +155,7 @@ const ptMessages = {
     "share": "Compartilhar",
     "sharing": "Compartilhando...",
     "captionLabel": "Escreva uma legenda...",
-    "dragPhotos": "Arraste as fotos aqui",
+    "dragPhotos": "Arraste fotos ou vídeos aqui",
     "selectFromComputer": "Selecionar do computador",
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão esta publicação.",
@@ -168,7 +170,8 @@ const ptMessages = {
     "search": "Buscar",
     "searching": "Buscando...",
     "musicNoResults": "Nenhuma música encontrada.",
-    "selectMusic": "Selecionar música"
+    "selectMusic": "Selecionar música",
+    "videoTooLong": "O vídeo não pode ter mais de 30 segundos."
   },
   "messages": {
     "title": "Mensagens",
@@ -189,6 +192,8 @@ const ptMessages = {
     "deleteBody": "Tem certeza que deseja excluir esta mensagem? Esta ação não pode ser desfeita.",
     "newMessageTitle": "Nova Mensagem",
     "searchUsers": "Procurar usuários...",
+    "typing": "Digitando...",
+    "recordingAudio": "Gravando áudio...",
     "media": {
       "photo": "Foto",
       "video": "Vídeo",
@@ -274,6 +279,15 @@ const ptMessages = {
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
     "showMusicCover": "Mostrar capa da música"
+  },
+  "createVibe": {
+    "title": "Nova Vibe",
+    "publishing": "Publicando...",
+    "publish": "Publicar Vibe",
+    "captionLabel": "Descreva sua vibe...",
+    "selectVideo": "Selecione um vídeo vertical",
+    "videoTooLong": "O vídeo deve ter menos de 60 segundos.",
+    "invalidFileError": "Por favor, selecione um arquivo de vídeo válido."
   },
   "pulseViewer": {
     "previous": "Pulso anterior",
@@ -419,6 +433,18 @@ const ptMessages = {
     "title": "O que você quer criar?",
     "post": "Publicação",
     "pulse": "Pulse"
+  },
+  "vibe": {
+    "comments": "Comentários",
+    "share": "Compartilhar",
+    "addComment": "Adicionar comentário...",
+    "deleteTitle": "Excluir Vibe?",
+    "deleteBody": "Tem certeza que deseja excluir esta Vibe?",
+    "sendTo": "Enviar para",
+    "shareExternal": "Compartilhar via",
+    "whatsapp": "WhatsApp / Status",
+    "forwarded": "Encaminhou uma Vibe",
+    "noComments": "Seja o primeiro a comentar!"
   }
 };
 
@@ -471,6 +497,8 @@ const enMessages = {
     "noActivity": "No new activity.",
     "profile": "Profile",
     "createPost": "Create Post",
+    "createVibe": "Post Vibe",
+    "vibes": "Vibes",
     "logOut": "Log Out",
     "cancel": "Cancel",
     "messages": "Direct",
@@ -493,6 +521,7 @@ const enMessages = {
   "post": {
     "like": "Like",
     "comment": "Comment",
+    "share": "Share Post",
     "forward": "Forward",
     "moreOptions": "More options",
     "delete": "Delete",
@@ -587,7 +616,8 @@ const enMessages = {
     "search": "Search",
     "searching": "Searching...",
     "musicNoResults": "No songs found.",
-    "selectMusic": "Select"
+    "selectMusic": "Select",
+    "videoTooLong": "Video cannot be longer than 30 seconds."
   },
   "messages": {
     "title": "Messages",
@@ -608,6 +638,8 @@ const enMessages = {
     "deleteBody": "Are you sure you want to delete this message? This cannot be undone.",
     "newMessageTitle": "New Message",
     "searchUsers": "Search for users...",
+    "typing": "Typing...",
+    "recordingAudio": "Recording audio...",
     "media": {
       "photo": "Photo",
       "video": "Video",
@@ -693,6 +725,15 @@ const enMessages = {
     "ventMode": "Vent Mode",
     "ventModeInfo": "Only selected followers will see this pulse.",
     "showMusicCover": "Show music cover"
+  },
+  "createVibe": {
+    "title": "New Vibe",
+    "publishing": "Publishing...",
+    "publish": "Publish Vibe",
+    "captionLabel": "Describe your vibe...",
+    "selectVideo": "Select a vertical video",
+    "videoTooLong": "Video must be under 60 seconds.",
+    "invalidFileError": "Please select a valid video file."
   },
   "pulseViewer": {
     "previous": "Previous pulse",
@@ -834,6 +875,18 @@ const enMessages = {
     "ended": "The broadcast has ended.",
     "leave": "Leave",
     "error": "Error starting live"
+  },
+  "vibe": {
+    "comments": "Comments",
+    "share": "Share",
+    "addComment": "Add a comment...",
+    "deleteTitle": "Delete Vibe?",
+    "deleteBody": "Are you sure you want to delete this Vibe?",
+    "sendTo": "Send to",
+    "shareExternal": "Share via",
+    "whatsapp": "WhatsApp / Status",
+    "forwarded": "Forwarded a Vibe",
+    "noComments": "Be the first to comment!"
   }
 };
 
