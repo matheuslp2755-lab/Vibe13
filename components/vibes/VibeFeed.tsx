@@ -130,7 +130,7 @@ const VibeCommentsModal: React.FC<{
                             <img src={comment.userAvatar} alt={comment.username} className="w-8 h-8 rounded-full object-cover" />
                             <div>
                                 <p className="text-sm font-semibold">{comment.username}</p>
-                                <p className="text-sm text-zinc-700 dark:text-zinc-300">{comment.text}</p>
+                                <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">{comment.text}</p>
                             </div>
                         </div>
                     ))
@@ -142,7 +142,7 @@ const VibeCommentsModal: React.FC<{
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     placeholder={t('vibe.addComment')}
-                    className="flex-grow bg-zinc-100 dark:bg-zinc-800 rounded-full px-4 py-2 outline-none"
+                    className="flex-grow bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full px-4 py-2 outline-none"
                 />
                 <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-semibold disabled:opacity-50">{t('post.postButton')}</button>
             </form>
@@ -318,11 +318,20 @@ const VibeItem: React.FC<{
 
     useEffect(() => {
         if (isActive) {
-            videoRef.current?.play().catch(e => console.log("Autoplay failed", e));
-            setIsPlaying(true);
+            if (videoRef.current) {
+                videoRef.current.currentTime = 0;
+                videoRef.current.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(e => {
+                        console.log("Autoplay failed", e);
+                        setIsPlaying(false);
+                    });
+            }
         } else {
-            videoRef.current?.pause();
-            setIsPlaying(false);
+            if (videoRef.current) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+            }
         }
     }, [isActive]);
 
@@ -330,10 +339,12 @@ const VibeItem: React.FC<{
         if (videoRef.current) {
             if (isPlaying) {
                 videoRef.current.pause();
+                setIsPlaying(false);
             } else {
-                videoRef.current.play();
+                videoRef.current.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(console.error);
             }
-            setIsPlaying(!isPlaying);
         }
     };
 
@@ -408,7 +419,7 @@ const VibeItem: React.FC<{
             </div>
 
             {/* Bottom Info */}
-            <div className="absolute left-4 bottom-4 right-16 z-10 text-white">
+            <div className="absolute left-4 bottom-4 right-16 z-10 text-white pointer-events-none">
                 <h3 className="font-bold text-lg drop-shadow-md mb-1">@{vibe.user?.username}</h3>
                 <p className="text-sm drop-shadow-md break-words">{vibe.caption}</p>
             </div>
@@ -485,14 +496,9 @@ const VibeFeed: React.FC = () => {
     const handleDelete = async () => {
         if (!deleteVibe) return;
         try {
-            // Delete from Firestore
             await deleteDoc(doc(db, 'vibes', deleteVibe.id));
-            
-            // Delete from Storage
-            // Extract path from URL (simple heuristic for Firebase Storage URLs)
             try {
                 const url = new URL(deleteVibe.videoUrl);
-                // Standard Firebase format: .../o/path%2Fto%2Ffile?alt=...
                 const path = decodeURIComponent(url.pathname.split('/o/')[1]);
                 const mediaRef = storageRef(storage, path);
                 await deleteObject(mediaRef);
