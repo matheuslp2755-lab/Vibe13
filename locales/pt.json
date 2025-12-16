@@ -430,5 +430,17 @@
     "title": "O que você quer criar?",
     "post": "Publicação",
     "pulse": "Pulse"
+  },
+  "vibe": {
+    "comments": "Comentários",
+    "share": "Compartilhar",
+    "addComment": "Adicionar comentário...",
+    "deleteTitle": "Excluir Vibe?",
+    "deleteBody": "Tem certeza que deseja excluir esta Vibe?",
+    "sendTo": "Enviar para",
+    "shareExternal": "Compartilhar via",
+    "whatsapp": "WhatsApp / Status",
+    "forwarded": "Encaminhou uma Vibe",
+    "noComments": "Seja o primeiro a comentar!"
   }
 }

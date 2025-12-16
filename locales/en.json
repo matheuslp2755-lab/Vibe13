@@ -425,5 +425,17 @@
     "ended": "The broadcast has ended.",
     "leave": "Leave",
     "error": "Error starting live"
+  },
+  "vibe": {
+    "comments": "Comments",
+    "share": "Share",
+    "addComment": "Add a comment...",
+    "deleteTitle": "Delete Vibe?",
+    "deleteBody": "Are you sure you want to delete this Vibe?",
+    "sendTo": "Send to",
+    "shareExternal": "Share via",
+    "whatsapp": "WhatsApp / Status",
+    "forwarded": "Forwarded a Vibe",
+    "noComments": "Be the first to comment!"
   }
 }
