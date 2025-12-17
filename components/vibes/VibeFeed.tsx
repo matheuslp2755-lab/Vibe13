@@ -58,6 +58,18 @@ const TrashIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
+const VolumeOnIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13.5 4.06c-.7.13-1.33.42-1.89.82L7.43 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97V5.03c0-.64-.62-1.09-1.25-.97zM19 12c0-1.72-.77-3.25-2-4.29v8.58c1.23-1.04 2-2.57 2-4.29zM17 2.11c2.85 1.15 5 3.96 5 7.89s-2.15 6.74-5 7.89v-2.1c1.72-.89 3-2.69 3-4.79s-1.28-3.9-3-4.79V2.11z"/>
+    </svg>
+);
+
+const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97v-3.87l4.73 4.73c-.57.44-1.22.8-1.94 1.05v2.09c1.28-.32 2.44-.92 3.42-1.74l1.46 1.46 1.27-1.27L4.27 3zM11.5 5.55L9.36 7.69 11.5 9.83V5.55z"/>
+    </svg>
+);
+
 const Spinner: React.FC = () => (
     <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -71,7 +83,8 @@ const VibeCommentsModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     vibeId: string;
-}> = ({ isOpen, onClose, vibeId }) => {
+    vibeAuthorId: string;
+}> = ({ isOpen, onClose, vibeId, vibeAuthorId }) => {
     const { t } = useLanguage();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
@@ -115,6 +128,16 @@ const VibeCommentsModal: React.FC<{
         }
     };
 
+    const handleDeleteComment = async (commentId: string) => {
+        try {
+            await deleteDoc(doc(db, 'vibes', vibeId, 'comments', commentId));
+            const vibeRef = doc(db, 'vibes', vibeId);
+            await updateDoc(vibeRef, { commentsCount: increment(-1) });
+        } catch (error) {
+            console.error("Error deleting comment:", error);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -132,7 +155,7 @@ const VibeCommentsModal: React.FC<{
                         <p className="text-center text-zinc-500 mt-8">{t('vibe.noComments')}</p>
                     ) : (
                         comments.map(comment => (
-                            <div key={comment.id} className="flex gap-3 mb-6 items-start">
+                            <div key={comment.id} className="flex gap-3 mb-6 items-start group">
                                 <img src={comment.userAvatar} alt={comment.username} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                                 <div className="flex-grow">
                                     <p className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -142,6 +165,14 @@ const VibeCommentsModal: React.FC<{
                                         {comment.text}
                                     </p>
                                 </div>
+                                {(currentUser?.uid === comment.userId || currentUser?.uid === vibeAuthorId) && (
+                                    <button 
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                        className="text-zinc-400 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
                         ))
                     )}
@@ -325,6 +356,7 @@ const VibeItem: React.FC<{
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(vibe.likes.includes(auth.currentUser?.uid || ''));
     const [likesCount, setLikesCount] = useState(vibe.likes.length);
+    const [isMuted, setIsMuted] = useState(true);
     const currentUser = auth.currentUser;
 
     useEffect(() => {
@@ -332,7 +364,6 @@ const VibeItem: React.FC<{
         if (!video) return;
 
         if (isActive) {
-            video.muted = true; // Necessário para garantir autoplay na maioria dos browsers
             video.currentTime = 0;
             const playPromise = video.play();
             if (playPromise !== undefined) {
@@ -368,6 +399,11 @@ const VibeItem: React.FC<{
         }
     };
 
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsMuted(!isMuted);
+    };
+
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!auth.currentUser) return;
@@ -394,7 +430,7 @@ const VibeItem: React.FC<{
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted
+                muted={isMuted}
                 onClick={togglePlay}
             />
 
@@ -405,6 +441,14 @@ const VibeItem: React.FC<{
                     </svg>
                 </div>
             )}
+
+            {/* Audio Toggle */}
+            <button 
+                onClick={toggleMute}
+                className="absolute left-4 top-4 z-30 p-2 bg-black/40 rounded-full text-white backdrop-blur-sm"
+            >
+                {isMuted ? <VolumeOffIcon className="w-6 h-6" /> : <VolumeOnIcon className="w-6 h-6" />}
+            </button>
 
             {/* Right Side Actions */}
             <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-30">
@@ -459,7 +503,7 @@ const VibeFeed: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     
     // Modal States
-    const [commentsVibeId, setCommentsVibeId] = useState<string | null>(null);
+    const [commentsVibe, setCommentsVibe] = useState<{id: string, authorId: string} | null>(null);
     const [shareVibe, setShareVibe] = useState<VibeType | null>(null);
     const [deleteVibe, setDeleteVibe] = useState<VibeType | null>(null);
 
@@ -560,8 +604,8 @@ const VibeFeed: React.FC = () => {
                     <div key={vibe.id} className="h-full w-full snap-start">
                         <VibeItem 
                             vibe={vibe} 
-                            isActive={index === activeVibeIndex && !commentsVibeId && !shareVibe && !deleteVibe} 
-                            onOpenComments={() => setCommentsVibeId(vibe.id)}
+                            isActive={index === activeVibeIndex && !commentsVibe && !shareVibe && !deleteVibe} 
+                            onOpenComments={() => setCommentsVibe({ id: vibe.id, authorId: vibe.userId })}
                             onOpenShare={() => setShareVibe(vibe)}
                             onDelete={() => setDeleteVibe(vibe)}
                         />
@@ -570,11 +614,12 @@ const VibeFeed: React.FC = () => {
             </div>
 
             {/* Modals */}
-            {commentsVibeId && (
+            {commentsVibe && (
                 <VibeCommentsModal 
                     isOpen={true} 
-                    onClose={() => setCommentsVibeId(null)} 
-                    vibeId={commentsVibeId} 
+                    onClose={() => setCommentsVibe(null)} 
+                    vibeId={commentsVibe.id}
+                    vibeAuthorId={commentsVibe.authorId}
                 />
             )}
 
