@@ -75,6 +75,7 @@ const VibeCommentsModal: React.FC<{
     const { t } = useLanguage();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
+    const [isPosting, setIsPosting] = useState(false);
     const currentUser = auth.currentUser;
 
     useEffect(() => {
@@ -88,67 +89,90 @@ const VibeCommentsModal: React.FC<{
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newComment.trim() || !currentUser) return;
+        if (!newComment.trim() || !currentUser || isPosting) return;
 
+        setIsPosting(true);
         try {
-            // Get current user details properly
             const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
             const userData = userDoc.data();
 
             await addDoc(collection(db, 'vibes', vibeId, 'comments'), {
                 userId: currentUser.uid,
-                username: userData?.username || currentUser.displayName,
-                userAvatar: userData?.avatar || currentUser.photoURL,
+                username: userData?.username || currentUser.displayName || t('common.user'),
+                userAvatar: userData?.avatar || currentUser.photoURL || 'https://i.pravatar.cc/150',
                 text: newComment.trim(),
                 timestamp: serverTimestamp()
             });
             
-            // Atomically increment comment count
             const vibeRef = doc(db, 'vibes', vibeId);
             await updateDoc(vibeRef, { commentsCount: increment(1) });
 
             setNewComment('');
         } catch (error) {
             console.error("Error posting comment:", error);
+        } finally {
+            setIsPosting(false);
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-x-0 bottom-0 top-1/3 bg-white dark:bg-zinc-900 rounded-t-2xl z-50 flex flex-col shadow-[0_-4px_20px_rgba(0,0,0,0.5)] animate-slide-up">
-            <div className="flex justify-between items-center p-4 border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="font-semibold text-lg">{t('vibe.comments')}</h3>
-                <button onClick={onClose} className="text-2xl">&times;</button>
-            </div>
-            <div className="flex-grow overflow-y-auto p-4">
-                {comments.length === 0 ? (
-                    <p className="text-center text-zinc-500 mt-8">{t('vibe.noComments')}</p>
-                ) : (
-                    comments.map(comment => (
-                        <div key={comment.id} className="flex gap-3 mb-4">
-                            <img src={comment.userAvatar} alt={comment.username} className="w-8 h-8 rounded-full object-cover" />
-                            <div>
-                                <p className="text-sm font-semibold">{comment.username}</p>
-                                <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words">{comment.text}</p>
+        <div className="fixed inset-0 bg-black/50 z-50 flex flex-col justify-end" onClick={onClose}>
+            <div 
+                className="bg-white dark:bg-zinc-900 rounded-t-2xl h-2/3 flex flex-col shadow-[0_-4px_20px_rgba(0,0,0,0.5)] animate-slide-up"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center p-4 border-b border-zinc-200 dark:border-zinc-800">
+                    <h3 className="font-semibold text-lg">{t('vibe.comments')}</h3>
+                    <button onClick={onClose} className="text-2xl font-light">&times;</button>
+                </div>
+                <div className="flex-grow overflow-y-auto p-4">
+                    {comments.length === 0 ? (
+                        <p className="text-center text-zinc-500 mt-8">{t('vibe.noComments')}</p>
+                    ) : (
+                        comments.map(comment => (
+                            <div key={comment.id} className="flex gap-3 mb-6 items-start">
+                                <img src={comment.userAvatar} alt={comment.username} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                <div className="flex-grow">
+                                    <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                                        {comment.username}
+                                    </p>
+                                    <p className="text-sm text-zinc-700 dark:text-zinc-300 break-words leading-relaxed">
+                                        {comment.text}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    ))
-                )}
+                        ))
+                    )}
+                </div>
+                <form onSubmit={handleSubmit} className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3 bg-white dark:bg-zinc-900 pb-safe">
+                    <img 
+                        src={currentUser?.photoURL || 'https://i.pravatar.cc/150'} 
+                        className="w-8 h-8 rounded-full object-cover" 
+                        alt="My profile" 
+                    />
+                    <input
+                        type="text"
+                        value={newComment}
+                        onChange={e => setNewComment(e.target.value)}
+                        placeholder={t('vibe.addComment')}
+                        className="flex-grow bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-sky-500 transition-shadow"
+                    />
+                    <button 
+                        type="submit" 
+                        disabled={!newComment.trim() || isPosting} 
+                        className="text-sky-500 font-bold text-sm disabled:opacity-50 px-2"
+                    >
+                        {isPosting ? <Spinner /> : t('post.postButton')}
+                    </button>
+                </form>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex gap-2">
-                <input
-                    type="text"
-                    value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    placeholder={t('vibe.addComment')}
-                    className="flex-grow bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full px-4 py-2 outline-none"
-                />
-                <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-semibold disabled:opacity-50">{t('post.postButton')}</button>
-            </form>
         </div>
     );
 };
+
+// --- ShareVibeModal ---
 
 const ShareVibeModal: React.FC<{
     isOpen: boolean;
@@ -186,7 +210,6 @@ const ShareVibeModal: React.FC<{
         const conversationRef = doc(db, 'conversations', conversationId);
 
         try {
-            // Ensure conversation exists
             const conversationSnap = await getDoc(conversationRef);
             if (!conversationSnap.exists()) {
                 await setDoc(conversationRef, {
@@ -199,12 +222,11 @@ const ShareVibeModal: React.FC<{
                 });
             }
 
-            // Send message
             await addDoc(collection(conversationRef, 'messages'), {
                 senderId: currentUser.uid,
-                text: `${t('vibe.forwarded')}: ${vibe.videoUrl}`, // Simple text fallback for now, or implement a rich message type
+                text: `${t('vibe.forwarded')}: ${vibe.videoUrl}`,
                 mediaUrl: vibe.videoUrl,
-                mediaType: 'video', // Treat as video message
+                mediaType: 'video',
                 timestamp: serverTimestamp()
             });
 
@@ -226,29 +248,20 @@ const ShareVibeModal: React.FC<{
     const handleWhatsAppShare = async () => {
         setIsSharing(true);
         try {
-            // Try Native Share with File first (Mobile experience for Status/Direct)
-            if (navigator.share && navigator.canShare) {
-                 const response = await fetch(vibe.videoUrl);
-                 const blob = await response.blob();
-                 const file = new File([blob], `vibe_${vibe.id}.mp4`, { type: 'video/mp4' });
-                 
-                 if (navigator.canShare({ files: [file] })) {
-                     await navigator.share({
-                         files: [file],
-                         title: 'Vibe',
-                         text: vibe.caption || 'Confira essa Vibe!'
-                     });
-                     onClose();
-                     return;
-                 }
+            if (navigator.share) {
+                 const text = `Confira essa Vibe no VibeApp: ${vibe.videoUrl}`;
+                 await navigator.share({
+                     title: 'Vibe',
+                     text: vibe.caption || 'Olha essa Vibe!',
+                     url: vibe.videoUrl
+                 });
+                 onClose();
+            } else {
+                 const text = `Confira essa Vibe: ${vibe.videoUrl}`;
+                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
             }
-            throw new Error("Native file share not supported");
         } catch (e) {
-            console.log("Fallback to Link Share:", e);
-            // Fallback to Link Share via Intent
-            const text = `Confira essa Vibe: ${vibe.videoUrl}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            onClose();
+            console.log("Share failed:", e);
         } finally {
             setIsSharing(false);
         }
@@ -263,7 +276,6 @@ const ShareVibeModal: React.FC<{
             <div className="bg-white dark:bg-zinc-900 w-full max-w-sm sm:rounded-xl rounded-t-xl p-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-bold mb-4 text-center">{t('vibe.share')}</h3>
                 
-                {/* External Share */}
                 <div className="flex justify-around mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-4">
                     <button onClick={handleWhatsAppShare} disabled={isSharing} className="flex flex-col items-center gap-1 disabled:opacity-50">
                         <div className="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white">
@@ -275,22 +287,21 @@ const ShareVibeModal: React.FC<{
                     </button>
                 </div>
 
-                {/* Internal Share */}
                 <h4 className="text-sm font-semibold mb-2">{t('vibe.sendTo')}</h4>
                 <input
                     type="text"
                     placeholder={t('header.searchPlaceholder')}
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-2 text-sm mb-2"
+                    className="w-full bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-2 text-sm mb-2 outline-none focus:ring-1 focus:ring-sky-500"
                 />
-                <div className="flex-grow overflow-y-auto">
-                    {loading ? <p className="text-center text-sm text-zinc-500">...</p> : (
+                <div className="flex-grow overflow-y-auto min-h-[150px]">
+                    {loading ? <div className="p-4 flex justify-center"><Spinner /></div> : (
                         filteredFollowing.map(user => (
-                            <button key={user.id} onClick={() => handleInternalShare(user.id, user.username, user.avatar)} className="w-full flex items-center gap-3 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
+                            <button key={user.id} onClick={() => handleInternalShare(user.id, user.username, user.avatar)} className="w-full flex items-center gap-3 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
                                 <img src={user.avatar} className="w-10 h-10 rounded-full object-cover" alt={user.username} />
-                                <span className="font-semibold text-sm">{user.username}</span>
-                                <span className="ml-auto bg-sky-500 text-white text-xs px-3 py-1 rounded-full">{t('messages.send')}</span>
+                                <span className="font-semibold text-sm flex-grow text-left">{user.username}</span>
+                                <span className="bg-sky-500 text-white text-xs px-3 py-1 rounded-full">{t('messages.send')}</span>
                             </button>
                         ))
                     )}
@@ -317,34 +328,37 @@ const VibeItem: React.FC<{
     const currentUser = auth.currentUser;
 
     useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
         if (isActive) {
-            if (videoRef.current) {
-                videoRef.current.currentTime = 0;
-                videoRef.current.play()
-                    .then(() => setIsPlaying(true))
-                    .catch(e => {
-                        console.log("Autoplay failed", e);
-                        setIsPlaying(false);
-                    });
+            video.currentTime = 0;
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    setIsPlaying(true);
+                }).catch(error => {
+                    console.log("Autoplay prevented:", error);
+                    setIsPlaying(false);
+                });
             }
         } else {
-            if (videoRef.current) {
-                videoRef.current.pause();
-                setIsPlaying(false);
-            }
+            video.pause();
+            setIsPlaying(false);
         }
     }, [isActive]);
 
     const togglePlay = () => {
-        if (videoRef.current) {
-            if (isPlaying) {
-                videoRef.current.pause();
-                setIsPlaying(false);
-            } else {
-                videoRef.current.play()
-                    .then(() => setIsPlaying(true))
-                    .catch(console.error);
-            }
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (isPlaying) {
+            video.pause();
+            setIsPlaying(false);
+        } else {
+            video.play()
+                .then(() => setIsPlaying(true))
+                .catch(console.error);
         }
     };
 
@@ -381,7 +395,7 @@ const VibeItem: React.FC<{
             />
 
             {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                     <svg className="w-20 h-20 text-white/50" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                     </svg>
@@ -389,45 +403,49 @@ const VibeItem: React.FC<{
             )}
 
             {/* Right Side Actions */}
-            <div className="absolute right-4 bottom-24 flex flex-col gap-6 items-center z-10">
-                <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden mb-4">
+            <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-30">
+                <div className="flex flex-col items-center mb-2">
+                    <div className="w-11 h-11 rounded-full border-2 border-white overflow-hidden shadow-lg">
                         <img src={vibe.user?.avatar || 'https://i.pravatar.cc/150'} alt={vibe.user?.username} className="w-full h-full object-cover" />
                     </div>
                 </div>
                 
-                <div className="flex flex-col items-center cursor-pointer" onClick={handleLike}>
-                    <HeartIcon filled={isLiked} />
-                    <span className="text-white text-xs font-semibold drop-shadow-md">{likesCount}</span>
+                <div className="flex flex-col items-center cursor-pointer group" onClick={handleLike}>
+                    <div className="group-active:scale-125 transition-transform duration-100">
+                        <HeartIcon filled={isLiked} />
+                    </div>
+                    <span className="text-white text-xs font-bold drop-shadow-md mt-1">{likesCount}</span>
                 </div>
                 
                 <div className="flex flex-col items-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onOpenComments(); }}>
                     <CommentIcon />
-                    <span className="text-white text-xs font-semibold drop-shadow-md">{vibe.commentsCount}</span>
+                    <span className="text-white text-xs font-bold drop-shadow-md mt-1">{vibe.commentsCount}</span>
                 </div>
                 
                 <div className="flex flex-col items-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onOpenShare(); }}>
                     <ShareIcon />
-                    <span className="text-white text-xs font-semibold drop-shadow-md">{t('vibe.share')}</span>
                 </div>
 
                 {currentUser?.uid === vibe.userId && (
-                    <div className="flex flex-col items-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-                        <TrashIcon className="w-8 h-8 text-white drop-shadow-md" />
+                    <div className="flex flex-col items-center cursor-pointer mt-2" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                        <TrashIcon className="w-7 h-7 text-white/80 drop-shadow-md hover:text-red-500 transition-colors" />
                     </div>
                 )}
             </div>
 
             {/* Bottom Info */}
-            <div className="absolute left-4 bottom-4 right-16 z-10 text-white pointer-events-none">
-                <h3 className="font-bold text-lg drop-shadow-md mb-1">@{vibe.user?.username}</h3>
-                <p className="text-sm drop-shadow-md break-words">{vibe.caption}</p>
+            <div className="absolute left-4 bottom-4 right-20 z-30 text-white pointer-events-none select-none">
+                <h3 className="font-bold text-base drop-shadow-md mb-1">@{vibe.user?.username}</h3>
+                <p className="text-sm drop-shadow-md break-words line-clamp-3 leading-tight">{vibe.caption}</p>
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 to-transparent pointer-events-none"></div>
+            {/* Overlay Gradient */}
+            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10"></div>
         </div>
     );
 };
+
+// --- Main VibeFeed Container ---
 
 const VibeFeed: React.FC = () => {
     const { t } = useLanguage();
@@ -449,7 +467,7 @@ const VibeFeed: React.FC = () => {
                 
                 const vibesData = await Promise.all(snapshot.docs.map(async (docSnap) => {
                     const data = docSnap.data();
-                    let userData = { username: 'Unknown', avatar: '' };
+                    let userData = { username: 'Unknown', avatar: 'https://i.pravatar.cc/150' };
                     try {
                         const userDoc = await getDoc(doc(db, 'users', data.userId));
                         if (userDoc.exists()) {
@@ -489,7 +507,7 @@ const VibeFeed: React.FC = () => {
             }
         };
 
-        container.addEventListener('scroll', handleScroll);
+        container.addEventListener('scroll', handleScroll, { passive: true });
         return () => container.removeEventListener('scroll', handleScroll);
     }, [activeVibeIndex]);
 
@@ -497,13 +515,15 @@ const VibeFeed: React.FC = () => {
         if (!deleteVibe) return;
         try {
             await deleteDoc(doc(db, 'vibes', deleteVibe.id));
+            
+            // Storage cleanup (optional but good practice)
             try {
                 const url = new URL(deleteVibe.videoUrl);
                 const path = decodeURIComponent(url.pathname.split('/o/')[1]);
                 const mediaRef = storageRef(storage, path);
                 await deleteObject(mediaRef);
             } catch (e) {
-                console.warn("Could not determine storage path from URL or file already gone", e);
+                console.warn("Media deletion from storage skipped/failed", e);
             }
 
             setVibes(prev => prev.filter(v => v.id !== deleteVibe.id));
@@ -514,24 +534,34 @@ const VibeFeed: React.FC = () => {
     };
 
     if (loading) {
-        return <div className="h-screen w-full bg-black flex items-center justify-center text-white">Carregando Vibes...</div>;
+        return (
+            <div className="h-[calc(100vh-8rem)] w-full bg-black flex flex-col items-center justify-center text-white">
+                <Spinner />
+                <p className="mt-4 text-zinc-400">Carregando Vibes...</p>
+            </div>
+        );
     }
 
     if (vibes.length === 0) {
-        return <div className="h-screen w-full bg-black flex items-center justify-center text-white">Nenhuma Vibe encontrada.</div>;
+        return (
+            <div className="h-[calc(100vh-8rem)] w-full bg-black flex items-center justify-center text-zinc-500 text-center p-8">
+                Nenhuma Vibe disponível no momento.<br/>Seja o primeiro a postar!
+            </div>
+        );
     }
 
     return (
-        <>
+        <div className="relative h-[calc(100vh-8rem)] bg-black overflow-hidden">
             <div 
                 ref={containerRef}
-                className="h-[calc(100vh-4rem)] w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black"
+                className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
+                style={{ scrollSnapType: 'y mandatory' }}
             >
                 {vibes.map((vibe, index) => (
                     <div key={vibe.id} className="h-full w-full snap-start">
                         <VibeItem 
                             vibe={vibe} 
-                            isActive={index === activeVibeIndex} 
+                            isActive={index === activeVibeIndex && !commentsVibeId && !shareVibe && !deleteVibe} 
                             onOpenComments={() => setCommentsVibeId(vibe.id)}
                             onOpenShare={() => setShareVibe(vibe)}
                             onDelete={() => setDeleteVibe(vibe)}
@@ -542,28 +572,44 @@ const VibeFeed: React.FC = () => {
 
             {/* Modals */}
             {commentsVibeId && (
-                <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setCommentsVibeId(null)}>
-                    <VibeCommentsModal isOpen={true} onClose={() => setCommentsVibeId(null)} vibeId={commentsVibeId} />
-                </div>
+                <VibeCommentsModal 
+                    isOpen={true} 
+                    onClose={() => setCommentsVibeId(null)} 
+                    vibeId={commentsVibeId} 
+                />
             )}
 
             {shareVibe && (
-                <ShareVibeModal isOpen={true} onClose={() => setShareVibe(null)} vibe={shareVibe} />
+                <ShareVibeModal 
+                    isOpen={true} 
+                    onClose={() => setShareVibe(null)} 
+                    vibe={shareVibe} 
+                />
             )}
 
             {deleteVibe && (
-                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => setDeleteVibe(null)}>
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl max-w-sm w-full mx-4 text-center" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold mb-2">{t('vibe.deleteTitle')}</h3>
-                        <p className="text-zinc-500 mb-6">{t('vibe.deleteBody')}</p>
-                        <div className="flex gap-4 justify-center">
-                            <Button onClick={() => setDeleteVibe(null)} className="!bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">{t('common.cancel')}</Button>
-                            <Button onClick={handleDelete} className="!bg-red-500 text-white">{t('common.delete')}</Button>
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center" onClick={() => setDeleteVibe(null)}>
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl max-w-xs w-full mx-4 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold mb-2 text-zinc-900 dark:text-white">{t('vibe.deleteTitle')}</h3>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">{t('vibe.deleteBody')}</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setDeleteVibe(null)} 
+                                className="flex-1 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg font-semibold"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                            <button 
+                                onClick={handleDelete} 
+                                className="flex-1 py-2 bg-red-500 text-white rounded-lg font-semibold"
+                            >
+                                {t('common.delete')}
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };
 
