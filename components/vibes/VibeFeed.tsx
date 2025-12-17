@@ -332,13 +332,14 @@ const VibeItem: React.FC<{
         if (!video) return;
 
         if (isActive) {
+            video.muted = true; // Necessário para garantir autoplay na maioria dos browsers
             video.currentTime = 0;
             const playPromise = video.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     setIsPlaying(true);
                 }).catch(error => {
-                    console.log("Autoplay prevented:", error);
+                    console.log("Autoplay impedido ou vídeo pausado manualmente:", error);
                     setIsPlaying(false);
                 });
             }
@@ -347,6 +348,11 @@ const VibeItem: React.FC<{
             setIsPlaying(false);
         }
     }, [isActive]);
+
+    useEffect(() => {
+        setIsLiked(vibe.likes.includes(auth.currentUser?.uid || ''));
+        setLikesCount(vibe.likes.length);
+    }, [vibe.likes]);
 
     const togglePlay = () => {
         const video = videoRef.current;
@@ -369,9 +375,6 @@ const VibeItem: React.FC<{
         const userId = auth.currentUser.uid;
         const vibeRef = doc(db, 'vibes', vibe.id);
         
-        setIsLiked(!isLiked);
-        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
-
         try {
             if (isLiked) {
                 await updateDoc(vibeRef, { likes: arrayRemove(userId) });
@@ -391,6 +394,7 @@ const VibeItem: React.FC<{
                 className="w-full h-full object-contain"
                 loop
                 playsInline
+                muted
                 onClick={togglePlay}
             />
 
@@ -460,40 +464,37 @@ const VibeFeed: React.FC = () => {
     const [deleteVibe, setDeleteVibe] = useState<VibeType | null>(null);
 
     useEffect(() => {
-        const fetchVibes = async () => {
-            try {
-                const q = query(collection(db, 'vibes'), orderBy('createdAt', 'desc'), limit(20));
-                const snapshot = await getDocs(q);
-                
-                const vibesData = await Promise.all(snapshot.docs.map(async (docSnap) => {
-                    const data = docSnap.data();
-                    let userData = { username: 'Unknown', avatar: 'https://i.pravatar.cc/150' };
-                    try {
-                        const userDoc = await getDoc(doc(db, 'users', data.userId));
-                        if (userDoc.exists()) {
-                            const u = userDoc.data();
-                            userData = { username: u.username, avatar: u.avatar };
-                        }
-                    } catch (e) {
-                        console.error("Error fetching user for vibe", e);
+        const q = query(collection(db, 'vibes'), orderBy('createdAt', 'desc'), limit(20));
+        
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const vibesData = await Promise.all(snapshot.docs.map(async (docSnap) => {
+                const data = docSnap.data();
+                let userData = { username: 'Unknown', avatar: 'https://i.pravatar.cc/150' };
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', data.userId));
+                    if (userDoc.exists()) {
+                        const u = userDoc.data();
+                        userData = { username: u.username, avatar: u.avatar };
                     }
+                } catch (e) {
+                    console.error("Error fetching user for vibe", e);
+                }
 
-                    return {
-                        id: docSnap.id,
-                        ...data,
-                        user: userData
-                    } as VibeType;
-                }));
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    user: userData
+                } as VibeType;
+            }));
 
-                setVibes(vibesData);
-            } catch (error) {
-                console.error("Error fetching vibes:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+            setVibes(vibesData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error listening to vibes:", error);
+            setLoading(false);
+        });
 
-        fetchVibes();
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -516,7 +517,6 @@ const VibeFeed: React.FC = () => {
         try {
             await deleteDoc(doc(db, 'vibes', deleteVibe.id));
             
-            // Storage cleanup (optional but good practice)
             try {
                 const url = new URL(deleteVibe.videoUrl);
                 const path = decodeURIComponent(url.pathname.split('/o/')[1]);
@@ -526,7 +526,6 @@ const VibeFeed: React.FC = () => {
                 console.warn("Media deletion from storage skipped/failed", e);
             }
 
-            setVibes(prev => prev.filter(v => v.id !== deleteVibe.id));
             setDeleteVibe(null);
         } catch (error) {
             console.error("Error deleting vibe:", error);
