@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db, collection, query, orderBy, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, where, addDoc, serverTimestamp, deleteDoc, storage, storageRef, deleteObject, setDoc, writeBatch, onSnapshot, increment } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCall } from '../../context/CallContext';
 import Button from '../common/Button';
 
 type VibeType = {
@@ -352,11 +353,11 @@ const VibeItem: React.FC<{
     onDelete: () => void;
 }> = ({ vibe, isActive, onOpenComments, onOpenShare, onDelete }) => {
     const { t } = useLanguage();
+    const { isGlobalMuted, setGlobalMuted } = useCall();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLiked, setIsLiked] = useState(vibe.likes.includes(auth.currentUser?.uid || ''));
     const [likesCount, setLikesCount] = useState(vibe.likes.length);
-    const [isMuted, setIsMuted] = useState(true);
     const currentUser = auth.currentUser;
 
     useEffect(() => {
@@ -376,6 +377,7 @@ const VibeItem: React.FC<{
             }
         } else {
             video.pause();
+            video.currentTime = 0; // Opcional: resetar ao sair
             setIsPlaying(false);
         }
     }, [isActive]);
@@ -401,7 +403,7 @@ const VibeItem: React.FC<{
 
     const toggleMute = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsMuted(!isMuted);
+        setGlobalMuted(!isGlobalMuted);
     };
 
     const handleLike = async (e: React.MouseEvent) => {
@@ -430,7 +432,7 @@ const VibeItem: React.FC<{
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted={isMuted}
+                muted={isGlobalMuted}
                 onClick={togglePlay}
             />
 
@@ -447,7 +449,7 @@ const VibeItem: React.FC<{
                 onClick={toggleMute}
                 className="absolute left-4 top-4 z-30 p-2 bg-black/40 rounded-full text-white backdrop-blur-sm"
             >
-                {isMuted ? <VolumeOffIcon className="w-6 h-6" /> : <VolumeOnIcon className="w-6 h-6" />}
+                {isGlobalMuted ? <VolumeOffIcon className="w-6 h-6" /> : <VolumeOnIcon className="w-6 h-6" />}
             </button>
 
             {/* Right Side Actions */}
