@@ -48,8 +48,8 @@
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
     "createPost": "Criar Publicação",
-    "createVibe": "Publicar Vibe",
-    "vibes": "Vibes",
+    "createVibe": "Publicar Pulse",
+    "vibes": "Pulses",
     "logOut": "Sair",
     "cancel": "Cancelar",
     "messages": "Direct",
@@ -255,9 +255,9 @@
     "title": "Cristal de Conexão: {status}",
     "streak": "{streak} dias de interação seguida",
     "shareTitle": "Sequência Conecta",
-    "shareAction": "Compartilhar no Pulse",
+    "shareAction": "Compartilhar no Moments",
     "publishing": "Publicando...",
-    "shareError": "Falha ao publicar o Pulse.",
+    "shareError": "Falha ao publicar o Moments.",
     "canvasError": "Falha ao gerar a imagem.",
     "imageLoadError": "Falha ao carregar as fotos de perfil.",
     "streakDays": "{streak} dias de conexão",
@@ -265,40 +265,40 @@
     "watermark": "Vibe"
   },
   "createPulse": {
-    "title": "Criar novo pulso",
+    "title": "Criar novo Moment",
     "publishing": "Publicando...",
-    "publish": "Publicar Pulso",
+    "publish": "Publicar Moment",
     "captionLabel": "Escreva uma legenda... (opcional)",
     "selectMedia": "Selecione uma imagem ou vídeo",
     "selectFromComputer": "Selecionar do computador",
     "invalidFileError": "Por favor, selecione um arquivo de imagem ou vídeo válido.",
-    "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
+    "publishError": "Falha ao criar o Moment. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
-    "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
+    "ventModeInfo": "Apenas seguidores selecionados verão este Moment.",
     "showMusicCover": "Mostrar capa da música"
   },
   "createVibe": {
-    "title": "Nova Vibe",
+    "title": "Novo Pulse",
     "publishing": "Publicando...",
-    "publish": "Publicar Vibe",
-    "captionLabel": "Descreva sua vibe...",
+    "publish": "Publicar Pulse",
+    "captionLabel": "Descreva seu Pulse...",
     "selectVideo": "Selecione um vídeo vertical",
     "videoTooLong": "O vídeo deve ter menos de 60 segundos.",
     "invalidFileError": "Por favor, selecione um arquivo de vídeo válido."
   },
   "pulseViewer": {
-    "previous": "Pulso anterior",
-    "next": "Próximo pulso",
-    "delete": "Excluir Pulso",
-    "deleteTitle": "Excluir Pulso?",
-    "deleteBody": "Tem certeza que deseja excluir este pulso? Esta ação não pode ser desfeita.",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "delete": "Excluir Moment",
+    "deleteTitle": "Excluir Moment?",
+    "deleteBody": "Tem certeza que deseja excluir este Moment? Esta ação não pode ser desfeita.",
     "viewedBy": "Visto por",
     "noViews": "Nenhuma visualização ainda.",
     "viewSingular": "visualização",
     "viewPlural": "visualizações"
   },
   "pulseBar": {
-    "viewPulse": "Ver o pulso de {username}",
+    "viewPulse": "Ver o Moment de {username}",
     "viewLive": "Assistir Live de {username}",
     "live": "AO VIVO"
   },
@@ -429,18 +429,18 @@
   "choiceModal": {
     "title": "O que você quer criar?",
     "post": "Publicação",
-    "pulse": "Pulse"
+    "pulse": "Moment"
   },
   "vibe": {
     "comments": "Comentários",
     "share": "Compartilhar",
     "addComment": "Adicionar comentário...",
-    "deleteTitle": "Excluir Vibe?",
-    "deleteBody": "Tem certeza que deseja excluir esta Vibe?",
+    "deleteTitle": "Excluir Pulse?",
+    "deleteBody": "Tem certeza que deseja excluir este Pulse?",
     "sendTo": "Enviar para",
     "shareExternal": "Compartilhar via",
     "whatsapp": "WhatsApp / Status",
-    "forwarded": "Encaminhou uma Vibe",
+    "forwarded": "Encaminhou um Pulse",
     "noComments": "Seja o primeiro a comentar!"
   }
 }

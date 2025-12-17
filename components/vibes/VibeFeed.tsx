@@ -80,7 +80,7 @@ const Spinner: React.FC = () => (
 
 // --- Modals ---
 
-const VibeCommentsModal: React.FC<{
+const PulseCommentsModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     vibeId: string;
@@ -204,9 +204,9 @@ const VibeCommentsModal: React.FC<{
     );
 };
 
-// --- ShareVibeModal ---
+// --- SharePulseModal ---
 
-const ShareVibeModal: React.FC<{
+const SharePulseModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     vibe: VibeType;
@@ -281,15 +281,15 @@ const ShareVibeModal: React.FC<{
         setIsSharing(true);
         try {
             if (navigator.share) {
-                 const text = `Confira essa Vibe no VibeApp: ${vibe.videoUrl}`;
+                 const text = `Confira esse Pulse no VibeApp: ${vibe.videoUrl}`;
                  await navigator.share({
-                     title: 'Vibe',
-                     text: vibe.caption || 'Olha essa Vibe!',
+                     title: 'Pulse',
+                     text: vibe.caption || 'Olha esse Pulse!',
                      url: vibe.videoUrl
                  });
                  onClose();
             } else {
-                 const text = `Confira essa Vibe: ${vibe.videoUrl}`;
+                 const text = `Confira esse Pulse: ${vibe.videoUrl}`;
                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
             }
         } catch (e) {
@@ -343,9 +343,9 @@ const ShareVibeModal: React.FC<{
     );
 };
 
-// --- Main VibeItem Component ---
+// --- Main PulseItem Component ---
 
-const VibeItem: React.FC<{ 
+const PulseItem: React.FC<{ 
     vibe: VibeType; 
     isActive: boolean;
     onOpenComments: () => void;
@@ -377,7 +377,7 @@ const VibeItem: React.FC<{
             }
         } else {
             video.pause();
-            video.currentTime = 0; // Opcional: resetar ao sair
+            video.currentTime = 0;
             setIsPlaying(false);
         }
     }, [isActive]);
@@ -495,7 +495,7 @@ const VibeItem: React.FC<{
     );
 };
 
-// --- Main VibeFeed Container ---
+// --- Main VibeFeed Container (Rebranded to Pulses) ---
 
 const VibeFeed: React.FC = () => {
     const { t } = useLanguage();
@@ -582,7 +582,7 @@ const VibeFeed: React.FC = () => {
         return (
             <div className="h-[calc(100vh-8rem)] w-full bg-black flex flex-col items-center justify-center text-white">
                 <Spinner />
-                <p className="mt-4 text-zinc-400">Carregando Vibes...</p>
+                <p className="mt-4 text-zinc-400">Carregando Pulses...</p>
             </div>
         );
     }
@@ -590,7 +590,7 @@ const VibeFeed: React.FC = () => {
     if (vibes.length === 0) {
         return (
             <div className="h-[calc(100vh-8rem)] w-full bg-black flex items-center justify-center text-zinc-500 text-center p-8">
-                Nenhuma Vibe disponível no momento.<br/>Seja o primeiro a postar!
+                Nenhum Pulse disponível no momento.<br/>Seja o primeiro a postar!
             </div>
         );
     }
@@ -604,7 +604,7 @@ const VibeFeed: React.FC = () => {
             >
                 {vibes.map((vibe, index) => (
                     <div key={vibe.id} className="h-full w-full snap-start">
-                        <VibeItem 
+                        <PulseItem 
                             vibe={vibe} 
                             isActive={index === activeVibeIndex && !commentsVibe && !shareVibe && !deleteVibe} 
                             onOpenComments={() => setCommentsVibe({ id: vibe.id, authorId: vibe.userId })}
@@ -617,7 +617,7 @@ const VibeFeed: React.FC = () => {
 
             {/* Modals */}
             {commentsVibe && (
-                <VibeCommentsModal 
+                <PulseCommentsModal 
                     isOpen={true} 
                     onClose={() => setCommentsVibe(null)} 
                     vibeId={commentsVibe.id}
@@ -626,7 +626,7 @@ const VibeFeed: React.FC = () => {
             )}
 
             {shareVibe && (
-                <ShareVibeModal 
+                <SharePulseModal 
                     isOpen={true} 
                     onClose={() => setShareVibe(null)} 
                     vibe={shareVibe} 

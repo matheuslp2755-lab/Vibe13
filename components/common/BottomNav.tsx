@@ -15,7 +15,7 @@ const HomeIcon: React.FC<{ filled: boolean, className?: string }> = ({ filled, c
     </svg>
 );
 
-const VibeIcon: React.FC<{ filled: boolean, className?: string }> = ({ filled, className }) => (
+const PulseVideoIcon: React.FC<{ filled: boolean, className?: string }> = ({ filled, className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={filled ? 0 : 2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
     </svg>
@@ -47,7 +47,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, onChangeView, onCrea
                     className={`p-2 transition-transform active:scale-90 ${currentView === 'vibes' ? 'text-black dark:text-white' : 'text-zinc-500'}`}
                     aria-label={t('header.vibes')}
                 >
-                    <VibeIcon filled={currentView === 'vibes'} className="w-7 h-7" />
+                    <PulseVideoIcon filled={currentView === 'vibes'} className="w-7 h-7" />
                 </button>
 
                 <button 
