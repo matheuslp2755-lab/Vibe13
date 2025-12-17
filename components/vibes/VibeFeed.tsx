@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, getDocs, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, where, addDoc, serverTimestamp, deleteDoc, storage, storageRef, deleteObject, setDoc, writeBatch, onSnapshot, increment } from '../../firebase';
+import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, addDoc, serverTimestamp, deleteDoc, storage, storageRef, deleteObject, onSnapshot, increment } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
-import Button from '../common/Button';
 
 type VibeType = {
     id: string;
@@ -27,12 +26,6 @@ type Comment = {
     userAvatar: string;
     text: string;
     timestamp: any;
-};
-
-type Follower = {
-    id: string;
-    username: string;
-    avatar: string;
 };
 
 const HeartIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
@@ -77,8 +70,6 @@ const Spinner: React.FC = () => (
         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
 );
-
-// --- Modals ---
 
 const PulseCommentsModal: React.FC<{
     isOpen: boolean;
@@ -204,147 +195,6 @@ const PulseCommentsModal: React.FC<{
     );
 };
 
-// --- SharePulseModal ---
-
-const SharePulseModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    vibe: VibeType;
-}> = ({ isOpen, onClose, vibe }) => {
-    const { t } = useLanguage();
-    const currentUser = auth.currentUser;
-    const [following, setFollowing] = useState<Follower[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [isSharing, setIsSharing] = useState(false);
-
-    useEffect(() => {
-        if (!isOpen || !currentUser) return;
-        const fetchFollowing = async () => {
-            setLoading(true);
-            try {
-                const followingRef = collection(db, 'users', currentUser.uid, 'following');
-                const snapshot = await getDocs(followingRef);
-                const followingData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Follower));
-                setFollowing(followingData);
-            } catch (error) {
-                console.error("Error fetching following:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchFollowing();
-    }, [isOpen, currentUser]);
-
-    const handleInternalShare = async (userId: string, username: string, avatar: string) => {
-        if (!currentUser) return;
-        const conversationId = [currentUser.uid, userId].sort().join('_');
-        const conversationRef = doc(db, 'conversations', conversationId);
-
-        try {
-            const conversationSnap = await getDoc(conversationRef);
-            if (!conversationSnap.exists()) {
-                await setDoc(conversationRef, {
-                    participants: [currentUser.uid, userId],
-                    participantInfo: {
-                        [currentUser.uid]: { username: currentUser.displayName, avatar: currentUser.photoURL },
-                        [userId]: { username, avatar }
-                    },
-                    timestamp: serverTimestamp()
-                });
-            }
-
-            await addDoc(collection(conversationRef, 'messages'), {
-                senderId: currentUser.uid,
-                text: `${t('vibe.forwarded')}: ${vibe.videoUrl}`,
-                mediaUrl: vibe.videoUrl,
-                mediaType: 'video',
-                timestamp: serverTimestamp()
-            });
-
-            await updateDoc(conversationRef, {
-                lastMessage: {
-                    senderId: currentUser.uid,
-                    text: t('vibe.forwarded'),
-                    timestamp: serverTimestamp(),
-                    mediaType: 'video'
-                },
-                timestamp: serverTimestamp()
-            });
-            onClose();
-        } catch (error) {
-            console.error("Share failed", error);
-        }
-    };
-
-    const handleWhatsAppShare = async () => {
-        setIsSharing(true);
-        try {
-            if (navigator.share) {
-                 const text = `Confira esse Pulse no VibeApp: ${vibe.videoUrl}`;
-                 await navigator.share({
-                     title: 'Pulse',
-                     text: vibe.caption || 'Olha esse Pulse!',
-                     url: vibe.videoUrl
-                 });
-                 onClose();
-            } else {
-                 const text = `Confira esse Pulse: ${vibe.videoUrl}`;
-                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            }
-        } catch (e) {
-            console.log("Share failed:", e);
-        } finally {
-            setIsSharing(false);
-        }
-    };
-
-    const filteredFollowing = following.filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center sm:items-center" onClick={onClose}>
-            <div className="bg-white dark:bg-zinc-900 w-full max-w-sm sm:rounded-xl rounded-t-xl p-4 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold mb-4 text-center">{t('vibe.share')}</h3>
-                
-                <div className="flex justify-around mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-                    <button onClick={handleWhatsAppShare} disabled={isSharing} className="flex flex-col items-center gap-1 disabled:opacity-50">
-                        <div className="w-12 h-12 bg-[#25D366] rounded-full flex items-center justify-center text-white">
-                            {isSharing ? <Spinner /> : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-                            )}
-                        </div>
-                        <span className="text-xs text-center">{t('vibe.whatsapp')}</span>
-                    </button>
-                </div>
-
-                <h4 className="text-sm font-semibold mb-2">{t('vibe.sendTo')}</h4>
-                <input
-                    type="text"
-                    placeholder={t('header.searchPlaceholder')}
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full bg-zinc-100 dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-2 text-sm mb-2 outline-none focus:ring-1 focus:ring-sky-500"
-                />
-                <div className="flex-grow overflow-y-auto min-h-[150px]">
-                    {loading ? <div className="p-4 flex justify-center"><Spinner /></div> : (
-                        filteredFollowing.map(user => (
-                            <button key={user.id} onClick={() => handleInternalShare(user.id, user.username, user.avatar)} className="w-full flex items-center gap-3 p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
-                                <img src={user.avatar} className="w-10 h-10 rounded-full object-cover" alt={user.username} />
-                                <span className="font-semibold text-sm flex-grow text-left">{user.username}</span>
-                                <span className="bg-sky-500 text-white text-xs px-3 py-1 rounded-full">{t('messages.send')}</span>
-                            </button>
-                        ))
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- Main PulseItem Component ---
-
 const PulseItem: React.FC<{ 
     vibe: VibeType; 
     isActive: boolean;
@@ -371,13 +221,13 @@ const PulseItem: React.FC<{
                 playPromise.then(() => {
                     setIsPlaying(true);
                 }).catch(error => {
-                    console.log("Autoplay impedido ou vídeo pausado manualmente:", error);
+                    console.warn("Autoplay prevented:", error);
                     setIsPlaying(false);
                 });
             }
         } else {
             video.pause();
-            video.currentTime = 0;
+            // Reset state so it's ready for next playback
             setIsPlaying(false);
         }
     }, [isActive]);
@@ -444,7 +294,6 @@ const PulseItem: React.FC<{
                 </div>
             )}
 
-            {/* Audio Toggle */}
             <button 
                 onClick={toggleMute}
                 className="absolute left-4 top-4 z-30 p-2 bg-black/40 rounded-full text-white backdrop-blur-sm"
@@ -452,7 +301,6 @@ const PulseItem: React.FC<{
                 {isGlobalMuted ? <VolumeOffIcon className="w-6 h-6" /> : <VolumeOnIcon className="w-6 h-6" />}
             </button>
 
-            {/* Right Side Actions */}
             <div className="absolute right-4 bottom-20 flex flex-col gap-6 items-center z-30">
                 <div className="flex flex-col items-center mb-2">
                     <div className="w-11 h-11 rounded-full border-2 border-white overflow-hidden shadow-lg">
@@ -483,19 +331,15 @@ const PulseItem: React.FC<{
                 )}
             </div>
 
-            {/* Bottom Info */}
             <div className="absolute left-4 bottom-4 right-20 z-30 text-white pointer-events-none select-none">
                 <h3 className="font-bold text-base drop-shadow-md mb-1">@{vibe.user?.username}</h3>
                 <p className="text-sm drop-shadow-md break-words line-clamp-3 leading-tight">{vibe.caption}</p>
             </div>
             
-            {/* Overlay Gradient */}
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/70 to-transparent pointer-events-none z-10"></div>
         </div>
     );
 };
-
-// --- Main VibeFeed Container (Rebranded to Pulses) ---
 
 const VibeFeed: React.FC = () => {
     const { t } = useLanguage();
@@ -504,14 +348,12 @@ const VibeFeed: React.FC = () => {
     const [activeVibeIndex, setActiveVibeIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     
-    // Modal States
     const [commentsVibe, setCommentsVibe] = useState<{id: string, authorId: string} | null>(null);
     const [shareVibe, setShareVibe] = useState<VibeType | null>(null);
     const [deleteVibe, setDeleteVibe] = useState<VibeType | null>(null);
 
     useEffect(() => {
         const q = query(collection(db, 'vibes'), orderBy('createdAt', 'desc'), limit(20));
-        
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             const vibesData = await Promise.all(snapshot.docs.map(async (docSnap) => {
                 const data = docSnap.data();
@@ -522,24 +364,15 @@ const VibeFeed: React.FC = () => {
                         const u = userDoc.data();
                         userData = { username: u.username, avatar: u.avatar };
                     }
-                } catch (e) {
-                    console.error("Error fetching user for vibe", e);
-                }
-
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    user: userData
-                } as VibeType;
+                } catch (e) { console.error(e); }
+                return { id: docSnap.id, ...data, user: userData } as VibeType;
             }));
-
             setVibes(vibesData);
             setLoading(false);
         }, (error) => {
             console.error("Error listening to vibes:", error);
             setLoading(false);
         });
-
         return () => unsubscribe();
     }, []);
 
@@ -562,20 +395,14 @@ const VibeFeed: React.FC = () => {
         if (!deleteVibe) return;
         try {
             await deleteDoc(doc(db, 'vibes', deleteVibe.id));
-            
             try {
                 const url = new URL(deleteVibe.videoUrl);
                 const path = decodeURIComponent(url.pathname.split('/o/')[1]);
                 const mediaRef = storageRef(storage, path);
                 await deleteObject(mediaRef);
-            } catch (e) {
-                console.warn("Media deletion from storage skipped/failed", e);
-            }
-
+            } catch (e) { console.warn(e); }
             setDeleteVibe(null);
-        } catch (error) {
-            console.error("Error deleting vibe:", error);
-        }
+        } catch (error) { console.error(error); }
     };
 
     if (loading) {
@@ -615,7 +442,6 @@ const VibeFeed: React.FC = () => {
                 ))}
             </div>
 
-            {/* Modals */}
             {commentsVibe && (
                 <PulseCommentsModal 
                     isOpen={true} 
@@ -625,32 +451,14 @@ const VibeFeed: React.FC = () => {
                 />
             )}
 
-            {shareVibe && (
-                <SharePulseModal 
-                    isOpen={true} 
-                    onClose={() => setShareVibe(null)} 
-                    vibe={shareVibe} 
-                />
-            )}
-
             {deleteVibe && (
                 <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center" onClick={() => setDeleteVibe(null)}>
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl max-w-xs w-full mx-4 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-bold mb-2 text-zinc-900 dark:text-white">{t('vibe.deleteTitle')}</h3>
                         <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">{t('vibe.deleteBody')}</p>
                         <div className="flex gap-3">
-                            <button 
-                                onClick={() => setDeleteVibe(null)} 
-                                className="flex-1 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg font-semibold"
-                            >
-                                {t('common.cancel')}
-                            </button>
-                            <button 
-                                onClick={handleDelete} 
-                                className="flex-1 py-2 bg-red-500 text-white rounded-lg font-semibold"
-                            >
-                                {t('common.delete')}
-                            </button>
+                            <button onClick={() => setDeleteVibe(null)} className="flex-1 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg font-semibold">{t('common.cancel')}</button>
+                            <button onClick={handleDelete} className="flex-1 py-2 bg-red-500 text-white rounded-lg font-semibold">{t('common.delete')}</button>
                         </div>
                     </div>
                 </div>

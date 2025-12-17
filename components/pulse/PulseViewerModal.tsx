@@ -69,9 +69,6 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
     const [viewsCount, setViewsCount] = useState(0);
     const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
     const [isMusicMuted, setIsMusicMuted] = useState(false);
-    const [isAddToMemoryOpen, setIsAddToMemoryOpen] = useState(false);
-    const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
-    const [initialContentForMemory, setInitialContentForMemory] = useState<any>(null);
     const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | 'none'>('none');
     
     useEffect(() => {
@@ -157,12 +154,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 isOpen={isViewsModalOpen} onClose={() => setIsViewsModalOpen(false)} pulseId={currentPulse.id}
                 onUserSelect={(userId) => { if(onViewProfile) { onViewProfile(userId); setIsViewsModalOpen(false); onClose(); } }}
             />
-            {isOwner && (
-                <>
-                    <AddToMemoryModal isOpen={isAddToMemoryOpen} onClose={() => setIsAddToMemoryOpen(false)} content={{ id: currentPulse.id, type: 'pulse', mediaUrl: currentPulse.mediaUrl, timestamp: currentPulse.createdAt }} onOpenCreate={(initialContent) => { setInitialContentForMemory(initialContent); setIsAddToMemoryOpen(false); setIsCreateMemoryOpen(true); }} />
-                    <CreateMemoryModal isOpen={isCreateMemoryOpen} onClose={() => setIsCreateMemoryOpen(false)} onMemoryCreated={() => {}} initialContent={initialContentForMemory} />
-                </>
-            )}
+            
             <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 select-none backdrop-blur-sm" onClick={onClose}>
                 {canGoPrev && (
                     <button onClick={goToPrev} className="absolute left-2 md:left-8 text-white bg-white/10 backdrop-blur-md rounded-full p-3 z-30 hover:bg-white/20 transition-all active:scale-95" aria-label={t('pulseViewer.previous')}>
@@ -192,9 +184,6 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                                                 <EyeIcon className="w-4 h-4" />{viewsCount}
                                             </button>
                                         )}
-                                         <button onClick={() => setIsAddToMemoryOpen(true)} className="text-white p-2 rounded-full hover:bg-white/20 transition-colors" title={t('post.addToMemory')}>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
-                                        </button>
                                         <button onClick={() => setIsDeleteConfirmOpen(true)} className="text-white p-2 rounded-full hover:bg-white/20 transition-colors" aria-label={t('pulseViewer.delete')}>
                                             <TrashIcon className="w-6 h-6" />
                                         </button>
@@ -213,8 +202,8 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
 
                         {currentPulse.mediaUrl.includes('.mp4') || currentPulse.mediaUrl.includes('.webm') ? (
                             <video 
-                                src={currentPulse.mediaUrl} controls autoPlay 
-                                muted={isGlobalMuted} // SINCRONIZADO GLOBALMENTE
+                                src={currentPulse.mediaUrl} autoPlay loop
+                                muted={isGlobalMuted} 
                                 className="w-full h-full object-contain" 
                             />
                         ) : <img src={currentPulse.mediaUrl} alt={currentPulse.legenda || 'Pulse'} className="w-full h-full object-contain" />}
@@ -232,7 +221,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 pointer-events-none">
                                 {currentPulse.musicInfo && (
                                     <div className="mb-3 text-white pointer-events-auto">
-                                        <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isMusicMuted} setIsMuted={setIsMusicMuted} />
+                                        <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={setIsMusicMuted} />
                                     </div>
                                 )}
                                 {currentPulse.legenda && <p className="text-white text-center text-md font-medium drop-shadow-lg">{currentPulse.legenda}</p>}

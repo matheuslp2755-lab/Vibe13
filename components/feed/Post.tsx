@@ -43,200 +43,6 @@ type CommentType = {
     timestamp: { seconds: number; nanoseconds: number };
 }
 
-type UserSearchResult = {
-    id: string;
-    username: string;
-    avatar: string;
-};
-
-type Follower = {
-    id: string;
-    username: string;
-    avatar: string;
-};
-
-interface ForwardPostModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  post: PostType;
-}
-
-const ForwardPostModal: React.FC<ForwardPostModalProps> = ({ isOpen, onClose, post }) => {
-    const { t } = useLanguage();
-    const currentUser = auth.currentUser;
-    const [following, setFollowing] = useState<Follower[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-    const [isSending, setIsSending] = useState(false);
-
-    useEffect(() => {
-        if (!isOpen) {
-            setSelectedUsers([]);
-            setSearchTerm('');
-            setIsSending(false);
-            return;
-        }
-        const fetchFollowing = async () => {
-            if (!currentUser) return;
-            setLoading(true);
-            try {
-                const followingRef = collection(db, 'users', currentUser.uid, 'following');
-                const snapshot = await getDocs(followingRef);
-                const followingData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Follower));
-                setFollowing(followingData);
-            } catch (error) { console.error(error); } finally { setLoading(false); }
-        };
-        fetchFollowing();
-    }, [isOpen, currentUser]);
-
-    const handleSend = async () => {
-        if (selectedUsers.length === 0 || !currentUser) return;
-        setIsSending(true);
-        const sendPromises = selectedUsers.map(async (recipientId) => {
-            const recipient = following.find(f => f.id === recipientId);
-            if (!recipient) return;
-            const conversationId = [currentUser.uid, recipient.id].sort().join('_');
-            const conversationRef = doc(db, 'conversations', conversationId);
-            try {
-                const conversationSnap = await getDoc(conversationRef);
-                if (!conversationSnap.exists()) {
-                    const currentUserDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                    const currentUserData = currentUserDoc.data();
-                    await setDoc(conversationRef, {
-                        participants: [currentUser.uid, recipient.id],
-                        participantInfo: {
-                            [currentUser.uid]: { username: currentUserData?.username, avatar: currentUserData?.avatar },
-                            [recipient.id]: { username: recipient.username, avatar: recipient.avatar }
-                        },
-                        timestamp: serverTimestamp(),
-                    });
-                }
-                await addDoc(collection(conversationRef, 'messages'), {
-                    senderId: currentUser.uid, text: '', timestamp: serverTimestamp(), mediaType: 'forwarded_post',
-                    forwardedPostData: {
-                        postId: post.id, imageUrl: post.imageUrl, originalPosterUsername: post.username,
-                        originalPosterAvatar: post.userAvatar, caption: post.caption,
-                    }
-                });
-                await updateDoc(conversationRef, {
-                    lastMessage: { senderId: currentUser.uid, text: t('messages.forwardedPost'), timestamp: serverTimestamp(), mediaType: 'forwarded_post' },
-                    timestamp: serverTimestamp(),
-                });
-            } catch (error) { console.error(error); }
-        });
-        await Promise.all(sendPromises);
-        setIsSending(false);
-        onClose();
-    };
-
-    const filteredFollowing = following.filter(user => user.username.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={onClose}>
-            <div className="bg-white dark:bg-black rounded-lg shadow-xl w-full max-w-sm border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[70vh]" onClick={e => e.stopPropagation()}>
-                <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center flex-shrink-0">
-                    <div className="w-8"></div>
-                    <h2 className="text-lg font-semibold">{t('forwardModal.title')}</h2>
-                    <button onClick={onClose} className="text-2xl font-light w-8">&times;</button>
-                </div>
-                <div className="p-2 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
-                    <input type="text" placeholder={t('forwardModal.search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md py-1.5 px-4 text-sm" />
-                </div>
-                <div className="flex-grow overflow-y-auto">
-                    {loading ? <p className="text-center p-4">{t('messages.loading')}</p> : filteredFollowing.length > 0 ? (
-                        filteredFollowing.map(user => (
-                            <label key={user.id} className="flex items-center p-3 gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
-                                <img src={user.avatar} alt={user.username} className="w-11 h-11 rounded-full object-cover" />
-                                <span className="font-semibold text-sm flex-grow">{user.username}</span>
-                                <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => {
-                                        setSelectedUsers(prev => prev.includes(user.id) ? prev.filter(id => id !== user.id) : [...prev, user.id]);
-                                    }} className="w-5 h-5 text-sky-600 bg-zinc-100 border-zinc-300 rounded focus:ring-sky-500" />
-                            </label>
-                        ))
-                    ) : <p className="text-center p-4 text-sm text-zinc-500">{following.length === 0 ? t('forwardModal.noFollowing') : t('forwardModal.noResults')}</p>}
-                </div>
-                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex-shrink-0">
-                    <Button onClick={handleSend} disabled={isSending || selectedUsers.length === 0}>{isSending ? t('forwardModal.sending') : t('forwardModal.send')}</Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-interface DuoPhotoModalProps { isOpen: boolean; onClose: () => void; post: PostType; }
-const DuoPhotoModal: React.FC<DuoPhotoModalProps> = ({ isOpen, onClose, post }) => {
-    const { t } = useLanguage();
-    const currentUser = auth.currentUser;
-    const [following, setFollowing] = useState<Follower[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedUser, setSelectedUser] = useState<Follower | null>(null);
-    const [isSending, setIsSending] = useState(false);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        if (!isOpen) { setSelectedUser(null); setSearchTerm(''); setIsSending(false); setError(''); return; }
-        const fetchFollowing = async () => {
-            if (!currentUser) return;
-            setLoading(true);
-            try {
-                const snapshot = await getDocs(collection(db, 'users', currentUser.uid, 'following'));
-                setFollowing(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Follower)));
-            } catch (error) { console.error(error); } finally { setLoading(false); }
-        };
-        fetchFollowing();
-    }, [isOpen, currentUser]);
-
-    const handleSendRequest = async () => {
-        if (!selectedUser || !currentUser) return;
-        if (post.duoPartner) { setError(t('duoModal.alreadyPartnered')); return; }
-        if (post.pendingDuoPartner) { setError(t('duoModal.requestPending')); return; }
-        setIsSending(true); setError('');
-        try {
-            await updateDoc(doc(db, 'posts', post.id), { pendingDuoPartner: { userId: selectedUser.id, username: selectedUser.username, userAvatar: selectedUser.avatar } });
-            await setDoc(doc(collection(db, 'users', selectedUser.id, 'notifications')), {
-                type: 'duo_request', fromUserId: currentUser.uid, fromUsername: currentUser.displayName, fromUserAvatar: currentUser.photoURL,
-                postId: post.id, timestamp: serverTimestamp(), read: false,
-            });
-            onClose();
-        } catch (error) { setError(t('duoModal.requestError')); } finally { setIsSending(false); }
-    };
-
-    const filteredFollowing = following.filter(user => user.username.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={onClose}>
-            <div className="bg-white dark:bg-black rounded-lg shadow-xl w-full max-w-sm border border-zinc-200 dark:border-zinc-800 flex flex-col max-h-[70vh]" onClick={e => e.stopPropagation()}>
-                <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center flex-shrink-0">
-                    <div className="w-8"></div>
-                    <h2 className="text-lg font-semibold">{t('duoModal.title')}</h2>
-                    <button onClick={onClose} className="text-2xl font-light w-8">&times;</button>
-                </div>
-                <div className="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400"><p>{t('duoModal.description')}</p></div>
-                <div className="p-2 border-y border-zinc-200 dark:border-zinc-800 flex-shrink-0">
-                    <input type="text" placeholder={t('forwardModal.search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md py-1.5 px-4 text-sm" />
-                </div>
-                <div className="flex-grow overflow-y-auto">
-                    {loading ? <p className="text-center p-4">{t('messages.loading')}</p> : filteredFollowing.length > 0 ? (
-                        filteredFollowing.map(user => (
-                            <label key={user.id} className="flex items-center p-3 gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
-                                <img src={user.avatar} alt={user.username} className="w-11 h-11 rounded-full object-cover" />
-                                <span className="font-semibold text-sm flex-grow">{user.username}</span>
-                                <input type="radio" name="duo-partner" checked={selectedUser?.id === user.id} onChange={() => setSelectedUser(user)} className="w-5 h-5 text-sky-600 bg-zinc-100 border-zinc-300 focus:ring-sky-500" />
-                            </label>
-                        ))
-                    ) : <p className="text-center p-4 text-sm text-zinc-500">{following.length === 0 ? t('duoModal.noFollowing') : t('forwardModal.noResults')}</p>}
-                </div>
-                <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex-shrink-0">
-                    {error && <p className="text-red-500 text-xs text-center mb-2">{error}</p>}
-                    <Button onClick={handleSendRequest} disabled={isSending || !selectedUser}>{isSending ? t('duoModal.sending') : t('duoModal.sendRequest')}</Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const LikeIcon: React.FC<{className?: string, isLiked: boolean, title: string}> = ({ className, isLiked, title }) => (
   <svg aria-label={title} className={className} fill={isLiked ? '#ef4444' : 'currentColor'} height="24" role="img" viewBox="0 0 24 24" width="24"><title>{title}</title><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-6.12 8.351C12.89 20.72 12.434 21 12 21s-.89-.28-1.38-.627C7.152 14.08 4.5 12.192 4.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.118-1.763a4.21 4.21 0 0 1 3.675-1.941Z"></path></svg>
 );
@@ -262,7 +68,7 @@ interface PostProps {
 const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, setPlayingMusicPostId, isMusicMuted, setIsMusicMuted }) => {
   const currentUser = auth.currentUser;
   const { t } = useLanguage();
-  const { isGlobalMuted } = useCall();
+  const { isGlobalMuted, setGlobalMuted } = useCall();
   const { formatTimestamp } = useTimeAgo();
   const [postData, setPostData] = useState<PostType>(post);
   const [isLiked, setIsLiked] = useState(false);
@@ -272,26 +78,16 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
   const [isDeleting, setIsDeleting] = useState(false);
   const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [isCommentDeleteConfirmOpen, setIsCommentDeleteConfirmOpen] = useState(false);
-  const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(null);
-  const [isDeletingComment, setIsDeletingComment] = useState(false);
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
   const [viewsCount, setViewsCount] = useState(0);
   const postRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
-  const [isDuoPhotoModalOpen, setIsDuoPhotoModalOpen] = useState(false);
   const [isAddCaptionModalOpen, setIsAddCaptionModalOpen] = useState(false);
   const [isAddMusicModalOpen, setIsAddMusicModalOpen] = useState(false);
   const [isAddToMemoryOpen, setIsAddToMemoryOpen] = useState(false);
   const [isCreateMemoryOpen, setIsCreateMemoryOpen] = useState(false);
   const [initialContentForMemory, setInitialContentForMemory] = useState<any>(null);
   const [playCount, setPlayCount] = useState(0);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionResults, setMentionResults] = useState<UserSearchResult[]>([]);
-  const [isMentionLoading, setIsMentionLoading] = useState(false);
-  const mentionStartPosition = useRef<number | null>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
 
   const isVideo = postData.mediaType === 'video' || postData.imageUrl.includes('.mp4') || postData.imageUrl.includes('.webm');
 
@@ -306,49 +102,17 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
   }, [postData.id]);
   
   useEffect(() => {
-    if (!postRef.current || !currentUser || currentUser.uid === postData.userId) return;
-    const observer = new IntersectionObserver(async ([entry]) => {
-        if (entry.isIntersecting) {
-            await setDoc(doc(db, 'posts', postData.id, 'views', currentUser.uid), { userId: currentUser.uid, viewedAt: serverTimestamp() });
-            observer.unobserve(entry.target);
-        }
-    }, { threshold: 0.5 });
-    observer.observe(postRef.current);
-    return () => observer.disconnect();
-  }, [postData.id, postData.userId, currentUser]);
-
-  useEffect(() => {
     if (!isVideo || !videoRef.current) return;
     const observer = new IntersectionObserver(([entry]) => {
         if (entry.isIntersecting) {
-            if (playCount < 2) videoRef.current?.play().catch(console.warn);
-        } else { videoRef.current?.pause(); }
+            videoRef.current?.play().catch(console.warn);
+        } else {
+            videoRef.current?.pause();
+        }
     }, { threshold: 0.6 });
     observer.observe(videoRef.current);
     return () => observer.disconnect();
-  }, [isVideo, playCount]);
-
-  const handleVideoEnded = () => {
-      if (playCount < 1) {
-          setPlayCount(prev => prev + 1);
-          if (videoRef.current) { videoRef.current.currentTime = 0; videoRef.current.play().catch(console.error); }
-      }
-  };
-
-  useEffect(() => {
-    if (!postData.musicInfo || !postRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) setPlayingMusicPostId(postData.id);
-        else if (playingMusicPostId === postData.id) setPlayingMusicPostId(null);
-    }, { threshold: 0.75 });
-    observer.observe(postRef.current);
-    return () => observer.disconnect();
-  }, [postData.id, postData.musicInfo, setPlayingMusicPostId, playingMusicPostId]);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'posts', postData.id, 'views'), (snap) => setViewsCount(snap.size));
-    return () => unsubscribe();
-  }, [postData.id]);
+  }, [isVideo]);
 
   const handleLikeToggle = async () => {
     if (!currentUser) return;
@@ -379,98 +143,30 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
     e.preventDefault();
     if (!currentUser || newComment.trim() === '') return;
     const commentText = newComment.trim();
-    const mentionRegex = /@(\w+)/g;
-    const uniqueMentions = [...new Set(commentText.match(mentionRegex)?.map(m => m.substring(1)) || [])];
     try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (!userDoc.exists()) throw new Error("User not found");
         const currentUsername = userDoc.data().username;
-        const batch = writeBatch(db);
-        const newCommentRef = doc(collection(db, 'posts', postData.id, 'comments'));
-        batch.set(newCommentRef, { text: commentText, userId: currentUser.uid, username: currentUsername, timestamp: serverTimestamp() });
-        if (uniqueMentions.length > 0) {
-            for (const username of uniqueMentions) {
-                const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-                const userSnapshot = await getDocs(q);
-                if (!userSnapshot.empty) {
-                    const mId = userSnapshot.docs[0].id;
-                    if (mId !== currentUser.uid) {
-                        batch.set(doc(collection(db, 'users', mId, 'notifications')), {
-                            type: 'mention_comment', fromUserId: currentUser.uid, fromUsername: currentUsername, fromUserAvatar: currentUser.photoURL,
-                            postId: postData.id, commentText: commentText.length > 100 ? `${commentText.substring(0, 97)}...` : commentText,
-                            timestamp: serverTimestamp(), read: false,
-                        });
-                    }
-                }
-            }
-        }
-        await batch.commit(); setNewComment(''); setMentionQuery(null);
+        await addDoc(collection(db, 'posts', postData.id, 'comments'), {
+            text: commentText,
+            userId: currentUser.uid,
+            username: currentUsername,
+            timestamp: serverTimestamp()
+        });
+        setNewComment('');
     } catch (error) { console.error(error); }
   };
-  
-  const confirmDeleteComment = async () => {
-    if (!commentToDeleteId) return;
-    setIsDeletingComment(true);
-    try {
-        await deleteDoc(doc(db, 'posts', postData.id, 'comments', commentToDeleteId));
-        setIsCommentDeleteConfirmOpen(false); setCommentToDeleteId(null);
-    } catch (error) { console.error(error); } finally { setIsDeletingComment(false); }
-  };
 
-  useEffect(() => {
-        if (!mentionQuery || mentionQuery.trim() === '') { setMentionResults([]); return; }
-        const debouncedSearch = setTimeout(async () => {
-            setIsMentionLoading(true);
-            const q = query(collection(db, 'users'), where('username_lowercase', '>=', mentionQuery.toLowerCase()), where('username_lowercase', '<=', mentionQuery.toLowerCase() + '\uf8ff'), limit(5));
-            try {
-                const snap = await getDocs(q);
-                setMentionResults(snap.docs.map(d => ({ id: d.id, username: d.data().username, avatar: d.data().avatar } as UserSearchResult)).filter(u => u.id !== auth.currentUser?.uid));
-            } catch (error) { console.error(error); } finally { setIsMentionLoading(false); }
-        }, 300);
-        return () => clearTimeout(debouncedSearch);
-  }, [mentionQuery]);
-
-  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const pos = e.target.selectionStart;
-    setNewComment(value);
-    if (pos === null) { setMentionQuery(null); return; }
-    const textBefore = value.substring(0, pos);
-    const atMatch = textBefore.match(/@(\w*)$/);
-    if (atMatch) { setMentionQuery(atMatch[1]); mentionStartPosition.current = textBefore.lastIndexOf('@'); }
-    else { setMentionQuery(null); }
-  };
-
-  const handleMentionSelect = (username: string) => {
-    if (mentionStartPosition.current === null) return;
-    const textBefore = newComment.substring(0, mentionStartPosition.current);
-    const textAfter = newComment.substring(mentionStartPosition.current + 1 + (mentionQuery?.length || 0));
-    setNewComment(`${textBefore}@${username} ${textAfter}`); setMentionQuery(null); commentInputRef.current?.focus();
-  };
-
-  const renderTextWithMentions = (text: string) => {
-    if (!text) return text;
-    return text.split(/(@\w+)/g).map((part, index) => part.startsWith('@') ? <strong key={index} className="text-sky-500 font-semibold">{part}</strong> : part);
+  const toggleMute = () => {
+      setGlobalMuted(!isGlobalMuted);
   };
 
   return (
     <>
         <article ref={postRef} className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg">
         <div className="flex items-center p-3">
-            {postData.duoPartner ? (
-                <>
-                    <div className="flex -space-x-4">
-                        <img src={postData.userAvatar} alt={postData.username} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-black" />
-                        <img src={postData.duoPartner.userAvatar} alt={postData.duoPartner.username} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-black" />
-                    </div>
-                    <span className="font-semibold text-sm ml-3">{postData.username} {t('post.and')} {postData.duoPartner.username}</span>
-                </>
-            ) : (
-                <>
-                    <img src={postData.userAvatar} alt={postData.username} className="w-8 h-8 rounded-full object-cover" />
-                    <span className="font-semibold text-sm ml-3">{postData.username}</span>
-                </>
-            )}
+            <img src={postData.userAvatar} alt={postData.username} className="w-8 h-8 rounded-full object-cover" />
+            <span className="font-semibold text-sm ml-3">{postData.username}</span>
             {currentUser?.uid === postData.userId && (
                  <div className="ml-auto relative">
                     <button onClick={() => setIsOptionsOpen(prev => !prev)}>
@@ -478,16 +174,6 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
                     </button>
                     {isOptionsOpen && (
                          <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-950 rounded-md shadow-lg border dark:border-zinc-800 z-10 py-1">
-                            {!postData.caption?.trim() && (
-                                <button onClick={() => { setIsAddCaptionModalOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.addCaption')}</button>
-                            )}
-                            {!postData.musicInfo && (
-                                <button onClick={() => { setIsAddMusicModalOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.addMusic')}</button>
-                            )}
-                             <button onClick={() => { setIsAddToMemoryOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.addToMemory')}</button>
-                            {!postData.duoPartner && !postData.pendingDuoPartner && !isVideo && (
-                                <button onClick={() => { setIsDuoPhotoModalOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.duoPhoto')}</button>
-                            )}
                             <button onClick={() => { setIsDeleteConfirmOpen(true); setIsOptionsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-900">{t('post.delete')}</button>
                         </div>
                     )}
@@ -495,14 +181,27 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
             )}
         </div>
         
-        <div>
+        <div className="relative group">
             {isVideo ? (
                 <video 
-                    ref={videoRef} src={postData.imageUrl} controls 
-                    muted={isGlobalMuted} // SINCRONIZADO GLOBALMENTE
-                    playsInline onEnded={handleVideoEnded} className="w-full object-cover max-h-[600px]" 
+                    ref={videoRef} src={postData.imageUrl} loop
+                    muted={isGlobalMuted}
+                    playsInline className="w-full object-cover max-h-[600px]" 
                 />
             ) : <img src={postData.imageUrl} alt="Post content" className="w-full object-cover" />}
+            
+            {isVideo && (
+                <button 
+                    onClick={toggleMute}
+                    className="absolute bottom-4 right-4 bg-black/50 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    {isGlobalMuted ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97v-3.87l4.73 4.73c-.57.44-1.22.8-1.94 1.05v2.09c1.28-.32 2.44-.92 3.42-1.74l1.46 1.46 1.27-1.27L4.27 3zM11.5 5.55L9.36 7.69 11.5 9.83V5.55z"/></svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 4.06c-.7.13-1.33.42-1.89.82L7.43 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97V5.03c0-.64-.62-1.09-1.25-.97zM19 12c0-1.72-.77-3.25-2-4.29v8.58c1.23-1.04 2-2.57 2-4.29zM17 2.11c2.85 1.15 5 3.96 5 7.89s-2.15 6.74-5 7.89v-2.1c1.72-.89 3-2.69 3-4.79s-1.28-3.9-3-4.79V2.11z"/></svg>
+                    )}
+                </button>
+            )}
         </div>
         
         {postData.musicInfo && (
@@ -517,77 +216,26 @@ const Post: React.FC<PostProps> = ({ post, onPostDeleted, playingMusicPostId, se
                     <LikeIcon title={t('post.like')} className={`w-6 h-6 hover:opacity-70 transition-opacity ${isLiked ? 'text-red-500' : 'dark:text-white'}`} isLiked={isLiked} />
                 </button>
                 <button><CommentIcon title={t('post.comment')} className="w-6 h-6 hover:text-zinc-500 dark:hover:text-zinc-400" /></button>
-                <button onClick={() => setIsForwardModalOpen(true)}><ShareIcon title={t('post.forward')} className="w-6 h-6 hover:text-zinc-500 dark:hover:text-zinc-400" /></button>
+                <button><ShareIcon title={t('post.forward')} className="w-6 h-6 hover:text-zinc-500 dark:hover:text-zinc-400" /></button>
             </div>
             <div className="text-sm space-y-1">
-                <div className="flex items-center gap-2 font-semibold">
-                    <span>{likesCount.toLocaleString()} {t('post.likes')}</span>
-                    {(viewsCount > 0) && (
-                        <>
-                            <span className="text-zinc-400 dark:text-zinc-600">•</span>
-                            {currentUser?.uid === postData.userId ? (
-                                <button onClick={() => setIsViewsModalOpen(true)} className="hover:underline">{viewsCount.toLocaleString()} {viewsCount === 1 ? t('post.viewSingular') : t('post.viewPlural')}</button>
-                            ) : <span>{viewsCount.toLocaleString()} {viewsCount === 1 ? t('post.viewSingular') : t('post.viewPlural')}</span>}
-                        </>
-                    )}
-                </div>
-                {postData.caption && <p><span className="font-semibold mr-2">{postData.username}</span>{renderTextWithMentions(postData.caption)}</p>}
-                 {comments.slice(0, 2).reverse().map(comment => (
-                    <div key={comment.id} className="flex items-center justify-between group">
-                         <p className="flex-grow pr-2"><span className="font-semibold mr-2">{comment.username}</span>{renderTextWithMentions(comment.text)}</p>
-                         {(currentUser?.uid === comment.userId || currentUser?.uid === postData.userId) && (
-                              <button onClick={() => { setCommentToDeleteId(comment.id); setIsCommentDeleteConfirmOpen(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity p-1" aria-label={t('post.delete')}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                             </button>
-                         )}
-                     </div>
+                <div className="font-semibold">{likesCount.toLocaleString()} {t('post.likes')}</div>
+                {postData.caption && <p><span className="font-semibold mr-2">{postData.username}</span>{postData.caption}</p>}
+                {comments.slice(0, 2).map(comment => (
+                    <p key={comment.id}><span className="font-semibold mr-2">{comment.username}</span>{comment.text}</p>
                 ))}
             </div>
             {comments.length > 2 && <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">{t('post.viewAllComments', { count: comments.length })}</p>}
             <p className="text-xs text-zinc-500 dark:text-zinc-400 uppercase mt-2">{formatTimestamp(postData.timestamp)}</p>
         </div>
 
-        <div className="relative border-t border-zinc-200 dark:border-zinc-800 px-4 py-2">
-            {mentionQuery !== null && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-60 overflow-y-auto">
-                {isMentionLoading && <div className="p-2 text-center text-sm text-zinc-500">{t('post.mentionSearching')}</div>}
-                {!isMentionLoading && mentionResults.map(user => (
-                    <div key={user.id} onClick={() => handleMentionSelect(user.username)} className="flex items-center p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
-                      <img src={user.avatar} alt={user.username} className="w-8 h-8 rounded-full object-cover mr-3" />
-                      <span className="font-semibold text-sm">{user.username}</span>
-                    </div>
-                ))}
-              </div>
-            )}
+        <div className="border-t border-zinc-200 dark:border-zinc-800 px-4 py-2">
             <form onSubmit={handleCommentSubmit} className="flex items-center">
-                <input ref={commentInputRef} type="text" placeholder={t('post.addComment')} value={newComment} onChange={handleCommentChange} autoComplete="off" className="w-full bg-transparent border-none focus:outline-none text-sm placeholder:text-zinc-500 dark:placeholder:text-zinc-400" />
-                <button type="submit" className="text-sky-500 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newComment.trim()}>{t('post.postButton')}</button>
+                <input type="text" placeholder={t('post.addComment')} value={newComment} onChange={(e) => setNewComment(e.target.value)} className="w-full bg-transparent border-none focus:outline-none text-sm" />
+                <button type="submit" className="text-sky-500 font-semibold text-sm disabled:opacity-50" disabled={!newComment.trim()}>{t('post.postButton')}</button>
             </form>
         </div>
         </article>
-        <ForwardPostModal isOpen={isForwardModalOpen} onClose={() => setIsForwardModalOpen(false)} post={postData} />
-        <DuoPhotoModal isOpen={isDuoPhotoModalOpen} onClose={() => setIsDuoPhotoModalOpen(false)} post={postData} />
-        <PostViewsModal isOpen={isViewsModalOpen} onClose={() => setIsViewsModalOpen(false)} postId={postData.id} />
-        <AddCaptionModal isOpen={isAddCaptionModalOpen} onClose={() => setIsAddCaptionModalOpen(false)} postId={postData.id} onCaptionSaved={(newCaption) => { setPostData(prev => ({ ...prev, caption: newCaption })); setIsAddCaptionModalOpen(false); }} />
-        <AddMusicModal isOpen={isAddMusicModalOpen} onClose={() => setIsAddMusicModalOpen(false)} postId={postData.id} onMusicAdded={(newMusicInfo) => { setPostData(prev => ({ ...prev, musicInfo: newMusicInfo })); setIsAddMusicModalOpen(false); }} />
-        {currentUser?.uid === postData.userId && (
-           <>
-            <AddToMemoryModal isOpen={isAddToMemoryOpen} onClose={() => setIsAddToMemoryOpen(false)} content={{ id: postData.id, type: 'post', mediaUrl: postData.imageUrl, timestamp: postData.timestamp }} onOpenCreate={(initialContent) => { setInitialContentForMemory(initialContent); setIsAddToMemoryOpen(false); setIsCreateMemoryOpen(true); }} />
-            <CreateMemoryModal isOpen={isCreateMemoryOpen} onClose={() => setIsCreateMemoryOpen(false)} onMemoryCreated={() => {}} initialContent={initialContentForMemory} />
-           </>
-        )}
-        {isCommentDeleteConfirmOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                <div className="bg-white dark:bg-black rounded-lg shadow-xl p-6 w-full max-w-sm text-center border dark:border-zinc-800">
-                    <h3 className="text-lg font-semibold mb-2">{t('post.deleteCommentTitle')}</h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{t('post.deleteCommentBody')}</p>
-                    <div className="flex flex-col gap-2">
-                         <button onClick={confirmDeleteComment} disabled={isDeletingComment} className="w-full px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold disabled:opacity-50">{isDeletingComment ? t('post.deleting') : t('post.delete')}</button>
-                        <button onClick={() => setIsCommentDeleteConfirmOpen(false)} className="w-full px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold">{t('common.cancel')}</button>
-                    </div>
-                </div>
-            </div>
-        )}
         {isDeleteConfirmOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                 <div className="bg-white dark:bg-black rounded-lg shadow-xl p-6 w-full max-w-sm text-center border dark:border-zinc-800">
