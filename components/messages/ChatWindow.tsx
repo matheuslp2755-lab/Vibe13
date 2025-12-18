@@ -55,7 +55,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
             if (isPlaying) {
                 audioRef.current.pause();
             } else {
-                audioRef.current.play().catch(console.error);
+                audioRef.current.play().catch(err => console.error("Audio playback error:", err?.message || err));
             }
         }
     };
@@ -337,8 +337,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await updateDoc(convRef, {
                 [`participantInfo.${currentUser.uid}.activity`]: status
             });
-        } catch (error) {
-            console.error("Error updating activity status:", error);
+        } catch (error: any) {
+            console.error("Error updating activity status:", error?.message || error);
         }
     };
 
@@ -594,8 +594,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 setRecordingTime(prev => prev + 1);
             }, 1000);
 
-        } catch (error) {
-            console.error("Error accessing microphone:", error);
+        } catch (error: any) {
+            console.error("Error accessing microphone:", error?.message || error);
             setUploadError(t('messages.recordingError'));
         }
     };
@@ -687,8 +687,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
             await batch.commit();
 
-        } catch (error) {
-            console.error("Error sending audio:", error);
+        } catch (error: any) {
+            console.error("Error sending audio:", error?.message || error);
             setUploadError(t('messages.media.uploadError'));
         } finally {
             setIsUploading(false);
@@ -804,8 +804,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
             await batch.commit();
 
-        } catch (error) {
-            console.error("Error sending message:", error);
+        } catch (error: any) {
+            console.error("Error sending message:", error?.message || error);
             setUploadError(t('messages.media.uploadError'));
             setNewMessage(tempMessageText);
             setReplyingTo(tempReplyingTo);
@@ -847,8 +847,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             }
             await updateDoc(conversationRef, lastMessageUpdate);
 
-        } catch (error) {
-            console.error("Error deleting message:", error);
+        } catch (error: any) {
+            console.error("Error deleting message:", error?.message || error);
         }
     };
 

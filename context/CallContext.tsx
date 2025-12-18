@@ -117,9 +117,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     await pc.current.setRemoteDescription(new RTCSessionDescription(data.answer));
                     while (candidatesQueue.current.length > 0) {
                         const candidate = candidatesQueue.current.shift();
-                        if (candidate) pc.current.addIceCandidate(candidate).catch(console.warn);
+                        if (candidate) pc.current.addIceCandidate(candidate).catch(e => console.warn(e?.message || String(e)));
                     }
-                } catch (e) { console.error(e); }
+                } catch (e: any) { console.error(e?.message || String(e)); }
             }
         }));
         
@@ -131,9 +131,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     try {
                         const candidate = new RTCIceCandidate(change.doc.data());
                         if (pc.current && pc.current.remoteDescription) {
-                            pc.current.addIceCandidate(candidate).catch(console.error);
+                            pc.current.addIceCandidate(candidate).catch(e => console.warn(e?.message || String(e)));
                         } else { candidatesQueue.current.push(candidate); }
-                    } catch (e) { console.warn("Invalid ICE candidate"); }
+                    } catch (e: any) { console.warn("Invalid ICE candidate:", e?.message || String(e)); }
                 }
             });
         }));

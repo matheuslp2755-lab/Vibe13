@@ -101,8 +101,8 @@ const CreateVibeModal: React.FC<CreateVibeModalProps> = ({ isOpen, onClose, onVi
             onVibeCreated();
             onClose();
 
-        } catch (err) {
-            console.error("Error creating vibe:", err);
+        } catch (err: any) {
+            console.error("Error creating vibe:", err?.message || err);
             setError(t('createPost.publishError'));
         } finally {
             setSubmitting(false);

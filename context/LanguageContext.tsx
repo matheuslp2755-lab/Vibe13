@@ -50,8 +50,9 @@ const ptMessages = {
     "notifications": "Notificações",
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
-    "createPost": "Criar Publicação",
-    "createVibe": "Publicar Vibe",
+    "createPost": "Publicação",
+    "createPulse": "Pulse (Story)",
+    "createVibe": "Vibe (Reel)",
     "vibes": "Vibes",
     "logOut": "Sair",
     "cancel": "Cancelar",
@@ -96,8 +97,13 @@ const ptMessages = {
     "noViews": "Nenhuma visualização ainda.",
     "duoPhoto": "Foto em Dupla",
     "and": "e",
+    "with": "com",
     "addCaption": "Adicionar Legenda",
-    "addMusic": "Adicionar Música",
+    "editCaption": "Editar Legenda",
+    "addMusic": "Adicionar música",
+    "changeMusic": "Trocar música",
+    "inviteDuo": "Convidar parceiro duo",
+    "tagFriends": "Marcar amigos",
     "addToMemory": "Adicionar à Lembrança"
   },
   "time": {
@@ -116,11 +122,11 @@ const ptMessages = {
     "followers": "seguidores",
     "followingCount": "seguindo",
     "postsTab": "PUBLICAÇÕES",
-    "pulsesTab": "PULSOS",
+    "pulsesTab": "PULSES",
     "noPosts": "Nenhuma Publicação Ainda",
     "noPostsSuggestion": "Quando este usuário compartilhar fotos, você as verá aqui.",
-    "noPulses": "Nenhum Pulso Ainda",
-    "noPulsesSuggestion": "Este usuário não compartilhou nenhum pulso.",
+    "noPulses": "Nenhum Pulse Ainda",
+    "noPulsesSuggestion": "Este usuário não compartilhou nenhum pulse.",
     "privateAccountMessage": "Esta Conta é Privada",
     "privateAccountSuggestion": "Siga para ver as fotos e vídeos.",
     "notFound": "Usuário não encontrado.",
@@ -165,7 +171,7 @@ const ptMessages = {
     "deselectAll": "Desmarcar Todos",
     "selectedCount": "{count} selecionados",
     "addMusic": "Adicionar música",
-    "changeMusic": "Alterar Música",
+    "changeMusic": "Trocar música",
     "searchMusicPlaceholder": "Procure por uma música ou artista...",
     "search": "Buscar",
     "searching": "Buscando...",
@@ -268,9 +274,9 @@ const ptMessages = {
     "watermark": "Vibe"
   },
   "createPulse": {
-    "title": "Criar novo pulso",
+    "title": "Criar novo Pulse",
     "publishing": "Publicando...",
-    "publish": "Publicar Pulso",
+    "publish": "Publicar Pulse",
     "captionLabel": "Escreva uma legenda... (opcional)",
     "selectMedia": "Selecione uma imagem ou vídeo",
     "selectFromComputer": "Selecionar do computador",
@@ -292,8 +298,8 @@ const ptMessages = {
   "pulseViewer": {
     "previous": "Pulso anterior",
     "next": "Próximo pulso",
-    "delete": "Excluir Pulso",
-    "deleteTitle": "Excluir Pulso?",
+    "delete": "Excluir Pulse",
+    "deleteTitle": "Excluir Pulse?",
     "deleteBody": "Tem certeza que deseja excluir este pulso? Esta ação não pode ser desfeita.",
     "viewedBy": "Visto por",
     "noViews": "Nenhuma visualização ainda.",
@@ -362,19 +368,20 @@ const ptMessages = {
     "genericError": "Falha ao enviar o link de redefinição. Por favor, tente novamente mais tarde."
   },
   "addCaptionModal": {
-    "title": "Adicionar Legenda",
+    "title": "Legenda",
     "captionLabel": "Escreva uma legenda...",
     "save": "Salvar",
     "saving": "Salvando...",
     "error": "Falha ao salvar a legenda. Por favor, tente novamente."
   },
   "addMusicModal": {
-    "title": "Adicionar Música"
+    "title": "Música",
+    "selectMusic": "Selecionar Música"
   },
   "musicSearch": {
     "fetchError": "Falha ao buscar músicas",
     "searchError": "Ocorreu um erro durante a busca.",
-    "trimInstructions": "Arraste para selecionar o trecho de 15 segundos.",
+    "trimInstructions": "Arraste para selecionar o trecho da música.",
     "done": "Concluir"
   },
   "musicPlayer": {

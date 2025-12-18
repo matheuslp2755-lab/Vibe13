@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { auth, db, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc, storage, storageRef, deleteObject, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc } from '../../firebase';
+import { auth, db, doc, updateDoc, arrayUnion, arrayRemove, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
 import { useTimeAgo } from '../../hooks/useTimeAgo';
+import MusicPlayer from './MusicPlayer';
 
 type PostType = {
     id: string;
@@ -15,125 +16,234 @@ type PostType = {
     caption: string;
     likes: string[];
     timestamp: any;
+    musicInfo?: {
+      nome: string;
+      artista: string;
+      capa: string;
+      preview: string;
+      startTime?: number;
+    };
+    duoPartner?: { userId: string; username: string; userAvatar: string; };
+    tags?: { userId: string; username: string }[];
 };
 
-const Post: React.FC<{ post: PostType; onPostDeleted: (id: string) => void }> = ({ post, onPostDeleted }) => {
+interface PostProps {
+    post: PostType;
+    onPostDeleted: (id: string) => void;
+    onForward?: (post: PostType) => void;
+    onEditCaption?: (post: PostType) => void;
+    onEditMusic?: (post: PostType) => void;
+    onInviteDuo?: (post: PostType) => void;
+    onManageTags?: (post: PostType) => void;
+}
+
+const Post: React.FC<PostProps> = ({ 
+    post, 
+    onPostDeleted, 
+    onForward, 
+    onEditCaption, 
+    onEditMusic, 
+    onInviteDuo,
+    onManageTags 
+}) => {
     const { t } = useLanguage();
     const { isGlobalMuted, setGlobalMuted } = useCall();
     const { formatTimestamp } = useTimeAgo();
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+    const [comments, setComments] = useState<any[]>([]);
+    const [showComments, setShowComments] = useState(false);
+    const [newComment, setNewComment] = useState('');
+    const [isLiked, setIsLiked] = useState(post.likes.includes(auth.currentUser?.uid || ''));
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
     const media = post.media || [{ url: post.imageUrl, type: 'image' }];
-    const isLiked = post.likes.includes(auth.currentUser?.uid || '');
-    const videoRef = useRef<HTMLVideoElement>(null);
     const currentUser = auth.currentUser;
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (media[currentMediaIndex].type !== 'video') return;
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && videoRef.current) {
+                    videoRef.current.play().catch(() => {});
+                } else if (videoRef.current) {
+                    videoRef.current.pause();
+                }
+            });
+        }, { threshold: 0.7 });
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, [currentMediaIndex, media]);
+
+    useEffect(() => {
+        const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('timestamp', 'asc'));
+        return onSnapshot(q, (snap) => {
+            setComments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+    }, [post.id]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleLike = async () => {
         if (!currentUser) return;
         const ref = doc(db, 'posts', post.id);
+        setIsLiked(!isLiked);
         await updateDoc(ref, { 
             likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
         });
     };
 
-    const handleDelete = async () => {
-        if (confirm(t('post.deletePostBody'))) {
-            try {
-                await deleteDoc(doc(db, 'posts', post.id));
-                onPostDeleted(post.id);
-            } catch (e) { console.error(e); }
-        }
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim() || !currentUser) return;
+        await addDoc(collection(db, 'posts', post.id, 'comments'), {
+            userId: currentUser.uid,
+            username: currentUser.displayName,
+            text: newComment,
+            timestamp: serverTimestamp()
+        });
+        setNewComment('');
     };
 
-    const toggleMute = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setGlobalMuted(!isGlobalMuted);
-    };
+    const isAuthor = currentUser?.uid === post.userId;
 
     return (
-        <article className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm">
-            <div className="flex items-center p-3">
-                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-yellow-400 to-pink-500">
-                    <img src={post.userAvatar} className="w-8 h-8 rounded-full border border-white dark:border-black object-cover" alt={post.username} />
+        <article ref={containerRef} className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm mb-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">
+                    <div className="relative flex">
+                        <img src={post.userAvatar} className="w-8 h-8 rounded-full object-cover border border-zinc-200 dark:border-zinc-800" />
+                        {post.duoPartner && (
+                            <img src={post.duoPartner.userAvatar} className="w-8 h-8 rounded-full object-cover -ml-3 border-2 border-white dark:border-black shadow-sm" />
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-xs">
+                            {post.username} {post.duoPartner && `& ${post.duoPartner.username}`}
+                        </span>
+                        {post.tags && post.tags.length > 0 && (
+                            <span className="text-[10px] text-zinc-500">
+                                {t('post.with')} {post.tags.map(t => t.username).join(', ')}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <span className="font-bold text-sm ml-3 hover:underline cursor-pointer">{post.username}</span>
-                {currentUser?.uid === post.userId && (
-                    <button onClick={handleDelete} className="ml-auto text-zinc-400 hover:text-red-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+
+                {isAuthor && (
+                    <div className="relative" ref={menuRef}>
+                        <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"></circle><circle cx="6" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
+                        </button>
+                        {isMenuOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1">
+                                <button onClick={() => { onEditCaption?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.caption ? t('post.editCaption') : t('post.addCaption')}</button>
+                                <button onClick={() => { onEditMusic?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.musicInfo ? t('post.changeMusic') : t('post.addMusic')}</button>
+                                <button onClick={() => { onInviteDuo?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.duoPartner ? t('post.changeDuo') : t('post.inviteDuo')}</button>
+                                <button onClick={() => { onManageTags?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{t('post.tagFriends')}</button>
+                                <div className="border-t dark:border-zinc-800 my-1"></div>
+                                <button onClick={() => { if(confirm(t('post.deletePostBody'))) onPostDeleted(post.id); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold">{t('common.delete')}</button>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
-            <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-900 group select-none">
+            {/* Media Carousel */}
+            <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-900 group">
                 {media[currentMediaIndex].type === 'video' ? (
-                    <div className="relative w-full h-full">
-                        <video 
-                            ref={videoRef}
-                            src={media[currentMediaIndex].url} 
-                            loop 
-                            autoPlay 
-                            muted={isGlobalMuted} 
-                            playsInline 
-                            className="w-full h-full object-cover" 
-                        />
-                        <button 
-                            onClick={toggleMute}
-                            className="absolute bottom-4 right-4 bg-black/50 p-2 rounded-full text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                            {isGlobalMuted ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97v-3.87l4.73 4.73c-.57.44-1.22.8-1.94 1.05v2.09c1.28-.32 2.44-.92 3.42-1.74l1.46 1.46 1.27-1.27L4.27 3zM11.5 5.55L9.36 7.69 11.5 9.83V5.55z"/></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 4.06c-.7.13-1.33.42-1.89.82L7.43 9H4.5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h2.93l4.18 4.12c.56.4 1.19.69 1.89.82.63.12 1.25-.33 1.25-.97V5.03c0-.64-.62-1.09-1.25-.97zM19 12c0-1.72-.77-3.25-2-4.29v8.58c1.23-1.04 2-2.57 2-4.29zM17 2.11c2.85 1.15 5 3.96 5 7.89s-2.15 6.74-5 7.89v-2.1c1.72-.89 3-2.69 3-4.79s-1.28-3.9-3-4.79V2.11z"/></svg>
-                            )}
-                        </button>
-                    </div>
+                    <video 
+                        ref={videoRef}
+                        src={media[currentMediaIndex].url} 
+                        loop 
+                        muted={isGlobalMuted} 
+                        playsInline 
+                        className="w-full h-full object-cover" 
+                    />
                 ) : (
-                    <img src={media[currentMediaIndex].url} className="w-full h-full object-cover" alt="Post" />
+                    <img src={media[currentMediaIndex].url} className="w-full h-full object-cover" />
                 )}
 
                 {media.length > 1 && (
                     <>
-                        {currentMediaIndex > 0 && (
-                            <button onClick={() => setCurrentMediaIndex(i => i - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 dark:bg-black/50 text-black dark:text-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                        )}
-                        {currentMediaIndex < media.length - 1 && (
-                            <button onClick={() => setCurrentMediaIndex(i => i + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 dark:bg-black/50 text-black dark:text-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                            </button>
-                        )}
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        <button onClick={() => setCurrentMediaIndex(i => Math.max(0, i - 1))} className={`absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-1.5 rounded-full shadow-md z-10 ${currentMediaIndex === 0 ? 'hidden' : ''}`}>
+                            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button onClick={() => setCurrentMediaIndex(i => Math.min(media.length - 1, i + 1))} className={`absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-1.5 rounded-full shadow-md z-10 ${currentMediaIndex === media.length - 1 ? 'hidden' : ''}`}>
+                            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1 z-10">
                             {media.map((_, i) => (
-                                <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === currentMediaIndex ? 'bg-sky-500 scale-125' : 'bg-white/60'}`} />
+                                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentMediaIndex ? 'bg-sky-500' : 'bg-white/50'}`} />
                             ))}
-                        </div>
-                        <div className="absolute top-4 right-4 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-full backdrop-blur-sm">
-                            {currentMediaIndex + 1}/{media.length}
                         </div>
                     </>
                 )}
             </div>
 
-            <div className="p-4">
-                <div className="flex gap-4 mb-3">
+            {/* Music Info */}
+            {post.musicInfo && (
+                <div className="border-t dark:border-zinc-800">
+                    <MusicPlayer musicInfo={post.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={setGlobalMuted} />
+                </div>
+            )}
+
+            {/* Actions */}
+            <div className="p-3">
+                <div className="flex gap-4 mb-2">
                     <button onClick={handleLike} className="transition-transform active:scale-125">
-                        <svg className={`w-7 h-7 ${isLiked ? 'text-red-500 fill-current' : 'text-zinc-800 dark:text-zinc-200'}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} fill="none"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                        <svg className={`w-7 h-7 ${isLiked ? 'text-red-500 fill-current' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                     </button>
-                    <button className="hover:opacity-60 transition-opacity">
-                        <svg className="w-7 h-7 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    <button onClick={() => setShowComments(!showComments)} className="hover:opacity-60">
+                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     </button>
-                    <button className="hover:opacity-60 transition-opacity">
-                        <svg className="w-7 h-7 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    <button onClick={() => onForward && onForward(post)} className="hover:opacity-60">
+                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                 </div>
-                <div className="flex flex-col gap-1">
-                    <p className="text-sm font-bold">{post.likes.length.toLocaleString()} curtidas</p>
-                    <p className="text-sm leading-relaxed">
-                        <span className="font-bold mr-2">{post.username}</span> 
-                        {post.caption}
-                    </p>
+
+                <div className="text-sm">
+                    <p className="font-bold mb-1">{post.likes.length} {t('post.likes')}</p>
+                    {post.caption && <p><span className="font-bold mr-2">{post.username}</span>{post.caption}</p>}
+                    
+                    {comments.length > 0 && !showComments && (
+                        <button onClick={() => setShowComments(true)} className="text-zinc-500 text-xs mt-2">
+                            {t('post.viewAllComments', { count: comments.length })}
+                        </button>
+                    )}
                 </div>
-                <p className="text-[10px] text-zinc-400 mt-2 uppercase font-semibold tracking-wider">{formatTimestamp(post.timestamp)}</p>
+
+                {/* Comments Section */}
+                {showComments && (
+                    <div className="mt-4 space-y-2 max-h-40 overflow-y-auto border-t dark:border-zinc-800 pt-2">
+                        {comments.map(c => (
+                            <p key={c.id} className="text-sm"><span className="font-bold mr-2">{c.username}</span>{c.text}</p>
+                        ))}
+                    </div>
+                )}
+
+                <form onSubmit={handleAddComment} className="mt-3 flex gap-2 border-t dark:border-zinc-800 pt-3">
+                    <input 
+                        type="text" 
+                        value={newComment} 
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder={t('post.addComment')} 
+                        className="flex-grow bg-transparent text-sm outline-none" 
+                    />
+                    <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-bold text-sm disabled:opacity-50">{t('post.postButton')}</button>
+                </form>
+                
+                <p className="text-[10px] text-zinc-400 mt-2 uppercase">{formatTimestamp(post.timestamp)}</p>
             </div>
         </article>
     );

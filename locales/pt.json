@@ -47,9 +47,10 @@
     "notifications": "Notificações",
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
-    "createPost": "Criar Publicação",
-    "createVibe": "Publicar Pulse",
-    "vibes": "Pulses",
+    "createPost": "Publicação",
+    "createPulse": "Pulse (Story)",
+    "createVibe": "Vibe (Reel)",
+    "vibes": "Vibes",
     "logOut": "Sair",
     "cancel": "Cancelar",
     "messages": "Direct",
@@ -93,8 +94,13 @@
     "noViews": "Nenhuma visualização ainda.",
     "duoPhoto": "Foto em Dupla",
     "and": "e",
+    "with": "com",
     "addCaption": "Adicionar Legenda",
-    "addMusic": "Adicionar Música",
+    "editCaption": "Editar Legenda",
+    "addMusic": "Adicionar música",
+    "changeMusic": "Trocar música",
+    "inviteDuo": "Convidar parceiro duo",
+    "tagFriends": "Marcar amigos",
     "addToMemory": "Adicionar à Lembrança"
   },
   "time": {
@@ -255,9 +261,9 @@
     "title": "Cristal de Conexão: {status}",
     "streak": "{streak} dias de interação seguida",
     "shareTitle": "Sequência Conecta",
-    "shareAction": "Compartilhar no Moments",
+    "shareAction": "Compartilhar no Pulse",
     "publishing": "Publicando...",
-    "shareError": "Falha ao publicar o Moments.",
+    "shareError": "Falha ao publicar o Pulse.",
     "canvasError": "Falha ao gerar a imagem.",
     "imageLoadError": "Falha ao carregar as fotos de perfil.",
     "streakDays": "{streak} dias de conexão",
@@ -265,40 +271,53 @@
     "watermark": "Vibe"
   },
   "createPulse": {
-    "title": "Criar novo Moment",
+    "title": "Criar novo Pulse",
     "publishing": "Publicando...",
-    "publish": "Publicar Moment",
+    "publish": "Publicar Pulse",
     "captionLabel": "Escreva uma legenda... (opcional)",
     "selectMedia": "Selecione uma imagem ou vídeo",
     "selectFromComputer": "Selecionar do computador",
     "invalidFileError": "Por favor, selecione um arquivo de imagem ou vídeo válido.",
-    "publishError": "Falha ao criar o Moment. Por favor, tente novamente.",
+    "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
-    "ventModeInfo": "Apenas seguidores selecionados verão este Moment.",
-    "showMusicCover": "Mostrar capa da música"
+    "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
+    "showMusicCover": "Mostrar capa da música",
+    "location": "Localização",
+    "countdown": "Contagem Regressiva",
+    "poll": "Enquete",
+    "pollQuestion": "Pergunta da enquete...",
+    "pollOption1": "Sim",
+    "pollOption2": "Não",
+    "countdownTitle": "Título do evento...",
+    "locationPlaceholder": "Onde você está?",
+    "days": "DIAS",
+    "hours": "HORAS",
+    "mins": "MINS",
+    "searchingLocations": "Buscando endereços reais..."
   },
   "createVibe": {
-    "title": "Novo Pulse",
+    "title": "Nova Vibe",
     "publishing": "Publicando...",
-    "publish": "Publicar Pulse",
-    "captionLabel": "Descreva seu Pulse...",
+    "publish": "Publicar Vibe",
+    "captionLabel": "Descreva sua vibe...",
     "selectVideo": "Selecione um vídeo vertical",
     "videoTooLong": "O vídeo deve ter menos de 60 segundos.",
     "invalidFileError": "Por favor, selecione um arquivo de vídeo válido."
   },
   "pulseViewer": {
-    "previous": "Anterior",
-    "next": "Próximo",
-    "delete": "Excluir Moment",
-    "deleteTitle": "Excluir Moment?",
-    "deleteBody": "Tem certeza que deseja excluir este Moment? Esta ação não pode ser desfeita.",
+    "previous": "Pulso anterior",
+    "next": "Próximo pulso",
+    "delete": "Excluir Pulse",
+    "deleteTitle": "Excluir Pulse?",
+    "deleteBody": "Tem certeza que deseja excluir este pulso? Esta ação não pode ser desfeita.",
     "viewedBy": "Visto por",
     "noViews": "Nenhuma visualização ainda.",
     "viewSingular": "visualização",
-    "viewPlural": "visualizações"
+    "viewPlural": "visualizações",
+    "save": "Salvar pulso"
   },
   "pulseBar": {
-    "viewPulse": "Ver o Moment de {username}",
+    "viewPulse": "Ver o pulso de {username}",
     "viewLive": "Assistir Live de {username}",
     "live": "AO VIVO"
   },
@@ -359,19 +378,20 @@
     "genericError": "Falha ao enviar o link de redefinição. Por favor, tente novamente mais tarde."
   },
   "addCaptionModal": {
-    "title": "Adicionar Legenda",
+    "title": "Legenda",
     "captionLabel": "Escreva uma legenda...",
     "save": "Salvar",
     "saving": "Salvando...",
     "error": "Falha ao salvar a legenda. Por favor, tente novamente."
   },
   "addMusicModal": {
-    "title": "Adicionar Música"
+    "title": "Música",
+    "selectMusic": "Selecionar Música"
   },
   "musicSearch": {
     "fetchError": "Falha ao buscar músicas",
     "searchError": "Ocorreu um erro durante a busca.",
-    "trimInstructions": "Arraste para selecionar o trecho de 15 segundos.",
+    "trimInstructions": "Arraste para selecionar o trecho da música.",
     "done": "Concluir"
   },
   "musicPlayer": {
@@ -429,18 +449,18 @@
   "choiceModal": {
     "title": "O que você quer criar?",
     "post": "Publicação",
-    "pulse": "Moment"
+    "pulse": "Pulse"
   },
   "vibe": {
     "comments": "Comentários",
     "share": "Compartilhar",
     "addComment": "Adicionar comentário...",
-    "deleteTitle": "Excluir Pulse?",
-    "deleteBody": "Tem certeza que deseja excluir este Pulse?",
+    "deleteTitle": "Excluir Vibe?",
+    "deleteBody": "Tem certeza que deseja excluir esta Vibe?",
     "sendTo": "Enviar para",
     "shareExternal": "Compartilhar via",
     "whatsapp": "WhatsApp / Status",
-    "forwarded": "Encaminhou um Pulse",
+    "forwarded": "Encaminhou uma Vibe",
     "noComments": "Seja o primeiro a comentar!"
   }
 }

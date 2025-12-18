@@ -363,8 +363,8 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
                                 });
                             }
                         }
-                    } catch (error) {
-                        console.error("Error sending message push notification:", error);
+                    } catch (error: any) {
+                        console.error("Error sending message push notification:", error?.message || error);
                     }
                 };
                 sendPushNotification();
@@ -373,8 +373,8 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
             setActiveConversationId(conversationId);
             setView('list');
             setViewingDiary(null);
-        } catch (error) {
-            console.error("Error ensuring conversation exists:", error);
+        } catch (error: any) {
+            console.error("Error ensuring conversation exists:", error?.message || error);
         }
     };
     
@@ -407,8 +407,8 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
             await addDoc(collection(db, 'diaries'), diaryData);
             setNewDiaryEntry('');
             setSelectedMusic(null);
-        } catch (error) {
-            console.error("Error publishing diary entry: ", error);
+        } catch (error: any) {
+            console.error("Error publishing diary entry: ", error?.message || error);
         } finally {
             setIsPublishingDiary(false);
         }
@@ -420,8 +420,8 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
             await deleteDoc(doc(db, 'diaries', confirmDeleteDiary.id));
             setConfirmDeleteDiary(null);
             setViewingDiary(null);
-        } catch (error) {
-            console.error("Error deleting diary:", error);
+        } catch (error: any) {
+            console.error("Error deleting diary:", error?.message || error);
         }
     };
 

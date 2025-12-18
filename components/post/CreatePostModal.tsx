@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { auth, db, storage, addDoc, collection, serverTimestamp, storageRef, uploadString, getDownloadURL } from '../../firebase';
+import { auth, db, storage, addDoc, collection, serverTimestamp, storageRef, uploadString, getDownloadURL, uploadBytes } from '../../firebase';
 import Button from '../common/Button';
 import TextAreaInput from '../common/TextAreaInput';
 import { useLanguage } from '../../context/LanguageContext';
@@ -22,19 +22,29 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     const [caption, setCaption] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [images, setImages] = useState<GalleryImage[]>([]);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (isOpen && initialImages) setImages(initialImages);
-        if (!isOpen) { setCaption(''); setImages([]); }
+        if (!isOpen) { setCaption(''); setImages([]); setError(''); }
     }, [isOpen, initialImages]);
 
     const handleSubmit = async () => {
         if (images.length === 0 || submitting) return;
         setSubmitting(true);
+        setError('');
         try {
             const mediaUrls = await Promise.all(images.map(async (img) => {
-                const ref = storageRef(storage, `posts/${auth.currentUser?.uid}/${Date.now()}-${img.file.name}`);
-                await uploadString(ref, img.preview, 'data_url');
+                const path = `posts/${auth.currentUser?.uid}/${Date.now()}-${img.file.name}`;
+                const ref = storageRef(storage, path);
+                
+                // Para vídeos grandes, uploadBytes é melhor que uploadString
+                if (img.file.type.startsWith('video/')) {
+                    await uploadBytes(ref, img.file);
+                } else {
+                    await uploadString(ref, img.preview, 'data_url');
+                }
+                
                 return { url: await getDownloadURL(ref), type: img.file.type.startsWith('video/') ? 'video' : 'image' };
             }));
 
@@ -49,7 +59,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                 timestamp: serverTimestamp(),
             });
             onPostCreated();
-        } catch (e) { console.error(e); }
+            onClose();
+        } catch (e) { 
+            console.error(e);
+            setError(t('createPost.publishError'));
+        }
         setSubmitting(false);
     };
 
@@ -60,20 +74,26 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             <div className="bg-white dark:bg-black rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="p-4 border-b dark:border-zinc-800 flex justify-between items-center">
                     <h2 className="text-lg font-semibold">{t('createPost.title')}</h2>
-                    <Button onClick={handleSubmit} disabled={submitting} className="!w-auto !py-1 !px-4 !text-sm">
-                        {submitting ? t('createPost.sharing') : t('createPost.share')}
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        {error && <span className="text-red-500 text-xs">{error}</span>}
+                        <Button onClick={handleSubmit} disabled={submitting} className="!w-auto !py-1 !px-4 !text-sm">
+                            {submitting ? t('createPost.sharing') : t('createPost.share')}
+                        </Button>
+                    </div>
                 </header>
                 <div className="flex-grow overflow-y-auto p-4 flex flex-col md:flex-row gap-4">
                     <div className="w-full md:w-1/2 grid grid-cols-2 sm:grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-lg">
                         {images.map((img, i) => (
-                            <div key={i} className="aspect-square relative rounded-md overflow-hidden">
+                            <div key={i} className="aspect-square relative rounded-md overflow-hidden bg-black">
                                 {img.file.type.startsWith('video/') ? (
                                     <video src={img.preview} className="w-full h-full object-cover" />
                                 ) : (
                                     <img src={img.preview} className="w-full h-full object-cover" />
                                 )}
                                 <div className="absolute top-1 right-1 bg-black/50 text-white text-[10px] px-1.5 rounded-full">{i + 1}</div>
+                                {img.file.type.startsWith('video/') && (
+                                    <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[9px] px-1 rounded">30s max</div>
+                                )}
                             </div>
                         ))}
                     </div>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
@@ -53,7 +54,8 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
     setError('');
     setResults([]);
     try {
-      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&entity=song&limit=10`);
+      // Limite aumentado para 30 resultados
+      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&entity=song&limit=30`);
       if (!response.ok) {
         throw new Error('Failed to fetch music');
       }
@@ -62,9 +64,9 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
       if (data.results.length === 0) {
           setError(t('createPost.musicNoResults'));
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(t('musicSearch.searchError'));
-      console.error(err);
+      console.error("Music Search error:", err?.message || String(err));
     } finally {
       setLoading(false);
     }

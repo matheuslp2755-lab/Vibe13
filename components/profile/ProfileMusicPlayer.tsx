@@ -46,7 +46,7 @@ const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) =>
             if (audioRef.current.currentTime < startTime || audioRef.current.currentTime >= startTime + SNIPPET_DURATION) {
                 audioRef.current.currentTime = startTime;
             }
-            audioRef.current.play().catch(err => console.error("Error playing audio:", err));
+            audioRef.current.play().catch(err => console.error("Error playing audio:", err?.message || String(err)));
         }
     };
 

@@ -58,7 +58,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
         if (isAudioPlaying) {
             audioRef.current.pause();
         } else {
-            audioRef.current.play().catch(err => console.error("Error playing audio:", err));
+            audioRef.current.play().catch(err => console.error("Error playing audio:", err?.message || String(err)));
         }
     };
     
