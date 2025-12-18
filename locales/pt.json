@@ -142,6 +142,7 @@
     "title": "Editar Perfil",
     "changePhoto": "Alterar foto do perfil",
     "usernameLabel": "Nome de usuário",
+    "nicknameLabel": "Apelido",
     "bioLabel": "Biografia",
     "privateAccount": "Conta Privada",
     "privateAccountInfo": "Apenas seus seguidores poderão ver suas fotos e vídeos.",
@@ -151,7 +152,13 @@
     "profileMusic": "Música do Perfil",
     "noProfileMusic": "Nenhuma música selecionada.",
     "changeMusic": "Alterar música",
-    "removeMusic": "Remover"
+    "removeMusic": "Remover",
+    "usernameCooldown": "Você só pode alterar o nome de usuário uma vez a cada 30 dias.",
+    "nicknameCooldown": "Você só pode alterar o apelido uma vez a cada 15 dias.",
+    "vibeLabel": "Vibe do Momento",
+    "vibeJoy": "Alegria",
+    "vibeAnger": "Raiva",
+    "vibeSloth": "Preguiça"
   },
   "createPost": {
     "title": "Criar nova publicação",
@@ -168,7 +175,7 @@
     "deselectAll": "Desmarcar Todos",
     "selectedCount": "{count} selecionados",
     "addMusic": "Adicionar música",
-    "changeMusic": "Alterar Música",
+    "changeMusic": "Trocar música",
     "searchMusicPlaceholder": "Procure por uma música ou artista...",
     "search": "Buscar",
     "searching": "Buscando...",

@@ -1,18 +1,26 @@
 
 import React, { useState, useEffect } from 'react';
-import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTimestamp, updateDoc, query, where, orderBy, onSnapshot, writeBatch } from '../../firebase';
+import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTimestamp, updateDoc, query, where, orderBy, onSnapshot, writeBatch, storage, storageRef, uploadBytes, getDownloadURL } from '../../firebase';
+import { updateProfile } from 'firebase/auth';
 import Button from '../common/Button';
 import EditProfileModal from './EditProfileModal';
 import OnlineIndicator from '../common/OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
 import PulseViewerModal from '../pulse/PulseViewerModal';
+import ProfileMusicPlayer from './ProfileMusicPlayer';
 
 interface UserProfileProps {
     userId: string;
     onStartMessage: (user: any) => void;
     onSelectUser?: (userId: string) => void;
 }
+
+const VIBE_EMOJIS: Record<string, string> = {
+    joy: '☀️',
+    anger: '🔥',
+    sloth: '💤'
+};
 
 const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSelectUser }) => {
     const { t } = useLanguage();
@@ -25,6 +33,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [isBlocked, setIsBlocked] = useState(false);
     const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
     const [viewingPulses, setViewingPulses] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
     
     const currentUser = auth.currentUser;
 
@@ -35,7 +45,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         const fetchUserData = async () => {
             const userSnap = await getDoc(doc(db, 'users', userId));
             if (userSnap.exists()) {
-                setUser(userSnap.data());
+                const userData = userSnap.data();
+                setUser(userData);
                 
                 if (currentUser) {
                     const followSnap = await getDoc(doc(db, 'users', currentUser.uid, 'following', userId));
@@ -107,6 +118,52 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         setIsOptionsMenuOpen(false);
     };
 
+    const handleUpdateProfile = async (updatedData: any) => {
+        if (!currentUser) return;
+        setIsSubmittingEdit(true);
+        try {
+            let avatarUrl = user.avatar;
+            if (updatedData.avatarFile) {
+                const avatarRef = storageRef(storage, `avatars/${currentUser.uid}/profile_${Date.now()}`);
+                await uploadBytes(avatarRef, updatedData.avatarFile);
+                avatarUrl = await getDownloadURL(avatarRef);
+            }
+
+            const updates: any = {
+                username: updatedData.username,
+                username_lowercase: updatedData.username.toLowerCase(),
+                nickname: updatedData.nickname,
+                bio: updatedData.bio,
+                avatar: avatarUrl,
+                isPrivate: updatedData.isPrivate,
+                profileMusic: updatedData.profileMusic,
+                currentVibe: updatedData.currentVibe
+            };
+
+            // Trata as restrições de tempo
+            if (updatedData.username !== user.username) {
+                updates.lastUsernameChange = serverTimestamp();
+            }
+            if (updatedData.nickname !== (user.nickname || '')) {
+                updates.lastNicknameChange = serverTimestamp();
+            }
+
+            await updateDoc(doc(db, 'users', currentUser.uid), updates);
+            await updateProfile(currentUser, {
+                displayName: updatedData.username,
+                photoURL: avatarUrl
+            });
+
+            setUser({ ...user, ...updates });
+            setIsEditModalOpen(false);
+        } catch (error) {
+            console.error(error);
+            alert("Erro ao atualizar perfil.");
+        } finally {
+            setIsSubmittingEdit(false);
+        }
+    };
+
     if (!user) return <div className="p-8 text-center">Carregando...</div>;
 
     const hasActivePulses = pulses.length > 0;
@@ -121,14 +178,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     <div className="w-full h-full rounded-full p-1 bg-white dark:bg-black">
                         <img src={user.avatar} className="w-full h-full rounded-full object-cover" />
                     </div>
+                    {user.currentVibe && (
+                        <div className="absolute -top-1 -right-1 bg-white dark:bg-zinc-800 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg border-2 border-zinc-100 dark:border-zinc-700 animate-bounce">
+                            {VIBE_EMOJIS[user.currentVibe]}
+                        </div>
+                    )}
                     <OnlineIndicator />
                 </div>
                 <div className="flex-grow text-center sm:text-left">
-                    <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
-                        <h2 className="text-2xl font-light">{user.username}</h2>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 mb-2">
+                        <div className="flex flex-col items-center sm:items-start">
+                            <h2 className="text-2xl font-light">{user.username}</h2>
+                            {user.nickname && <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">@{user.nickname}</span>}
+                        </div>
                         <div className="flex gap-2">
                             {currentUser?.uid === userId ? (
-                                <Button className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">Editar Perfil</Button>
+                                <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white !font-bold">Editar Perfil</Button>
                             ) : (
                                 <>
                                     <Button onClick={handleFollow} className={`!w-auto ${isFollowing ? '!bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white' : ''}`}>
@@ -149,12 +214,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-6 justify-center sm:justify-start text-sm">
+                    <div className="flex gap-6 justify-center sm:justify-start text-sm mb-4">
                         <p><b>{stats.posts}</b> publicações</p>
                         <p><b>{stats.followers}</b> seguidores</p>
                         <p><b>{stats.following}</b> seguindo</p>
                     </div>
-                    <p className="mt-4 text-sm font-medium">{user.bio}</p>
+                    
+                    {user.bio && <p className="text-sm font-medium whitespace-pre-wrap max-w-md">{user.bio}</p>}
+
+                    {user.profileMusic && (
+                        <div className="mt-4 max-w-sm">
+                            <ProfileMusicPlayer musicInfo={user.profileMusic} />
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -194,6 +266,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     }}
                 />
             )}
+
+            <EditProfileModal 
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                user={user}
+                onUpdate={handleUpdateProfile}
+                isSubmitting={isSubmittingEdit}
+            />
         </div>
     );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Button from '../common/Button';
 import TextInput from '../common/TextInput';
@@ -13,6 +14,8 @@ type MusicInfo = {
   startTime?: number;
 };
 
+type VibeType = 'joy' | 'anger' | 'sloth' | null;
+
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,16 +23,37 @@ interface EditProfileModalProps {
     username: string;
     avatar: string;
     bio?: string;
+    nickname?: string;
+    currentVibe?: VibeType;
     isPrivate?: boolean;
     profileMusic?: MusicInfo;
+    lastUsernameChange?: { seconds: number };
+    lastNicknameChange?: { seconds: number };
   };
-  onUpdate: (updatedData: { username: string; bio: string; avatarFile: File | null; avatarPreview: string | null; isPrivate: boolean; profileMusic: MusicInfo | null }) => Promise<void>;
+  onUpdate: (updatedData: { 
+    username: string; 
+    nickname: string;
+    bio: string; 
+    avatarFile: File | null; 
+    avatarPreview: string | null; 
+    isPrivate: boolean; 
+    profileMusic: MusicInfo | null;
+    currentVibe: VibeType;
+  }) => Promise<void>;
   isSubmitting: boolean;
 }
 
+const VIBE_OPTIONS = [
+    { id: 'joy', label: 'vibeJoy', emoji: '☀️', color: 'bg-yellow-400' },
+    { id: 'anger', label: 'vibeAnger', emoji: '🔥', color: 'bg-red-600' },
+    { id: 'sloth', label: 'vibeSloth', emoji: '💤', color: 'bg-indigo-400' },
+];
+
 const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, user, onUpdate, isSubmitting }) => {
   const [username, setUsername] = useState(user.username);
+  const [nickname, setNickname] = useState(user.nickname || '');
   const [bio, setBio] = useState(user.bio || '');
+  const [currentVibe, setCurrentVibe] = useState<VibeType>(user.currentVibe || null);
   const [isPrivate, setIsPrivate] = useState(user.isPrivate || false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -42,7 +66,9 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   useEffect(() => {
     if (isOpen) {
       setUsername(user.username);
+      setNickname(user.nickname || '');
       setBio(user.bio || '');
+      setCurrentVibe(user.currentVibe || null);
       setIsPrivate(user.isPrivate || false);
       setAvatarFile(null);
       setAvatarPreview(null);
@@ -52,6 +78,18 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   }, [isOpen, user]);
 
   if (!isOpen) return null;
+
+  const canChangeUsername = () => {
+    if (!user.lastUsernameChange) return true;
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    return (Date.now() - user.lastUsernameChange.seconds * 1000) > thirtyDaysInMs;
+  };
+
+  const canChangeNickname = () => {
+    if (!user.lastNicknameChange) return true;
+    const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000;
+    return (Date.now() - user.lastNicknameChange.seconds * 1000) > fifteenDaysInMs;
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -70,8 +108,20 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validações de Cooldown
+    if (username !== user.username && !canChangeUsername()) {
+        setError(t('editProfile.usernameCooldown'));
+        return;
+    }
+
+    if (nickname !== (user.nickname || '') && !canChangeNickname()) {
+        setError(t('editProfile.nicknameCooldown'));
+        return;
+    }
+
     try {
-        await onUpdate({ username, bio, avatarFile, avatarPreview, isPrivate, profileMusic });
+        await onUpdate({ username, nickname, bio, avatarFile, avatarPreview, isPrivate, profileMusic, currentVibe });
     } catch (err) {
         console.error(err);
         setError(t('editProfile.updateError'));
@@ -81,11 +131,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
   return (
     <>
       <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto"
           onClick={onClose}
       >
         <div 
-          className="bg-white dark:bg-black rounded-lg shadow-xl w-full max-w-md border border-zinc-200 dark:border-zinc-800"
+          className="bg-white dark:bg-black rounded-lg shadow-xl w-full max-w-md border border-zinc-200 dark:border-zinc-800 my-8"
           onClick={e => e.stopPropagation()}
         >
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
@@ -95,7 +145,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
           <form onSubmit={handleSubmit}>
               <div className="p-6 flex flex-col items-center gap-4">
                   <div className="flex items-center gap-6 w-full">
-                      <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
+                      <img src={avatarPreview || user.avatar} alt="Profile" className="w-16 h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-800" />
                       <div className="flex flex-col items-start">
                           <span className="font-semibold">{user.username}</span>
                           <button 
@@ -114,29 +164,73 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                           />
                       </div>
                   </div>
+
                   <div className="w-full flex flex-col gap-4 mt-4">
-                      <TextInput
-                          id="username"
-                          label={t('editProfile.usernameLabel')}
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                      />
+                      <div>
+                        <TextInput
+                            id="username"
+                            label={t('editProfile.usernameLabel')}
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            disabled={!canChangeUsername() && username === user.username}
+                        />
+                        {!canChangeUsername() && (
+                            <p className="text-[10px] text-zinc-500 mt-1">{t('editProfile.usernameCooldown')}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <TextInput
+                            id="nickname"
+                            label={t('editProfile.nicknameLabel')}
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
+                            disabled={!canChangeNickname() && nickname === (user.nickname || '')}
+                        />
+                         {!canChangeNickname() && (
+                            <p className="text-[10px] text-zinc-500 mt-1">{t('editProfile.nicknameCooldown')}</p>
+                        )}
+                      </div>
+
                       <TextAreaInput
                           id="bio"
                           label={t('editProfile.bioLabel')}
                           value={bio}
                           onChange={(e) => setBio(e.target.value)}
                       />
+
+                      {/* Vibe do Momento */}
+                      <div className="w-full">
+                          <label className="font-semibold text-xs text-zinc-500 mb-2 block uppercase tracking-wider">{t('editProfile.vibeLabel')}</label>
+                          <div className="flex justify-between gap-2">
+                              {VIBE_OPTIONS.map(v => (
+                                  <button
+                                      key={v.id}
+                                      type="button"
+                                      onClick={() => setCurrentVibe(currentVibe === v.id ? null : v.id as VibeType)}
+                                      className={`flex-1 flex flex-col items-center p-3 rounded-xl border-2 transition-all ${
+                                          currentVibe === v.id 
+                                          ? `${v.color} border-zinc-400 dark:border-white text-white scale-105` 
+                                          : 'bg-zinc-50 dark:bg-zinc-900 border-transparent text-zinc-500 opacity-60'
+                                      }`}
+                                  >
+                                      <span className="text-2xl mb-1">{v.emoji}</span>
+                                      <span className="text-[10px] font-bold uppercase">{t(`editProfile.${v.label}`)}</span>
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+
                        <div className="w-full">
-                          <label className="font-semibold text-sm">{t('editProfile.profileMusic')}</label>
+                          <label className="font-semibold text-xs text-zinc-500 mb-1 block uppercase tracking-wider">{t('editProfile.profileMusic')}</label>
                           {profileMusic ? (
-                              <div className="flex items-center gap-2 mt-1 text-sm p-2 rounded-md bg-zinc-50 dark:bg-zinc-900">
-                                  <img src={profileMusic.capa} className="w-10 h-10 rounded" alt={profileMusic.nome}/>
-                                  <div className="flex-grow">
-                                      <p className="font-semibold truncate">{profileMusic.nome}</p>
-                                      <p className="text-xs text-zinc-500 truncate">{profileMusic.artista}</p>
+                              <div className="flex items-center gap-2 mt-1 text-sm p-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800">
+                                  <img src={profileMusic.capa} className="w-10 h-10 rounded shadow-sm" alt={profileMusic.nome}/>
+                                  <div className="flex-grow overflow-hidden">
+                                      <p className="font-semibold truncate text-xs">{profileMusic.nome}</p>
+                                      <p className="text-[10px] text-zinc-500 truncate">{profileMusic.artista}</p>
                                   </div>
-                                   <button type="button" onClick={() => setProfileMusic(null)} className="text-xs font-semibold text-red-500 hover:underline p-1">{t('editProfile.removeMusic')}</button>
+                                   <button type="button" onClick={() => setProfileMusic(null)} className="text-xs font-bold text-red-500 p-1">X</button>
                               </div>
                           ) : <p className="text-xs text-zinc-500 mt-1">{t('editProfile.noProfileMusic')}</p>}
                           <button 
@@ -147,7 +241,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                             {profileMusic ? t('editProfile.changeMusic') : t('createPost.addMusic')}
                           </button>
                       </div>
-                       <div className="flex items-center justify-between w-full mt-2">
+
+                       <div className="flex items-center justify-between w-full mt-2 pt-4 border-t dark:border-zinc-800">
                           <div>
                               <label htmlFor="private-account" className="font-semibold text-sm">{t('editProfile.privateAccount')}</label>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('editProfile.privateAccountInfo')}</p>
@@ -166,7 +261,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose, us
                   </div>
               </div>
               <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex flex-col items-end">
-                  {error && <p className="text-red-500 text-xs text-center mb-2 w-full">{error}</p>}
+                  {error && <p className="text-red-500 text-xs text-center mb-2 w-full font-medium">{error}</p>}
                   <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? t('editProfile.submitting') : t('editProfile.submit')}
                   </Button>
