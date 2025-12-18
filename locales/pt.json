@@ -126,6 +126,7 @@
     "noPulsesSuggestion": "Este usuário não compartilhou nenhum pulse.",
     "privateAccountMessage": "Esta Conta é Privada",
     "privateAccountSuggestion": "Siga para ver as fotos e vídeos.",
+    "privateListsMessage": "Esta lista é privada. Apenas o proprietário pode visualizá-la.",
     "notFound": "Usuário não encontrado.",
     "followersModalTitle": "Seguidores",
     "followingModalTitle": "Seguindo",
@@ -156,9 +157,9 @@
     "usernameCooldown": "Você só pode alterar o nome de usuário uma vez a cada 30 dias.",
     "nicknameCooldown": "Você só pode alterar o apelido uma vez a cada 15 dias.",
     "vibeLabel": "Vibe do Momento",
-    "vibeJoy": "Alegria",
-    "vibeAnger": "Raiva",
-    "vibeSloth": "Preguiça"
+    "vibeJoy": "Alegria (Alegria)",
+    "vibeAnger": "Raiva (Raiva)",
+    "vibeSloth": "Preguiça (Tédio)"
   },
   "createPost": {
     "title": "Criar nova publicação",
@@ -321,7 +322,8 @@
     "noViews": "Nenhuma visualização ainda.",
     "viewSingular": "visualização",
     "viewPlural": "visualizações",
-    "save": "Salvar pulso"
+    "save": "Salvar pulso",
+    "replyPlaceholder": "Responder ao pulse..."
   },
   "pulseBar": {
     "viewPulse": "Ver o pulso de {username}",

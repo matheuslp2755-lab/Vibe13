@@ -4,6 +4,7 @@ import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTi
 import { updateProfile } from 'firebase/auth';
 import Button from '../common/Button';
 import EditProfileModal from './EditProfileModal';
+import FollowersModal from './FollowersModal';
 import OnlineIndicator from '../common/OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
@@ -36,7 +37,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
     
+    const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
+    const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
+    
     const currentUser = auth.currentUser;
+    const isOwner = currentUser?.uid === userId;
 
     useEffect(() => {
         let unsubscribePosts: (() => void) | undefined;
@@ -55,14 +60,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setIsBlocked(blockSnap.exists());
                 }
 
-                // Posts Listener
                 const postsQ = query(collection(db, 'posts'), where('userId', '==', userId), orderBy('timestamp', 'desc'));
                 unsubscribePosts = onSnapshot(postsQ, (snap) => {
                     setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
                     setStats(prev => ({ ...prev, posts: snap.size }));
                 });
 
-                // Pulses Listener (últimas 24h)
                 const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
                 const pulsesQ = query(
                     collection(db, 'pulses'), 
@@ -74,7 +77,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setPulses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
                 });
 
-                // Stats de seguidores/seguindo
                 const fers = await getDocs(collection(db, 'users', userId, 'followers'));
                 const fing = await getDocs(collection(db, 'users', userId, 'following'));
                 setStats(prev => ({ ...prev, followers: fers.size, following: fing.size }));
@@ -105,19 +107,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         setIsFollowing(!isFollowing);
     };
 
-    const handleBlock = async () => {
-        if (!currentUser) return;
-        const blockRef = doc(db, 'users', currentUser.uid, 'blocked', userId);
-        if (isBlocked) {
-            await deleteDoc(blockRef);
-        } else {
-            await setDoc(blockRef, { timestamp: serverTimestamp() });
-            if (isFollowing) handleFollow();
-        }
-        setIsBlocked(!isBlocked);
-        setIsOptionsMenuOpen(false);
-    };
-
     const handleUpdateProfile = async (updatedData: any) => {
         if (!currentUser) return;
         setIsSubmittingEdit(true);
@@ -140,7 +129,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 currentVibe: updatedData.currentVibe
             };
 
-            // Trata as restrições de tempo
             if (updatedData.username !== user.username) {
                 updates.lastUsernameChange = serverTimestamp();
             }
@@ -161,6 +149,22 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
             alert("Erro ao atualizar perfil.");
         } finally {
             setIsSubmittingEdit(false);
+        }
+    };
+
+    const handleOpenFollowersList = () => {
+        if (isOwner || !user.isPrivate) {
+            setIsFollowersModalOpen(true);
+        } else {
+            alert(t('profile.privateListsMessage'));
+        }
+    };
+
+    const handleOpenFollowingList = () => {
+        if (isOwner || !user.isPrivate) {
+            setIsFollowingModalOpen(true);
+        } else {
+            alert(t('profile.privateListsMessage'));
         }
     };
 
@@ -192,7 +196,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                             {user.nickname && <span className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">@{user.nickname}</span>}
                         </div>
                         <div className="flex gap-2">
-                            {currentUser?.uid === userId ? (
+                            {isOwner ? (
                                 <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white !font-bold">Editar Perfil</Button>
                             ) : (
                                 <>
@@ -200,24 +204,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                                         {isFollowing ? 'Seguindo' : 'Seguir'}
                                     </Button>
                                     <Button onClick={() => onStartMessage(user)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">Mensagem</Button>
-                                    <div className="relative">
-                                        <button onClick={() => setIsOptionsMenuOpen(!isOptionsMenuOpen)} className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg></button>
-                                        {isOptionsMenuOpen && (
-                                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden">
-                                                <button onClick={handleBlock} className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold">
-                                                    {isBlocked ? 'Desbloquear' : 'Bloquear'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
                                 </>
                             )}
                         </div>
                     </div>
                     <div className="flex gap-6 justify-center sm:justify-start text-sm mb-4">
-                        <p><b>{stats.posts}</b> publicações</p>
-                        <p><b>{stats.followers}</b> seguidores</p>
-                        <p><b>{stats.following}</b> seguindo</p>
+                        <p><b>{stats.posts}</b> {t('profile.posts')}</p>
+                        <button onClick={handleOpenFollowersList} className="hover:underline"><b>{stats.followers}</b> {t('profile.followers')}</button>
+                        <button onClick={handleOpenFollowingList} className="hover:underline"><b>{stats.following}</b> {t('profile.followingCount')}</button>
                     </div>
                     
                     {user.bio && <p className="text-sm font-medium whitespace-pre-wrap max-w-md">{user.bio}</p>}
@@ -230,26 +224,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 </div>
             </header>
 
-            {isBlocked ? (
+            {user.isPrivate && !isFollowing && !isOwner ? (
                 <div className="p-12 text-center border-t dark:border-zinc-800">
-                    <p className="font-bold">Você bloqueou este usuário.</p>
-                    <p className="text-zinc-500 text-sm mt-1">Desbloqueie para ver as publicações.</p>
-                </div>
-            ) : user.isPrivate && !isFollowing && currentUser?.uid !== userId ? (
-                <div className="p-12 text-center border-t dark:border-zinc-800">
-                    <p className="font-bold">Esta conta é privada.</p>
-                    <p className="text-zinc-500 text-sm mt-1">Siga para ver fotos e vídeos.</p>
+                    <p className="font-bold">{t('profile.privateAccountMessage')}</p>
+                    <p className="text-zinc-500 text-sm mt-1">{t('profile.privateAccountSuggestion')}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-3 gap-1 border-t dark:border-zinc-800 pt-4">
                     {posts.map(p => (
                         <div key={p.id} className="aspect-square bg-zinc-100 dark:bg-zinc-800 overflow-hidden group relative">
                             <img src={p.imageUrl} className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer" />
-                            {p.media && p.media.length > 1 && (
-                                <div className="absolute top-2 right-2">
-                                    <svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M19 15V5c0-1.103-.897-2-2-2H7c-1.103 0-2 .897-2 2v10c0 1.103.897 2 2 2h10c1.103 0 2-.897 2-2zM7 5h10v10H7V5zm10 14H5V7H3v12c0 1.103.897 2 2 2h12v-2z"/></svg>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>
@@ -264,6 +248,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     onDelete={(deletedPulse) => {
                         setPulses(prev => prev.filter(p => p.id !== deletedPulse.id));
                     }}
+                    onViewProfile={(uid) => { setViewingPulses(false); onSelectUser?.(uid); }}
                 />
             )}
 
@@ -273,6 +258,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 user={user}
                 onUpdate={handleUpdateProfile}
                 isSubmitting={isSubmittingEdit}
+            />
+
+            <FollowersModal 
+                isOpen={isFollowersModalOpen}
+                onClose={() => setIsFollowersModalOpen(false)}
+                userId={userId}
+                mode="followers"
+            />
+            <FollowersModal 
+                isOpen={isFollowingModalOpen}
+                onClose={() => setIsFollowingModalOpen(false)}
+                userId={userId}
+                mode="following"
             />
         </div>
     );

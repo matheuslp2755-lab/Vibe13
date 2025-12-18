@@ -40,7 +40,7 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
     const { t } = useLanguage();
 
     return (
-        <div className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm sticky top-0 z-20 lg:rounded-xl lg:border lg:mb-4">
+        <div className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black lg:rounded-xl lg:border lg:mb-4 overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-4 overflow-x-auto no-scrollbar scroll-smooth">
                 {/* Cartões de Transmissão ao Vivo */}
                 {activeLives.map((live) => (
@@ -71,7 +71,7 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                 {/* Cartões de Pulse (Stories) */}
                 {usersWithPulses.map(({ author, pulses }) => {
                     const latestPulse = pulses[pulses.length - 1];
-                    const isVideo = latestPulse.mediaUrl.includes('.mp4') || latestPulse.mediaUrl.includes('.webm');
+                    const isVideo = latestPulse.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i);
 
                     return (
                         <div 

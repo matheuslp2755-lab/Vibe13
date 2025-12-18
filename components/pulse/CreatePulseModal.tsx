@@ -129,7 +129,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
             try {
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const response = await ai.models.generateContent({
-                    model: "gemini-2.5-flash",
+                    model: "gemini-3-flash-preview",
                     contents: `Atue como um buscador de locais do Instagram. Retorne APENAS uma lista separada por ponto e vírgula de 5 nomes de locais reais, endereços ou cidades que correspondam ao termo: "${tempLoc}". Não adicione explicações ou introduções.`,
                     config: {
                         tools: [{ googleMaps: {} }],
@@ -433,7 +433,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                 </div>
             </div>
 
-            {/* Cabeçalho superior - Mantém fechar e enviar */}
+            {/* Cabeçalho superior */}
             <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[80] bg-gradient-to-b from-black/60 to-transparent">
                 <button onClick={onClose} className="text-white text-3xl font-light">&times;</button>
                 <div className="flex items-center gap-3">
@@ -450,28 +450,28 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                 </div>
             </header>
 
-            {/* Menu Lateral de Opções */}
+            {/* Menu Lateral de Opções com Animação */}
             {mediaPreview && (
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[85] flex flex-col items-center gap-4">
                     <button 
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className={`p-3 rounded-full backdrop-blur-md transition-all duration-300 ${isMenuOpen ? 'bg-white text-black rotate-45 scale-110' : 'bg-black/30 text-white border border-white/20'}`}
+                        className={`p-3 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg ${isMenuOpen ? 'bg-white text-black rotate-45 scale-110' : 'bg-black/30 text-white border border-white/20'}`}
                     >
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4"/></svg>
                     </button>
 
                     <div className={`flex flex-col gap-3 transition-all duration-500 origin-top ${isMenuOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-10 scale-50 pointer-events-none'}`}>
-                        <button onClick={() => { setIsAddingText(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm font-bold text-lg hover:bg-white/20">Aa</button>
-                        <button onClick={() => { setIsMusicModalOpen(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                        <button onClick={() => { setIsAddingText(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm font-bold text-lg hover:bg-white/20 transition-all hover:scale-110 active:scale-90">Aa</button>
+                        <button onClick={() => { setIsMusicModalOpen(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-all hover:scale-110 active:scale-90">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
                         </button>
-                        <button onClick={() => { setIsAddingLocation(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                        <button onClick={() => { setIsAddingLocation(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-all hover:scale-110 active:scale-90">
                             <LocationIcon className="w-5 h-5" />
                         </button>
-                        <button onClick={() => { setIsAddingPoll(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                        <button onClick={() => { setIsAddingPoll(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-all hover:scale-110 active:scale-90">
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
                         </button>
-                        <button onClick={() => { setIsAddingCountdown(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                        <button onClick={() => { setIsAddingCountdown(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-all hover:scale-110 active:scale-90">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </button>
                     </div>
@@ -485,7 +485,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                             {mediaFile?.type.startsWith('video/') ? <video src={mediaPreview} autoPlay loop muted playsInline className="w-full h-full object-contain" /> : <img src={mediaPreview} className="w-full h-full object-contain" />}
                         </div>
 
-                        {/* Adesivos Arrastáveis */}
+                        {/* Stickers */}
                         {overlayText && (
                             <div 
                                 onPointerDown={() => onDragStart('text')}
@@ -584,7 +584,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                     </div>
                 )}
 
-                {/* MODAIS DE CONFIGURAÇÃO */}
+                {/* Modais de Stickers */}
                 {isAddingText && (
                     <div className="absolute inset-0 bg-black/80 z-[100] flex flex-col items-center justify-between p-10">
                         <div className="w-full flex justify-between items-center">
@@ -605,7 +605,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
 
                 {isAddingLocation && (
                     <div className="absolute inset-0 bg-black/80 z-[100] flex flex-col p-6 items-center">
-                        <div className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-white/10 mt-20 flex flex-col max-h-[70vh]">
+                        <div className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-700 mt-20 flex flex-col max-h-[70vh]">
                             <h3 className="text-white font-black text-xl mb-4">{t('createPulse.location')}</h3>
                             <div className="relative">
                                 <input autoFocus type="text" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none focus:ring-2 ring-sky-500" placeholder={t('createPulse.locationPlaceholder')} value={tempLoc} onChange={e => setTempLoc(e.target.value)} />
@@ -641,7 +641,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
 
                 {isAddingCountdown && (
                     <div className="absolute inset-0 bg-black/80 z-[100] flex flex-col p-6 items-center">
-                        <div className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-white/10 mt-20">
+                        <div className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-zinc-700 mt-20">
                             <h3 className="text-white font-black text-xl mb-4">{t('createPulse.countdown')}</h3>
                             <input autoFocus type="text" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none mb-3" placeholder={t('createPulse.countdownTitle')} value={cdTitle} onChange={e => setCdTitle(e.target.value)} />
                             <input type="date" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none mb-3" value={cdDate} onChange={e => setCdDate(e.target.value)} />
