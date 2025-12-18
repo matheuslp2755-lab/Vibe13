@@ -11,13 +11,13 @@ interface GalleryImage {
 interface GalleryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImageSelected: (image: GalleryImage) => void;
+  onImagesSelected: (images: GalleryImage[]) => void;
 }
 
-const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSelected }) => {
+const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImagesSelected }) => {
     const { t } = useLanguage();
     const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
-    const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+    const [selectedImages, setSelectedImages] = useState<GalleryImage[]>([]);
     const [activeTab, setActiveTab] = useState<'gallery' | 'camera'>('gallery');
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [cameraError, setCameraError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
     useEffect(() => {
         if (!isOpen) {
             setGalleryImages([]);
-            setSelectedImage(null);
+            setSelectedImages([]);
             setActiveTab('gallery');
             setCameraError(null);
             if (cameraStream) {
@@ -37,66 +37,36 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
                 setCameraStream(null);
             }
         }
-    }, [isOpen]); // Depend on isOpen
+    }, [isOpen]);
 
     useEffect(() => {
         if (activeTab === 'camera' && isOpen) {
-            let stream: MediaStream;
-            let isCancelled = false;
-    
             const startCamera = async () => {
                 try {
-                    const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: 'environment' } // Prioritize rear camera
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'user' } 
                     });
-                    
-                    if (isCancelled) {
-                        mediaStream.getTracks().forEach(track => track.stop());
-                        return;
-                    }
-                    
-                    stream = mediaStream;
                     setCameraStream(stream);
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
-                        // Important: Play the video to ensure dimensions are loaded
-                        videoRef.current.play().catch(e => console.error("Error playing video stream:", e));
                     }
-                    setCameraError(null);
                 } catch (err) {
-                    console.error("Camera error:", err);
-                    if (!isCancelled) {
-                        setCameraError(t('gallery.cameraError'));
-                    }
+                    setCameraError(t('gallery.cameraError'));
                 }
             };
             startCamera();
-    
-            return () => {
-                isCancelled = true;
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
-                setCameraStream(null);
-                if (videoRef.current) {
-                    videoRef.current.srcObject = null;
-                }
-            };
         } else {
-            // Stop camera if switching away from camera tab or closing modal
-             if (cameraStream) {
+            if (cameraStream) {
                 cameraStream.getTracks().forEach(track => track.stop());
                 setCameraStream(null);
             }
         }
-    }, [activeTab, isOpen, t]);
-
+    }, [activeTab, isOpen]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files);
+            const files = Array.from(e.target.files).slice(0, 20);
             const imagePromises = files
-                // Allow images and videos
                 .filter((file: File) => file.type.startsWith('image/') || file.type.startsWith('video/'))
                 .map((file: File) => {
                     return new Promise<GalleryImage>((resolve) => {
@@ -110,72 +80,55 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
 
             Promise.all(imagePromises).then(images => {
                 setGalleryImages(prev => [...images, ...prev]);
-                if (images.length > 0 && !selectedImage) {
-                    setSelectedImage(images[0]);
+                if (images.length > 0 && selectedImages.length === 0) {
+                    setSelectedImages([images[0]]);
                 }
             });
         }
     };
 
-    const handleCapture = () => {
-        if (!videoRef.current || !canvasRef.current) return;
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        
-        // Ensure video has dimensions
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-            console.warn("Video dimensions not ready yet");
-            return;
-        }
-
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        if (!context) return;
-
-        // Flip if using user-facing camera (optional, keeping standard for now)
-        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-
-        canvas.toBlob((blob) => {
-            if (blob) {
-                const newFile = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                const preview = URL.createObjectURL(blob);
-                const newImage = { file: newFile, preview };
-                
-                setGalleryImages(prev => [newImage, ...prev]);
-                setSelectedImage(newImage);
-                setActiveTab('gallery'); // Switch back to gallery view
+    const toggleSelection = (image: GalleryImage) => {
+        setSelectedImages(prev => {
+            const isSelected = prev.some(img => img.preview === image.preview);
+            if (isSelected) {
+                return prev.filter(img => img.preview !== image.preview);
+            } else if (prev.length < 20) {
+                return [...prev, image];
             }
-        }, 'image/jpeg', 0.95);
+            return prev;
+        });
     };
 
-    const handleNext = () => {
-        if (selectedImage) {
-            onImageSelected(selectedImage);
+    const handleCapture = () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(video, 0, 0);
+            const preview = canvas.toDataURL('image/jpeg');
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    const newImage = { file, preview };
+                    setGalleryImages(prev => [newImage, ...prev]);
+                    if (selectedImages.length < 20) setSelectedImages(prev => [...prev, newImage]);
+                    setActiveTab('gallery');
+                }
+            });
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div 
-            className="fixed inset-0 bg-white dark:bg-black z-[60] flex flex-col"
-            role="dialog"
-            aria-modal="true"
-        >
-            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
-                <button onClick={onClose} className="p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <h2 className="text-lg font-semibold">{t('gallery.title')}</h2>
-                <Button 
-                    onClick={handleNext} 
-                    disabled={!selectedImage} 
-                    className="!w-auto !py-0 !px-4 !text-sm"
-                >
+        <div className="fixed inset-0 bg-white dark:bg-black z-[60] flex flex-col">
+            <header className="flex-shrink-0 flex items-center justify-between p-4 border-b dark:border-zinc-800">
+                <button onClick={onClose}><XIcon className="w-6 h-6" /></button>
+                <h2 className="text-lg font-semibold">{t('gallery.title')} ({selectedImages.length}/20)</h2>
+                <Button onClick={() => onImagesSelected(selectedImages)} disabled={selectedImages.length === 0} className="!w-auto !py-1 !px-4 !text-sm">
                     {t('gallery.next')}
                 </Button>
             </header>
@@ -183,103 +136,60 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImageSel
             <div className="flex-grow flex flex-col overflow-hidden">
                 {activeTab === 'gallery' ? (
                     <div className="w-full aspect-square bg-black flex items-center justify-center flex-shrink-0">
-                        {selectedImage ? (
-                            selectedImage.file.type.startsWith('video/') ? (
-                                <video src={selectedImage.preview} controls className="max-h-full max-w-full object-contain" />
+                        {selectedImages.length > 0 ? (
+                            selectedImages[selectedImages.length - 1].file.type.startsWith('video/') ? (
+                                <video src={selectedImages[selectedImages.length - 1].preview} controls className="max-h-full max-w-full" />
                             ) : (
-                                <img src={selectedImage.preview} alt="Selected" className="max-h-full max-w-full object-contain" />
+                                <img src={selectedImages[selectedImages.length - 1].preview} className="max-h-full max-w-full object-contain" />
                             )
-                        ) : (
-                            <div className="text-zinc-500">{t('gallery.selectPhotos')}</div>
-                        )}
+                        ) : <p className="text-zinc-500">Selecione até 20 fotos</p>}
                     </div>
                 ) : (
-                     <div className="relative w-full flex-grow bg-black flex flex-col items-center justify-center">
-                        {cameraError ? (
-                            <p className="text-red-500 p-4">{cameraError}</p>
-                        ) : (
-                            <>
-                                <video 
-                                    ref={videoRef} 
-                                    autoPlay 
-                                    playsInline 
-                                    className="w-full h-full object-cover"
-                                ></video>
-                                <div className="absolute bottom-6 flex justify-center w-full z-20">
-                                    <button onClick={handleCapture} className="w-16 h-16 rounded-full bg-white/30 border-4 border-white flex items-center justify-center hover:bg-white/50 transition-colors" aria-label={t('gallery.capture')}>
-                                        <div className="w-12 h-12 rounded-full bg-white"></div>
-                                    </button>
-                                </div>
-                            </>
-                        )}
+                    <div className="relative flex-grow bg-black">
+                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover mirrored" style={{ transform: 'scaleX(-1)' }} />
+                        <button onClick={handleCapture} className="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-4 border-white flex items-center justify-center">
+                            <div className="w-12 h-12 bg-white rounded-full"></div>
+                        </button>
                     </div>
                 )}
 
-                <div className="flex-shrink-0 border-b border-zinc-200 dark:border-zinc-800">
-                    <div className="flex justify-around">
-                        <button onClick={() => setActiveTab('gallery')} className={`w-full py-3 text-sm font-semibold border-b-2 ${activeTab === 'gallery' ? 'border-black dark:border-white text-black dark:text-white' : 'border-transparent text-zinc-500'}`}>{t('gallery.galleryTab')}</button>
-                        <button onClick={() => setActiveTab('camera')} className={`w-full py-3 text-sm font-semibold border-b-2 ${activeTab === 'camera' ? 'border-black dark:border-white text-black dark:text-white' : 'border-transparent text-zinc-500'}`}>{t('gallery.cameraTab')}</button>
-                    </div>
+                <div className="flex justify-around border-b dark:border-zinc-800">
+                    <button onClick={() => setActiveTab('gallery')} className={`w-full py-3 text-sm font-semibold ${activeTab === 'gallery' ? 'border-b-2 border-black dark:border-white' : 'text-zinc-500'}`}>{t('gallery.galleryTab')}</button>
+                    <button onClick={() => setActiveTab('camera')} className={`w-full py-3 text-sm font-semibold ${activeTab === 'camera' ? 'border-b-2 border-black dark:border-white' : 'text-zinc-500'}`}>{t('gallery.cameraTab')}</button>
                 </div>
 
                 {activeTab === 'gallery' && (
-                    <div className="flex-grow overflow-y-auto">
-                        {galleryImages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                                <h3 className="text-xl mt-4 mb-2">{t('createPost.dragPhotos')}</h3>
-                                <Button onClick={() => fileInputRef.current?.click()}>
-                                    {t('gallery.selectPhotos')}
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-0.5">
-                                <div 
-                                    className="relative aspect-square cursor-pointer flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 text-zinc-500"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
+                    <div className="flex-grow overflow-y-auto grid grid-cols-3 gap-0.5">
+                        <div onClick={() => fileInputRef.current?.click()} className="aspect-square bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center cursor-pointer">
+                            <PlusIcon className="w-8 h-8 text-zinc-400" />
+                        </div>
+                        {galleryImages.map((img, i) => {
+                            const index = selectedImages.findIndex(s => s.preview === img.preview);
+                            return (
+                                <div key={i} onClick={() => toggleSelection(img)} className="relative aspect-square cursor-pointer">
+                                    {img.file.type.startsWith('video/') ? <video src={img.preview} className="w-full h-full object-cover" /> : <img src={img.preview} className="w-full h-full object-cover" />}
+                                    {index !== -1 && (
+                                        <div className="absolute top-2 right-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">
+                                            {index + 1}
+                                        </div>
+                                    )}
                                 </div>
-                                {galleryImages.map((image, index) => (
-                                    <div
-                                        key={`${image.file.name}-${index}`}
-                                        className="relative aspect-square cursor-pointer group"
-                                        onClick={() => setSelectedImage(image)}
-                                    >
-                                        {image.file.type.startsWith('video/') ? (
-                                            <>
-                                                <video src={image.preview} className="w-full h-full object-cover" />
-                                                <div className="absolute top-1 right-1 bg-black/60 rounded p-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
-                                                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l4 2A1 1 0 0020 14V6a1 1 0 00-1.447-.894l-4 2z" />
-                                                    </svg>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <img src={image.preview} alt="Gallery item" className="w-full h-full object-cover" />
-                                        )}
-                                        <div className={`absolute inset-0 transition-colors ${selectedImage?.preview === image.preview ? 'bg-black/30' : 'bg-black/0 group-hover:bg-black/10'}`}></div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                            );
+                        })}
                     </div>
                 )}
             </div>
-
-            {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                style={{ opacity: 0, width: '0.1px', height: '0.1px', position: 'absolute', overflow: 'hidden', zIndex: -1 }} 
-                accept="image/*,video/*" 
-                multiple 
-            />
-            <canvas ref={canvasRef} className="hidden"></canvas>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/*,video/*" multiple />
+            <canvas ref={canvasRef} className="hidden" />
         </div>
     );
 };
+
+const XIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+);
+const PlusIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+);
 
 export default GalleryModal;
