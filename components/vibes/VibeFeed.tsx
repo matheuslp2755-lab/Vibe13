@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot, getDocs } from '../../firebase';
+import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot, getDocs, deleteDoc } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
@@ -47,10 +47,16 @@ const RepostIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
+const TrashIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
 const VibeItem: React.FC<{ 
     vibe: VibeType; 
     isActive: boolean;
-    onDelete: () => void;
+    onDelete: (id: string) => void;
 }> = ({ vibe, isActive, onDelete }) => {
     const { t } = useLanguage();
     const { isGlobalMuted, setGlobalMuted } = useCall();
@@ -62,6 +68,7 @@ const VibeItem: React.FC<{
     const currentUser = auth.currentUser;
     const isLiked = vibe.likes.includes(currentUser?.uid || '');
     const isReposted = vibe.reposts?.includes(currentUser?.uid || '') || false;
+    const isOwner = currentUser?.uid === vibe.userId;
 
     const [reposterData, setReposterData] = useState<{username: string, avatar: string, isMe: boolean} | null>(null);
 
@@ -123,6 +130,18 @@ const VibeItem: React.FC<{
         });
     };
 
+    const handleDelete = async () => {
+        if (!isOwner) return;
+        if (window.confirm("Deseja excluir este Vibe permanentemente?")) {
+            try {
+                await deleteDoc(doc(db, 'vibes', vibe.id));
+                onDelete(vibe.id);
+            } catch (e) {
+                console.error("Erro ao deletar Vibe:", e);
+            }
+        }
+    };
+
     const handleDoubleTap = () => {
         const now = Date.now();
         if (now - lastTap.current < 300) {
@@ -165,12 +184,12 @@ const VibeItem: React.FC<{
                 </div>
             )}
 
-            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados para mobile full screen */}
-            <div className="absolute right-4 bottom-24 flex flex-col gap-5 items-center z-30">
-                <div className="relative group">
-                    <img src={vibe.user?.avatar} className="w-11 h-11 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
+            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados mais altos (bottom-32) para não conflitar com menu inferior */}
+            <div className="absolute right-4 bottom-32 flex flex-col gap-6 items-center z-30">
+                <div className="relative group mb-2">
+                    <img src={vibe.user?.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
                     <div className="absolute -bottom-1 -right-1 bg-sky-500 rounded-full p-1 border-2 border-black">
-                         <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
+                         <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
                     </div>
                 </div>
                 
@@ -191,23 +210,31 @@ const VibeItem: React.FC<{
                 <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); setGlobalMuted(!isGlobalMuted); }}>
                     {isGlobalMuted ? <VolumeOffIcon className="w-8 h-8 text-white drop-shadow-md" /> : <VolumeOnIcon className="w-8 h-8 text-white drop-shadow-md" />}
                 </div>
+
+                {isOwner && (
+                    <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
+                        <TrashIcon className="w-8 h-8 text-white/50 hover:text-red-500 drop-shadow-md transition-colors" />
+                    </div>
+                )}
             </div>
 
-            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL */}
-            <div className="absolute left-4 bottom-10 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
+            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL - Posicionado mais alto (bottom-24) */}
+            <div className="absolute left-4 bottom-24 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
                 {reposterData && (
                     <div className="flex items-center gap-1.5 mb-2.5 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
                         <img src={reposterData.avatar} className="w-4 h-4 rounded-full border border-white/30" />
                         <span className="text-[9px] font-black text-white tracking-tight uppercase">
-                            {reposterData.isMe ? t('post.youRepublicated') : t('post.republishedBy', { username: reposterData.username })}
+                            {reposterData.isMe ? t('common.youRepublicated') : t('post.republishedBy', { username: reposterData.username })}
                         </span>
                     </div>
                 )}
-                <div className="flex items-center gap-2 mb-1.5 pointer-events-auto">
-                    <h3 className="font-black text-sm drop-shadow-lg">@{vibe.user?.username}</h3>
-                    <button className="bg-transparent border border-white/50 text-[9px] font-black px-2 py-0.5 rounded-md hover:bg-white hover:text-black transition-all">Seguir</button>
+                <div className="flex items-center gap-2 mb-2 pointer-events-auto">
+                    <h3 className="font-black text-base drop-shadow-lg">@{vibe.user?.username}</h3>
+                    {!isOwner && (
+                        <button className="bg-transparent border border-white/70 text-[10px] font-black px-3 py-1 rounded-full hover:bg-white hover:text-black transition-all">Seguir</button>
+                    )}
                 </div>
-                <p className="text-xs font-medium drop-shadow-lg break-words line-clamp-3 leading-tight mb-2">{vibe.caption}</p>
+                <p className="text-xs font-medium drop-shadow-lg break-words line-clamp-3 leading-tight mb-3">{vibe.caption}</p>
                 
                 {vibe.musicInfo && (
                     <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm p-1 pr-3 rounded-full w-fit border border-white/10 overflow-hidden group">
@@ -222,7 +249,7 @@ const VibeItem: React.FC<{
             </div>
             
             {/* Overlay gradiente inferior mais alto para leitura da legenda */}
-            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
+            <div className="absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none z-10" />
             
             <style>{`
                 @keyframes heart-pop { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.25); opacity: 0.9; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
@@ -230,7 +257,7 @@ const VibeItem: React.FC<{
                 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .animate-spin-slow { animation: spin-slow 4s linear infinite; }
                 @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
-                .animate-marquee { animation: marquee 6s linear infinite; }
+                .animate-marquee { animation: marquee 8s linear infinite; }
             `}</style>
         </div>
     );
@@ -270,6 +297,10 @@ const VibeFeed: React.FC = () => {
         }
     };
 
+    const handleVibeDeleted = (id: string) => {
+        setVibes(prev => prev.filter(v => v.id !== id));
+    };
+
     if (loading) return (
         <div className="h-full bg-black flex flex-col items-center justify-center text-white">
             <div className="w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4" />
@@ -278,7 +309,7 @@ const VibeFeed: React.FC = () => {
     );
 
     return (
-        /* ALTURA AJUSTADA: h-full para ocupar todo o main, que no mobile agora é h-screen menos o BottomNav */
+        /* ALTURA AJUSTADA: 100dvh e o container de scroll respeita isso */
         <div className="relative h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
             <div 
                 ref={containerRef} 
@@ -292,7 +323,7 @@ const VibeFeed: React.FC = () => {
                             key={v.id} 
                             vibe={v} 
                             isActive={i === activeVibeIndex} 
-                            onDelete={() => {}} 
+                            onDelete={handleVibeDeleted} 
                         />
                     ))
                 ) : (

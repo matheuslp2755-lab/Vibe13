@@ -89,6 +89,20 @@ const ptMessages = {
     "deletePostBody": "Tem certeza? Esta ação não pode ser desfeita.",
     "addToMemory": "Salvar na Memória"
   },
+  "profile": {
+    "addAccount": "Adicionar conta",
+    "switchAccount": "Trocar de conta",
+    "logout": "Sair",
+    "posts": "publicações",
+    "followingCount": "seguindo",
+    "followers": "seguidores",
+    "editProfile": "Editar Perfil",
+    "message": "Mensagem",
+    "privateAccountMessage": "Esta conta é privada",
+    "privateAccountSuggestion": "Siga para ver as publicações.",
+    "following": "Seguindo",
+    "follow": "Seguir"
+  },
   "createStatus": {
     "title": "Nova Publicação",
     "placeholder": "No que você está pensando?",
