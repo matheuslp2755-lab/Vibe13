@@ -55,7 +55,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
             if (isPlaying) {
                 audioRef.current.pause();
             } else {
-                audioRef.current.play().catch(err => console.error("Audio playback error:", err?.message || err));
+                audioRef.current.play().catch(err => console.error("Audio playback error:", err?.message || String(err)));
             }
         }
     };
@@ -338,7 +338,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 [`participantInfo.${currentUser.uid}.activity`]: status
             });
         } catch (error: any) {
-            console.error("Error updating activity status:", error?.message || error);
+            console.error("Error updating activity status:", error?.message || String(error));
         }
     };
 
@@ -579,6 +579,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             setRecordedAudioMimeType(mediaRecorder.mimeType);
             audioChunksRef.current = [];
 
+            mediaRecorder.onstart = () => {
+                setIsRecording(true);
+                updateActivity('recording');
+                setRecordingTime(0);
+
+                recordingTimerRef.current = setInterval(() => {
+                    setRecordingTime(prev => prev + 1);
+                }, 1000);
+            };
+
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
@@ -586,16 +596,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             };
 
             mediaRecorder.start(); 
-            setIsRecording(true);
-            updateActivity('recording');
-            setRecordingTime(0);
-
-            recordingTimerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
-            }, 1000);
 
         } catch (error: any) {
-            console.error("Error accessing microphone:", error?.message || error);
+            console.error("Error accessing microphone:", error?.message || String(error));
             setUploadError(t('messages.recordingError'));
         }
     };
@@ -644,7 +647,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             // Determine extension based on MIME type
             let extension = 'webm';
             if (mimeType.includes('mp4') || mimeType.includes('aac')) {
-                extension = 'm4a'; // or 'mp4', but m4a is common for audio-only mp4 container
+                extension = 'm4a'; 
             } else if (mimeType.includes('ogg')) {
                 extension = 'ogg';
             }
@@ -653,7 +656,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             const fileName = `${Date.now()}.${extension}`;
             const audioRef = storageRef(storage, `chat_media/${conversationId}/${fileName}`);
             
-            // Add metadata for correct content type
             const metadata = { contentType: mimeType };
             await uploadBytes(audioRef, audioBlob, metadata);
             const audioUrl = await getDownloadURL(audioRef);
@@ -688,7 +690,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await batch.commit();
 
         } catch (error: any) {
-            console.error("Error sending audio:", error?.message || error);
+            console.error("Error sending audio:", error?.message || String(error));
             setUploadError(t('messages.media.uploadError'));
         } finally {
             setIsUploading(false);
@@ -781,7 +783,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     crystal: {
                         createdAt: serverTimestamp(),
                         lastInteractionAt: serverTimestamp(),
-                        level: 'APAGADO', // Start as inactive
+                        level: 'APAGADO', 
                         streak: 1
                     }
                 };
@@ -805,7 +807,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await batch.commit();
 
         } catch (error: any) {
-            console.error("Error sending message:", error?.message || error);
+            console.error("Error sending message:", error?.message || String(error));
             setUploadError(t('messages.media.uploadError'));
             setNewMessage(tempMessageText);
             setReplyingTo(tempReplyingTo);
@@ -848,7 +850,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await updateDoc(conversationRef, lastMessageUpdate);
 
         } catch (error: any) {
-            console.error("Error deleting message:", error?.message || error);
+            console.error("Error deleting message:", error?.message || String(error));
         }
     };
 
@@ -902,7 +904,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         alt={otherUser.username} 
                         className="w-10 h-10 rounded-full object-cover"
                         onError={(e) => {
-                            // Fallback to generic placeholder if image fails to load, instead of initials
                             e.currentTarget.src = FALLBACK_AVATAR_URL;
                         }}
                     />
@@ -1094,7 +1095,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 ) : (
                     <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                         <>
-                             {/* FIX: Use inline style opacity:0 instead of hidden class for WebView compatibility */}
                              <input 
                                 type="file" 
                                 ref={fileInputRef} 
@@ -1118,7 +1118,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 onChange={(e) => {
                                     setNewMessage(e.target.value);
                                     
-                                    // Typing logic: Set state then debounce clear
                                     if (e.target.value.trim().length > 0) {
                                         updateActivity('typing');
                                         
@@ -1128,7 +1127,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                         
                                         typingTimeoutRef.current = setTimeout(() => {
                                             updateActivity(null);
-                                        }, 3000); // Stop showing typing after 3s of inactivity
+                                        }, 3000); 
                                     } else {
                                         updateActivity(null);
                                     }
@@ -1192,13 +1191,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         <button onClick={() => setViewingMedia(null)} className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2 z-10">
                             <XIcon className="w-6 h-6" />
                         </button>
-                        {/* Add to Memory Button */}
                         <button 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setContentForMemory({
-                                    id: `msg-${Date.now()}`, // Temporary ID for memory
-                                    type: viewingMedia.type === 'video' ? 'pulse' : 'image', // Mapping for CreateMemoryModal
+                                    id: `msg-${Date.now()}`, 
+                                    type: viewingMedia.type === 'video' ? 'pulse' : 'image', 
                                     mediaUrl: viewingMedia.url,
                                     timestamp: serverTimestamp()
                                 });
@@ -1220,17 +1218,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     </div>
                 </div>
             )}
-            {/* Memory Modals */}
             {contentForMemory && (
                 <AddToMemoryModal
                     isOpen={isAddToMemoryOpen}
                     onClose={() => {
                         setIsAddToMemoryOpen(false);
-                        // Do not clear contentForMemory here if opening CreateMemoryModal
                     }}
                     content={contentForMemory}
                     onOpenCreate={(initialContent) => {
-                        setContentForMemory(initialContent); // Ensure content is passed
+                        setContentForMemory(initialContent); 
                         setIsAddToMemoryOpen(false);
                         setIsCreateMemoryOpen(true);
                     }}
@@ -1242,7 +1238,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     setIsCreateMemoryOpen(false);
                     setContentForMemory(null);
                 }}
-                onMemoryCreated={() => { /* Optional toast */ }}
+                onMemoryCreated={() => { }}
                 initialContent={contentForMemory}
             />
 
@@ -1261,10 +1257,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 top: '50%',
                                 left: '50%',
                                 transform: 'translate(-50%, -50%)',
-                                width: '96px', // w-24
-                                height: '96px', // h-24
+                                width: '96px', 
+                                height: '96px', 
                             }
-                            : { // 'settling'
+                            : { 
                                 top: `${finalCrystalPos.top}px`,
                                 left: `${finalCrystalPos.left}px`,
                                 width: `${finalCrystalPos.width}px`,

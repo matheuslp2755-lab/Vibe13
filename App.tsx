@@ -78,7 +78,8 @@ const AppContent: React.FC = () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         stream.getTracks().forEach(track => track.stop());
       } catch (err: any) {
-        console.warn("Media permissions denied or error:", err);
+        // Fix circular structure error in logging
+        console.warn("Media permissions denied or error:", err?.message || String(err));
       }
     };
 
@@ -127,7 +128,10 @@ const AppContent: React.FC = () => {
     const updateUserLastSeen = () => {
         updateDoc(userDocRef, {
             lastSeen: serverTimestamp()
-        }).catch(err => console.error("Failed to update last seen:", err));
+        }).catch(err => {
+            // Fix circular structure error in logging
+            console.error("Failed to update last seen:", err?.message || String(err));
+        });
     };
 
     updateUserLastSeen();

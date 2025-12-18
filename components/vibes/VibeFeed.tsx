@@ -1,10 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, addDoc, serverTimestamp, deleteDoc, onSnapshot, increment, getDocs } from '../../firebase';
+import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot, getDocs } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
-import MusicPlayer from '../feed/MusicPlayer';
 
 type VibeType = {
     id: string;
@@ -28,98 +27,6 @@ type VibeType = {
         avatar: string;
     };
 };
-
-// VÍDEOS CURADOS PARA O FEED PARECER REAL E VARIADO
-const MOCK_VIBES: VibeType[] = [
-    {
-        id: 'mock-1',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2023/10/24/186354-877709320_tiny.mp4',
-        mediaType: 'video',
-        caption: 'Explorando as luzes da cidade à noite. ✨ #neon #vibe #cyberpunk',
-        likes: ['user1', 'user2', 'user3', 'user99'],
-        commentsCount: 128,
-        createdAt: new Date(),
-        user: { username: 'urban_skye', avatar: 'https://i.pravatar.cc/150?u=urban' }
-    },
-    {
-        id: 'mock-2',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2021/04/12/70881-537449557_tiny.mp4',
-        mediaType: 'video',
-        caption: 'A calmaria que a gente precisava hoje... 🌊 #oceano #relax #nature',
-        likes: ['user5', 'user12', 'user45'],
-        commentsCount: 42,
-        createdAt: new Date(),
-        user: { username: 'blue_waves', avatar: 'https://i.pravatar.cc/150?u=ocean' }
-    },
-    {
-        id: 'mock-5',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2023/11/04/187741-881260783_tiny.mp4',
-        mediaType: 'video',
-        caption: 'O café da manhã perfeito não exis... 🥞☕ #foodie #aesthetic #breakfast',
-        likes: ['user20', 'user21', 'user22'],
-        commentsCount: 15,
-        createdAt: new Date(),
-        user: { username: 'chef_vibe', avatar: 'https://i.pravatar.cc/150?u=food' }
-    },
-    {
-        id: 'mock-6',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2024/02/25/201948-916843468_tiny.mp4',
-        mediaType: 'video',
-        caption: 'POV: Você está em Tóquio. 🇯🇵 #travel #japan #streetstyle',
-        likes: ['u1', 'u2', 'u3', 'u4', 'u5'],
-        commentsCount: 89,
-        createdAt: new Date(),
-        user: { username: 'nomad_spirit', avatar: 'https://i.pravatar.cc/150?u=tokyo' }
-    },
-    {
-        id: 'mock-3',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2020/09/24/50860-462947113_tiny.mp4',
-        mediaType: 'video',
-        caption: 'Arte em movimento. Sente o fluxo. 🎨 #abstract #digitalart #loop',
-        likes: ['user9', 'user10', 'user55', 'user66'],
-        commentsCount: 45,
-        createdAt: new Date(),
-        user: { username: 'art_fluid', avatar: 'https://i.pravatar.cc/150?u=art' }
-    },
-    {
-        id: 'mock-7',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2021/10/26/93437-640701046_tiny.mp4',
-        mediaType: 'video',
-        caption: 'Treino de hoje pago! 💪🔥 #fitness #motivation #gymvibe',
-        likes: ['fit1', 'fit2'],
-        commentsCount: 3,
-        createdAt: new Date(),
-        user: { username: 'power_train', avatar: 'https://i.pravatar.cc/150?u=fitness' }
-    },
-    {
-        id: 'mock-4',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2021/09/10/88137-603175852_tiny.mp4',
-        mediaType: 'video',
-        caption: 'Foco total no trabalho hoje. ☕💻 #lofi #studygram #workspace',
-        likes: ['user22', 'user88'],
-        commentsCount: 8,
-        createdAt: new Date(),
-        user: { username: 'focus_mode', avatar: 'https://i.pravatar.cc/150?u=daily' }
-    },
-    {
-        id: 'mock-8',
-        userId: 'vibe-official',
-        videoUrl: 'https://cdn.pixabay.com/video/2023/04/16/159155-818227367_tiny.mp4',
-        mediaType: 'video',
-        caption: 'Aquele por do sol que renova as energias. 🌅 #sunset #goldenhour',
-        likes: ['sky1', 'sky2', 'sky3'],
-        commentsCount: 56,
-        createdAt: new Date(),
-        user: { username: 'horizon_chaser', avatar: 'https://i.pravatar.cc/150?u=sky' }
-    }
-];
 
 const VolumeOnIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -160,7 +67,10 @@ const VibeItem: React.FC<{
 
     useEffect(() => {
         if (isActive && vibe.mediaType !== 'image') {
-            videoRef.current?.play().catch(() => {});
+            videoRef.current?.play().catch(err => {
+                // Silently catch play() errors without logging complex circular objects
+                console.warn("Vibe autoplay blocked or failed:", err?.message || "User interaction required");
+            });
         } else {
             videoRef.current?.pause();
             if(videoRef.current) videoRef.current.currentTime = 0;
@@ -201,21 +111,17 @@ const VibeItem: React.FC<{
     const handleLikeAction = async () => {
         if (!currentUser) return;
         const ref = doc(db, 'vibes', vibe.id);
-        if (!vibe.id.startsWith('mock-')) {
-            await updateDoc(ref, { 
-                likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
-            });
-        }
+        await updateDoc(ref, { 
+            likes: isLiked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
+        });
     };
 
     const handleRepost = async () => {
         if (!currentUser) return;
         const ref = doc(db, 'vibes', vibe.id);
-        if (!vibe.id.startsWith('mock-')) {
-            await updateDoc(ref, { 
-                reposts: isReposted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
-            });
-        }
+        await updateDoc(ref, { 
+            reposts: isReposted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
+        });
     };
 
     const handleDoubleTap = () => {
@@ -234,7 +140,7 @@ const VibeItem: React.FC<{
             {!isLoaded && vibe.mediaType !== 'image' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-0">
                     <div className="w-12 h-12 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-4">Carregando Vibe...</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-4">Sintonizando Vibe...</span>
                 </div>
             )}
 
@@ -260,61 +166,63 @@ const VibeItem: React.FC<{
                 </div>
             )}
 
-            <div className="absolute right-4 bottom-24 flex flex-col gap-6 items-center z-30">
+            {/* BOTÕES DE AÇÃO LATERAIS */}
+            <div className="absolute right-4 bottom-20 flex flex-col gap-5 items-center z-30">
                 <div className="relative group">
-                    <img src={vibe.user?.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
+                    <img src={vibe.user?.avatar} className="w-11 h-11 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
                     <div className="absolute -bottom-1 -right-1 bg-sky-500 rounded-full p-1 border-2 border-black">
                          <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
                     </div>
                 </div>
                 
                 <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); handleLikeAction(); }}>
-                    <svg className={`w-9 h-9 transition-all active:scale-125 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} fill="none"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                    <span className="text-white text-xs font-black drop-shadow-md mt-1">{vibe.likes.length}</span>
+                    <svg className={`w-8 h-8 transition-all active:scale-125 drop-shadow-md ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} fill="none"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                    <span className="text-white text-[10px] font-black drop-shadow-md mt-1">{vibe.likes.length}</span>
                 </div>
                 
                 <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); setIsCommentsOpen(true); }}>
-                    <svg className="w-9 h-9 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" /></svg>
-                    <span className="text-white text-xs font-black drop-shadow-md mt-1">{vibe.commentsCount}</span>
+                    <svg className="w-8 h-8 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" /></svg>
+                    <span className="text-white text-[10px] font-black drop-shadow-md mt-1">{vibe.commentsCount}</span>
                 </div>
 
                 <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); handleRepost(); }}>
-                    <RepostIcon className={`w-9 h-9 transition-all active:scale-125 ${isReposted ? 'text-green-500' : 'text-white'}`} />
+                    <RepostIcon className={`w-8 h-8 drop-shadow-md transition-all active:scale-125 ${isReposted ? 'text-green-500' : 'text-white'}`} />
                 </div>
 
                 <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); setGlobalMuted(!isGlobalMuted); }}>
-                    {isGlobalMuted ? <VolumeOffIcon className="w-9 h-9 text-white drop-shadow-md" /> : <VolumeOnIcon className="w-9 h-9 text-white drop-shadow-md" />}
+                    {isGlobalMuted ? <VolumeOffIcon className="w-8 h-8 text-white drop-shadow-md" /> : <VolumeOnIcon className="w-8 h-8 text-white drop-shadow-md" />}
                 </div>
             </div>
 
-            <div className="absolute left-4 bottom-10 z-30 text-white pointer-events-none pr-20 max-w-[80%]">
+            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL */}
+            <div className="absolute left-4 bottom-6 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
                 {reposterData && (
-                    <div className="flex items-center gap-1.5 mb-3 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
+                    <div className="flex items-center gap-1.5 mb-2.5 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
                         <img src={reposterData.avatar} className="w-4 h-4 rounded-full border border-white/30" />
-                        <span className="text-[10px] font-black text-white tracking-tight uppercase">
+                        <span className="text-[9px] font-black text-white tracking-tight uppercase">
                             {reposterData.isMe ? t('post.youRepublicated') : t('post.republishedBy', { username: reposterData.username })}
                         </span>
                     </div>
                 )}
-                <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-black text-base drop-shadow-lg">@{vibe.user?.username}</h3>
-                    <button className="bg-transparent border border-white/50 text-[10px] font-black px-2 py-0.5 rounded-md hover:bg-white hover:text-black transition-all">Seguir</button>
+                <div className="flex items-center gap-2 mb-1.5 pointer-events-auto">
+                    <h3 className="font-black text-sm drop-shadow-lg">@{vibe.user?.username}</h3>
+                    <button className="bg-transparent border border-white/50 text-[9px] font-black px-2 py-0.5 rounded-md hover:bg-white hover:text-black transition-all">Seguir</button>
                 </div>
-                <p className="text-sm font-medium drop-shadow-lg break-words line-clamp-3 leading-snug">{vibe.caption}</p>
+                <p className="text-xs font-medium drop-shadow-lg break-words line-clamp-3 leading-tight mb-2">{vibe.caption}</p>
                 
                 {vibe.musicInfo && (
-                    <div className="flex items-center gap-2 mt-4 bg-black/20 backdrop-blur-sm p-1.5 pr-4 rounded-full w-fit border border-white/10 overflow-hidden group">
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center animate-spin-slow">
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm p-1 pr-3 rounded-full w-fit border border-white/10 overflow-hidden group">
+                        <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center animate-spin-slow">
                             <img src={vibe.musicInfo.capa} className="w-full h-full rounded-full" />
                         </div>
-                        <div className="overflow-hidden w-24">
-                            <p className="text-[10px] font-bold truncate animate-marquee whitespace-nowrap">{vibe.musicInfo.nome} • {vibe.musicInfo.artista}</p>
+                        <div className="overflow-hidden w-28">
+                            <p className="text-[9px] font-bold truncate animate-marquee whitespace-nowrap">{vibe.musicInfo.nome} • {vibe.musicInfo.artista}</p>
                         </div>
                     </div>
                 )}
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
+            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none z-10" />
             
             <style>{`
                 @keyframes heart-pop { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.25); opacity: 0.9; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
@@ -336,20 +244,19 @@ const VibeFeed: React.FC = () => {
     const { t } = useLanguage();
 
     useEffect(() => {
-        const q = query(collection(db, 'vibes'), orderBy('createdAt', 'desc'), limit(15));
+        const q = query(collection(db, 'vibes'), orderBy('createdAt', 'desc'), limit(20));
         return onSnapshot(q, async (snap) => {
             const firestoreVibes = await Promise.all(snap.docs.map(async d => {
-                const userDoc = await getDoc(doc(db, 'users', d.data().userId));
-                return { id: d.id, ...d.data(), user: userDoc.exists() ? userDoc.data() : { username: '...', avatar: '' } } as VibeType;
+                const data = d.data();
+                const userDoc = await getDoc(doc(db, 'users', data.userId));
+                return { 
+                    id: d.id, 
+                    ...data, 
+                    user: userDoc.exists() ? userDoc.data() : { username: '...', avatar: '' } 
+                } as VibeType;
             }));
-
-            // Misturamos os vídeos do banco com os vídeos sugeridos (MOCKS)
-            // Os vídeos do Firestore (reais) aparecem no topo
-            const merged = [...firestoreVibes, ...MOCK_VIBES];
             
-            const unique = Array.from(new Map(merged.map(item => [item.id, item])).values());
-            
-            setVibes(unique);
+            setVibes(firestoreVibes);
             setLoading(false);
         });
     }, []);
@@ -371,21 +278,28 @@ const VibeFeed: React.FC = () => {
     );
 
     return (
-        <div className="relative h-screen sm:h-[calc(100vh-4rem)] bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
+        <div className="relative h-[calc(100dvh-8rem)] lg:h-[calc(100vh-2rem)] bg-black overflow-hidden lg:rounded-3xl shadow-2xl lg:mt-4">
             <div 
                 ref={containerRef} 
                 onScroll={handleScroll} 
                 className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar scroll-smooth"
                 style={{ scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
             >
-                {vibes.map((v, i) => (
-                    <VibeItem 
-                        key={v.id} 
-                        vibe={v} 
-                        isActive={i === activeVibeIndex} 
-                        onDelete={() => {}} 
-                    />
-                ))}
+                {vibes.length > 0 ? (
+                    vibes.map((v, i) => (
+                        <VibeItem 
+                            key={v.id} 
+                            vibe={v} 
+                            isActive={i === activeVibeIndex} 
+                            onDelete={() => {}} 
+                        />
+                    ))
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-500 font-bold p-10 text-center gap-4">
+                        <svg className="w-16 h-16 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        <p className="text-sm uppercase tracking-widest">Nenhum Vibe postado ainda.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
