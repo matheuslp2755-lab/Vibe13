@@ -95,6 +95,20 @@
     "background": "Fundo",
     "font": "Fonte"
   },
+  "createPulse": {
+    "location": "Localização",
+    "locationPlaceholder": "Pesquisar localização...",
+    "searchingLocations": "Buscando locais próximos...",
+    "poll": "Enquete",
+    "pollQuestion": "Faça uma pergunta...",
+    "pollOption1": "Sim",
+    "pollOption2": "Não",
+    "countdown": "Contagem Regressiva",
+    "countdownTitle": "Dê um nome à contagem...",
+    "days": "Dias",
+    "hours": "Horas",
+    "mins": "Min"
+  },
   "musicSearch": {
     "fetchError": "Erro ao buscar músicas",
     "searchError": "Ocorreu um erro durante a busca.",
