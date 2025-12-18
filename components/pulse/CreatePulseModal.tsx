@@ -56,6 +56,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
     const [filterIndex, setFilterIndex] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [isSavingLocal, setIsSavingLocal] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // Canvas & Scale
     const [imageScale, setImageScale] = useState(1);
@@ -112,10 +113,11 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
             setImageScale(1); setTextSize(24); setFontIndex(0);
             initialDistance.current = null;
             lastScale.current = 1;
+            setIsMenuOpen(false);
         }
     }, [isOpen]);
 
-    // Função de Busca de Locais Reais via Gemini Maps Grounding
+    // Busca de locais reais
     useEffect(() => {
         if (tempLoc.length < 3) {
             setLocationSuggestions([]);
@@ -424,12 +426,14 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
         <div className="fixed inset-0 bg-black z-[70] flex flex-col select-none touch-none overflow-hidden">
             <canvas ref={exportCanvasRef} className="hidden" />
             
+            {/* Lixeira superior */}
             <div className={`absolute top-10 left-1/2 -translate-x-1/2 z-[90] transition-all duration-300 pointer-events-none ${isDragging ? 'opacity-100 scale-110' : 'opacity-0 scale-50'}`}>
                 <div className={`p-4 rounded-full backdrop-blur-xl border-2 ${dragOverTrash ? 'bg-red-500 border-white text-white' : 'bg-black/30 border-white/20 text-white'}`}>
                     <TrashIcon className="w-8 h-8" />
                 </div>
             </div>
 
+            {/* Cabeçalho superior - Mantém fechar e enviar */}
             <header className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-[80] bg-gradient-to-b from-black/60 to-transparent">
                 <button onClick={onClose} className="text-white text-3xl font-light">&times;</button>
                 <div className="flex items-center gap-3">
@@ -437,19 +441,6 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                         <>
                             <button onClick={handleDownload} disabled={isSavingLocal} className="text-white p-2.5 bg-black/30 rounded-full backdrop-blur-md active:scale-90 transition-transform">
                                 {isSavingLocal ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <DownloadIcon className="w-6 h-6" />}
-                            </button>
-                            <button onClick={() => setIsAddingText(true)} className="text-white p-2 bg-black/20 rounded-full backdrop-blur-md font-bold">Aa</button>
-                            <button onClick={() => setIsMusicModalOpen(true)} className="text-white p-2 bg-black/20 rounded-full backdrop-blur-md">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                            </button>
-                            <button onClick={() => setIsAddingLocation(true)} className="text-white p-2 bg-black/20 rounded-full backdrop-blur-md">
-                                <LocationIcon className="w-6 h-6" />
-                            </button>
-                            <button onClick={() => setIsAddingPoll(true)} className="text-white p-2 bg-black/20 rounded-full backdrop-blur-md">
-                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-                            </button>
-                            <button onClick={() => setIsAddingCountdown(true)} className="text-white p-2 bg-black/20 rounded-full backdrop-blur-md">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
                             <Button onClick={handleSubmit} disabled={submitting} className="!w-auto !py-1 !px-6 !bg-white !text-black rounded-full font-bold">
                                 {submitting ? '...' : 'Enviar'}
@@ -459,6 +450,34 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                 </div>
             </header>
 
+            {/* Menu Lateral de Opções */}
+            {mediaPreview && (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[85] flex flex-col items-center gap-4">
+                    <button 
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        className={`p-3 rounded-full backdrop-blur-md transition-all duration-300 ${isMenuOpen ? 'bg-white text-black rotate-45 scale-110' : 'bg-black/30 text-white border border-white/20'}`}
+                    >
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M12 4v16m8-8H4"/></svg>
+                    </button>
+
+                    <div className={`flex flex-col gap-3 transition-all duration-500 origin-top ${isMenuOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-10 scale-50 pointer-events-none'}`}>
+                        <button onClick={() => { setIsAddingText(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm font-bold text-lg hover:bg-white/20">Aa</button>
+                        <button onClick={() => { setIsMusicModalOpen(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                        </button>
+                        <button onClick={() => { setIsAddingLocation(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                            <LocationIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => { setIsAddingPoll(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+                        </button>
+                        <button onClick={() => { setIsAddingCountdown(true); setIsMenuOpen(false); }} className="w-12 h-12 flex items-center justify-center bg-black/40 text-white rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div ref={containerRef} className="flex-grow relative overflow-hidden flex items-center justify-center bg-black" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
                 {mediaPreview ? (
                     <div className="w-full h-full relative flex items-center justify-center">
@@ -466,6 +485,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                             {mediaFile?.type.startsWith('video/') ? <video src={mediaPreview} autoPlay loop muted playsInline className="w-full h-full object-contain" /> : <img src={mediaPreview} className="w-full h-full object-contain" />}
                         </div>
 
+                        {/* Adesivos Arrastáveis */}
                         {overlayText && (
                             <div 
                                 onPointerDown={() => onDragStart('text')}
@@ -543,6 +563,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                             </div>
                         )}
 
+                        {/* Filtros inferiores */}
                         <div className="absolute bottom-10 left-0 right-0 flex justify-start gap-4 overflow-x-auto px-10 no-scrollbar py-4 bg-gradient-to-t from-black/80 to-transparent">
                             {FILTERS.map((f, i) => (
                                 <button key={i} onClick={() => setFilterIndex(i)} className={`flex-shrink-0 flex flex-col items-center gap-1 transition-transform ${filterIndex === i ? 'scale-110' : 'opacity-60 scale-90'}`}>
@@ -563,6 +584,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                     </div>
                 )}
 
+                {/* MODAIS DE CONFIGURAÇÃO */}
                 {isAddingText && (
                     <div className="absolute inset-0 bg-black/80 z-[100] flex flex-col items-center justify-between p-10">
                         <div className="w-full flex justify-between items-center">
@@ -586,45 +608,19 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                         <div className="w-full max-w-sm bg-zinc-900 rounded-3xl p-6 shadow-2xl border border-white/10 mt-20 flex flex-col max-h-[70vh]">
                             <h3 className="text-white font-black text-xl mb-4">{t('createPulse.location')}</h3>
                             <div className="relative">
-                                <input 
-                                    autoFocus 
-                                    type="text" 
-                                    className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none focus:ring-2 ring-sky-500" 
-                                    placeholder={t('createPulse.locationPlaceholder')} 
-                                    value={tempLoc} 
-                                    onChange={e => setTempLoc(e.target.value)} 
-                                />
-                                {isSearchingLoc && (
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    </div>
-                                )}
+                                <input autoFocus type="text" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none focus:ring-2 ring-sky-500" placeholder={t('createPulse.locationPlaceholder')} value={tempLoc} onChange={e => setTempLoc(e.target.value)} />
+                                {isSearchingLoc && <div className="absolute right-4 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div></div>}
                             </div>
-
-                            <div className="mt-4 flex-grow overflow-y-auto custom-scrollbar">
+                            <div className="mt-4 flex-grow overflow-y-auto">
                                 {locationSuggestions.map((loc, i) => (
-                                    <button 
-                                        key={i} 
-                                        onClick={() => {
-                                            setLocation({ name: loc, x: 50, y: 50 });
-                                            setIsAddingLocation(false);
-                                            setTempLoc('');
-                                            setLocationSuggestions([]);
-                                        }}
-                                        className="w-full text-left p-4 hover:bg-white/10 border-b border-white/5 last:border-0 text-white text-sm transition-colors flex items-center gap-3"
-                                    >
+                                    <button key={i} onClick={() => { setLocation({ name: loc, x: 50, y: 50 }); setIsAddingLocation(false); setTempLoc(''); setLocationSuggestions([]); }} className="w-full text-left p-4 hover:bg-white/10 border-b border-white/5 last:border-0 text-white text-sm transition-colors flex items-center gap-3">
                                         <LocationIcon className="w-4 h-4 text-sky-500 shrink-0" />
                                         <span>{loc}</span>
                                     </button>
                                 ))}
-                                {tempLoc.length >= 3 && locationSuggestions.length === 0 && !isSearchingLoc && (
-                                    <p className="text-zinc-500 text-xs p-4 text-center">{t('createPulse.searchingLocations')}</p>
-                                )}
+                                {tempLoc.length >= 3 && locationSuggestions.length === 0 && !isSearchingLoc && <p className="text-zinc-500 text-xs p-4 text-center">{t('createPulse.searchingLocations')}</p>}
                             </div>
-
-                            <div className="flex gap-3 mt-6">
-                                <Button className="!bg-zinc-800" onClick={() => { setIsAddingLocation(false); setTempLoc(''); setLocationSuggestions([]); }}>{t('common.cancel')}</Button>
-                            </div>
+                            <div className="flex gap-3 mt-6"><Button className="!bg-zinc-800" onClick={() => { setIsAddingLocation(false); setTempLoc(''); setLocationSuggestions([]); }}>{t('common.cancel')}</Button></div>
                         </div>
                     </div>
                 )}
@@ -638,10 +634,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                                 <input type="text" className="w-1/2 bg-zinc-100 text-black p-3 rounded-xl outline-none text-center font-bold" placeholder={t('createPulse.pollOption1')} value={pollO1} onChange={e => setPollO1(e.target.value)} />
                                 <input type="text" className="w-1/2 bg-zinc-100 text-black p-3 rounded-xl outline-none text-center font-bold" placeholder={t('createPulse.pollOption2')} value={pollO2} onChange={e => setPollO2(e.target.value)} />
                             </div>
-                            <div className="flex gap-3 mt-6">
-                                <Button className="!bg-zinc-100 !text-black" onClick={() => setIsAddingPoll(false)}>{t('common.cancel')}</Button>
-                                <Button onClick={() => { if(pollQ) setPoll({ question: pollQ, opt1: pollO1||'Sim', opt2: pollO2||'Não', x: 50, y: 50 }); setIsAddingPoll(false); setPollQ(''); }}>OK</Button>
-                            </div>
+                            <div className="flex gap-3 mt-6"><Button className="!bg-zinc-100 !text-black" onClick={() => setIsAddingPoll(false)}>{t('common.cancel')}</Button><Button onClick={() => { if(pollQ) setPoll({ question: pollQ, opt1: pollO1||'Sim', opt2: pollO2||'Não', x: 50, y: 50 }); setIsAddingPoll(false); setPollQ(''); }}>OK</Button></div>
                         </div>
                     </div>
                 )}
@@ -652,10 +645,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                             <h3 className="text-white font-black text-xl mb-4">{t('createPulse.countdown')}</h3>
                             <input autoFocus type="text" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none mb-3" placeholder={t('createPulse.countdownTitle')} value={cdTitle} onChange={e => setCdTitle(e.target.value)} />
                             <input type="date" className="w-full bg-zinc-800 text-white p-4 rounded-2xl outline-none mb-3" value={cdDate} onChange={e => setCdDate(e.target.value)} />
-                            <div className="flex gap-3 mt-6">
-                                <Button className="!bg-zinc-800" onClick={() => setIsAddingCountdown(false)}>{t('common.cancel')}</Button>
-                                <Button onClick={() => { if(cdTitle) setCountdown({ title: cdTitle, date: cdDate, x: 50, y: 50 }); setIsAddingCountdown(false); setCdTitle(''); }}>OK</Button>
-                            </div>
+                            <div className="flex gap-3 mt-6"><Button className="!bg-zinc-800" onClick={() => setIsAddingCountdown(false)}>{t('common.cancel')}</Button><Button onClick={() => { if(cdTitle) setCountdown({ title: cdTitle, date: cdDate, x: 50, y: 50 }); setIsAddingCountdown(false); setCdTitle(''); }}>OK</Button></div>
                         </div>
                     </div>
                 )}
