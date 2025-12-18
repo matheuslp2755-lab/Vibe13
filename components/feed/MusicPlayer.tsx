@@ -43,7 +43,7 @@ const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const SNIPPET_DURATION = 25; // Atualizado para 25 segundos
+const SNIPPET_DURATION = 25; 
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted, setIsMuted }) => {
     const { t } = useLanguage();
@@ -68,6 +68,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
 
         if (isPlaying) {
             const startTime = musicInfo.startTime || 0;
+            // Garante que o áudio comece no ponto selecionado
             if (audio.currentTime < startTime || audio.currentTime >= startTime + SNIPPET_DURATION) {
                 audio.currentTime = startTime;
             }
@@ -86,6 +87,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
         const handleTimeUpdate = () => {
             const time = audio.currentTime;
             const startTime = musicInfo.startTime || 0;
+            // Loop dentro dos 25 segundos
             if (time >= startTime + SNIPPET_DURATION) {
                 audio.currentTime = startTime;
             }
@@ -137,6 +139,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
                 >
                     {isMuted ? <VolumeOffIcon className="w-5 h-5" /> : <VolumeOnIcon className="w-5 h-5" />}
                 </button>
+                {/* Aqui o audio src carrega a trilha inteira (original) */}
                 <audio ref={audioRef} src={musicInfo.preview} preload="metadata" muted={isMuted} />
             </div>
         </div>

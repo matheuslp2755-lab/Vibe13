@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
 
@@ -25,161 +25,227 @@ interface MusicTrimmerProps {
   onBack: () => void;
 }
 
-const PlayIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" clipRule="evenodd" />
-    </svg>
-);
+const SNIPPET_DURATION = 25;
 
-const PauseIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 100-2H9V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 100-2h-1V8a1 1 0 00-1-1z" clipRule="evenodd" />
-    </svg>
-);
-
-const SNIPPET_DURATION = 25; // Solicitado trecho de 25 segundos
+// Letras sincronizadas mockadas para o sistema (No app real, viriam da API de letras)
+const MOCK_LYRICS = [
+  { time: 0, text: "🎶 Aumenta o som, sente a batida..." },
+  { time: 4, text: "O universo conspira a nosso favor ✨" },
+  { time: 8, text: "Nada pode nos parar agora 🚀" },
+  { time: 12, text: "Vivendo intensamente cada segundo 🌟" },
+  { time: 16, text: "Nossa conexão brilha mais que neon 🔥" },
+  { time: 20, text: "Dançando sob as luzes da cidade 🏙️" },
+  { time: 24, text: "A vibe que contagia todo mundo 🌈" },
+  { time: 28, text: "O melhor momento é o agora 💎" },
+  { time: 32, text: "Rumo ao infinito e além 🎸" },
+  { time: 36, text: "Sintonizados na mesma frequência ⚡" },
+  { time: 40, text: "Deixa a música guiar o coração ❤️" }
+];
 
 const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack }) => {
   const { t } = useLanguage();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [startTime, setStartTime] = useState(0);
-  const [trackDuration, setTrackDuration] = useState(30);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0); 
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    
-    audio.volume = 1.0;
 
-    const handleLoadedMetadata = () => {
-        setTrackDuration(audio.duration);
-        audio.currentTime = startTime;
-        audio.play().catch(() => setIsPlaying(false));
-        setIsPlaying(true);
+    const onLoadedMetadata = () => {
+        // Pega a duração real da música (inteira)
+        setDuration(audio.duration);
+        audio.currentTime = 0;
     };
 
-    const handleTimeUpdate = () => {
-        if (audio.currentTime >= startTime + SNIPPET_DURATION) {
-            audio.currentTime = startTime; 
+    const onTimeUpdate = () => {
+        setCurrentTime(audio.currentTime);
+        // Garante o loop infinito APENAS no trecho de 25s selecionado
+        if (!isDragging && audio.currentTime >= startTime + SNIPPET_DURATION) {
+            audio.currentTime = startTime;
         }
     };
 
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
-
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('timeupdate', onTimeUpdate);
     return () => {
-      audio.pause();
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
     };
-  }, [startTime]);
+  }, [startTime, isDragging]);
+
+  useEffect(() => {
+    if (audioRef.current && !isDragging) {
+        audioRef.current.currentTime = startTime;
+        audioRef.current.play().catch(() => {});
+        setIsPlaying(true);
+    }
+  }, [startTime, isDragging]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newStartTime = parseFloat(e.target.value);
-    setStartTime(newStartTime);
+    const val = parseFloat(e.target.value);
+    setStartTime(val);
     if (audioRef.current) {
-        audioRef.current.currentTime = newStartTime;
-        if (!isPlaying) {
-            audioRef.current.play().catch(() => setIsPlaying(false));
-            setIsPlaying(true);
+        audioRef.current.currentTime = val;
+    }
+  };
+
+  // Encontra o índice da letra ativa para o efeito de destaque e scroll
+  const activeLyricIndex = useMemo(() => {
+    const time = isDragging ? startTime : currentTime;
+    let index = 0;
+    for (let i = 0; i < MOCK_LYRICS.length; i++) {
+        if (MOCK_LYRICS[i].time <= time) {
+            index = i;
+        } else {
+            break;
         }
     }
-  };
+    return index;
+  }, [currentTime, startTime, isDragging]);
 
-  const togglePlayPause = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      if (audio.currentTime < startTime || audio.currentTime > startTime + SNIPPET_DURATION) {
-          audio.currentTime = startTime;
-      }
-      audio.play();
-    }
-  };
-
-  const handleConfirm = () => {
-    onConfirm({
-      nome: track.trackName,
-      artista: track.artistName,
-      capa: track.artworkUrl100,
-      preview: track.previewUrl,
-      startTime: startTime,
-    });
-  };
-
-  const maxStartTime = Math.max(0, trackDuration - SNIPPET_DURATION);
-  const barCount = 60;
+  const maxStartTime = Math.max(0, duration - SNIPPET_DURATION);
+  const barCount = 100; // Waveform mais densa para a música toda
 
   return (
-    <div className="p-4 flex flex-col items-center gap-6 text-center">
-      <audio ref={audioRef} src={track.previewUrl} preload="auto" />
-      <img src={track.artworkUrl100.replace('100x100', '400x400')} alt={track.trackName} className="w-48 h-48 rounded-lg shadow-lg border dark:border-zinc-800" />
-      <div>
-        <p className="font-bold text-lg">{track.trackName}</p>
-        <p className="text-sm text-zinc-500">{track.artistName}</p>
+    <div className="flex flex-col items-center gap-6 p-6 h-full bg-white dark:bg-black animate-fade-in overflow-hidden">
+      <audio ref={audioRef} src={track.previewUrl} />
+
+      {/* LYRICS ENGINE: Visualização da Letra Sincronizada (Scrolling Centralizado) */}
+      <div className="w-full h-36 flex flex-col items-center justify-center relative">
+         <div className="absolute inset-0 bg-gradient-to-b from-white dark:from-black via-transparent to-white dark:to-black z-10 pointer-events-none" />
+         <div 
+            className="flex flex-col items-center gap-6 transition-all duration-500 ease-out"
+            style={{ transform: `translateY(${(activeLyricIndex * -52) + 26}px)` }}
+         >
+            {MOCK_LYRICS.map((line, idx) => {
+                const isActive = idx === activeLyricIndex;
+                return (
+                    <p 
+                        key={idx}
+                        className={`text-center font-black transition-all duration-500 max-w-xs ${
+                            isActive 
+                            ? 'text-4xl bg-gradient-to-r from-sky-400 via-purple-500 to-pink-500 text-transparent bg-clip-text scale-110 opacity-100 drop-shadow-md' 
+                            : 'text-xl text-zinc-300 dark:text-zinc-800 opacity-20 blur-[1px]'
+                        }`}
+                    >
+                        {line.text}
+                    </p>
+                );
+            })}
+         </div>
       </div>
 
-      <div className="w-full flex items-center gap-4 bg-transparent p-4 rounded-2xl border dark:border-zinc-800">
-        <button onClick={togglePlayPause} className="text-sky-500 flex-shrink-0 active:scale-90 transition-transform">
-          {isPlaying ? <PauseIcon className="w-10 h-10" /> : <PlayIcon className="w-10 h-10" />}
-        </button>
-        
-        <div className="flex-grow flex flex-col gap-2">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-left">{t('musicSearch.trimInstructions')}</p>
-            
-            <div className="relative h-16 w-full flex items-center">
-                {/* Ondas Sonoras da Música Inteira */}
-                <div className="absolute inset-0 flex items-center justify-between gap-[2px]">
-                    {Array.from({ length: barCount }).map((_, i) => {
-                        const barTime = (i / barCount) * trackDuration;
-                        const isActive = barTime >= startTime && barTime <= startTime + SNIPPET_DURATION;
-                        
-                        return (
-                            <div 
-                                key={i} 
-                                className={`w-1 rounded-full transition-colors duration-300 ${isActive ? 'bg-sky-500' : 'bg-zinc-300 dark:bg-zinc-700'}`} 
-                                style={{ height: `${25 + Math.abs(Math.sin(i * 0.5)) * 65}%` }}
-                            />
-                        );
-                    })}
-                </div>
-
-                <input
-                    type="range"
-                    min="0"
-                    max={maxStartTime}
-                    step="0.1"
-                    value={startTime}
-                    onChange={handleSliderChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                    disabled={maxStartTime <= 0}
-                />
-            </div>
-
-             <div className="flex justify-between text-[10px] text-zinc-500 mt-1 font-mono font-bold">
-                <span>0:00</span>
-                <span>0:{Math.floor(trackDuration).toString().padStart(2, '0')}</span>
-            </div>
+      {/* Identidade Visual: Capa e Artista */}
+      <div className="relative group mt-2">
+        <img 
+            src={track.artworkUrl100.replace('100x100', '600x600')} 
+            alt={track.trackName} 
+            className="w-44 h-44 rounded-[3rem] shadow-2xl border-4 border-zinc-100 dark:border-zinc-800 transition-transform group-hover:scale-105" 
+        />
+        <div className="absolute -bottom-2 -right-2 bg-sky-500 p-3 rounded-full shadow-lg border-2 border-white dark:border-black">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.447-.894L4 6.424V20.5a1 1 0 001.5 1.5h.01L17 18.424V4.5a1 1 0 00-1-1.5zM6 8.118l8-2.436v8.664l-8 2.436V8.118z" /></svg>
         </div>
       </div>
-      
-      <div className="w-full flex gap-3">
-          <button onClick={onBack} className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-full font-bold text-sm">
+
+      <div className="text-center">
+        <h3 className="font-black text-2xl tracking-tight leading-tight">{track.trackName}</h3>
+        <p className="text-zinc-500 font-bold text-sm uppercase tracking-widest mt-1 opacity-60">{track.artistName}</p>
+      </div>
+
+      {/* WAVEFORM SELECTOR (SISTEMA DE MÚSICA COMPLETA) */}
+      <div className="w-full space-y-6 px-2 mt-4">
+        <div className="relative h-32 w-full flex items-center bg-zinc-50 dark:bg-zinc-900/40 rounded-[2.5rem] border border-zinc-100 dark:border-zinc-800 overflow-hidden shadow-inner">
+            
+            {/* Waveform Base: Representa a música INTEIRA */}
+            <div className="absolute inset-0 flex items-center justify-between gap-[2px] px-8 opacity-10">
+                {Array.from({ length: barCount }).map((_, i) => (
+                    <div 
+                        key={i} 
+                        className="w-[2px] rounded-full bg-zinc-600 dark:bg-zinc-400" 
+                        style={{ height: `${20 + Math.abs(Math.sin(i * 0.4)) * 60}%` }}
+                    />
+                ))}
+            </div>
+
+            {/* Janela de 25s: Highlight dinâmico que se move conforme o tempo */}
+            <div 
+                className="absolute inset-0 flex items-center justify-between gap-[2px] px-8 pointer-events-none overflow-hidden transition-all duration-100"
+                style={{ 
+                    clipPath: `inset(0 ${100 - ((startTime + SNIPPET_DURATION) / (duration || 1)) * 100}% 0 ${(startTime / (duration || 1)) * 100}%)` 
+                }}
+            >
+                {Array.from({ length: barCount }).map((_, i) => (
+                    <div 
+                        key={i} 
+                        className="w-[2px] rounded-full bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.9)]" 
+                        style={{ height: `${25 + Math.abs(Math.sin(i * 0.4)) * 75}%` }}
+                    />
+                ))}
+            </div>
+
+            {/* Slider de Arraste da Timeline */}
+            <input
+                type="range"
+                min="0"
+                max={maxStartTime}
+                step="0.01"
+                value={startTime}
+                onMouseDown={() => setIsDragging(true)}
+                onMouseUp={() => setIsDragging(false)}
+                onTouchStart={() => setIsDragging(true)}
+                onTouchEnd={() => setIsDragging(false)}
+                onChange={handleSliderChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
+                disabled={maxStartTime <= 0}
+            />
+
+            {/* Indicador Visual da Janela de 25s (Estilo Instagram) */}
+            <div 
+                className="absolute h-full border-x-4 border-sky-500 bg-sky-500/5 pointer-events-none transition-all duration-100 shadow-[0_0_30px_rgba(14,165,233,0.15)]"
+                style={{ 
+                    left: `${(startTime / (duration || 1)) * 100}%`, 
+                    width: `${(SNIPPET_DURATION / (duration || 1)) * 100}%` 
+                }}
+            >
+                <div className="absolute top-[-4px] left-0 right-0 h-1.5 bg-sky-500 rounded-full" />
+                <div className="absolute bottom-[-4px] left-0 right-0 h-1.5 bg-sky-500 rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[4.5rem] bg-sky-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full whitespace-nowrap shadow-xl border-2 border-white dark:border-black">
+                    JANELA DE 25s
+                </div>
+            </div>
+        </div>
+
+        <div className="flex justify-between items-center text-[10px] font-black text-zinc-400 uppercase tracking-widest px-6">
+            <span>0:00</span>
+            <span className="text-sky-500 animate-pulse">{t('musicSearch.trimInstructions')}</span>
+            <span>{Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}</span>
+        </div>
+      </div>
+
+      {/* Botões de Ação */}
+      <div className="w-full flex gap-3 mt-auto mb-2">
+        <button 
+            onClick={onBack} 
+            className="flex-1 py-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 font-black text-xs uppercase tracking-widest text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+        >
             {t('common.cancel')}
-          </button>
-          <Button onClick={handleConfirm} className="flex-1 !rounded-full !py-3">
+        </button>
+        <Button 
+            onClick={() => onConfirm({
+                nome: track.trackName,
+                artista: track.artistName,
+                capa: track.artworkUrl100,
+                preview: track.previewUrl,
+                startTime: startTime,
+            })} 
+            className="flex-1 !rounded-2xl !py-4 !text-xs !font-black !uppercase !tracking-widest shadow-2xl shadow-sky-500/30"
+        >
             {t('musicSearch.done')}
-          </Button>
+        </Button>
       </div>
     </div>
   );

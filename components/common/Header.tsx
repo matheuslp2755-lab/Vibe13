@@ -238,20 +238,20 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     };
 
     return (
-        <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-300 dark:border-zinc-800 z-50">
+        <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-200 dark:border-zinc-800 z-50">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl gap-4">
                 
                 {!isMobileSearchOpen && (
                     <h1 
                         onClick={onGoHome} 
-                        className="text-3xl font-serif cursor-pointer shrink-0 font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text animate-fade-in tracking-tighter"
+                        className="text-4xl font-serif cursor-pointer shrink-0 font-black bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-transparent bg-clip-text drop-shadow-md tracking-tighter"
                     >
                         {t('header.title')}
                     </h1>
                 )}
 
                 <div ref={searchRef} className="relative flex-grow max-w-xs hidden sm:block">
-                    <div className={`flex items-center bg-zinc-100 dark:bg-zinc-900 border border-transparent focus-within:border-zinc-300 dark:focus-within:border-zinc-700 rounded-lg px-3 transition-all ${isSearchFocused ? 'ring-2 ring-sky-500/20' : ''}`}>
+                    <div className={`flex items-center bg-zinc-100 dark:bg-zinc-900 border border-transparent focus-within:border-zinc-300 dark:focus-within:border-zinc-700 rounded-xl px-3 transition-all ${isSearchFocused ? 'ring-2 ring-sky-500/20' : ''}`}>
                         <SearchIcon />
                         <input
                             type="text"
@@ -259,25 +259,25 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onFocus={() => setIsSearchFocused(true)}
-                            className="w-full bg-transparent p-2 text-sm outline-none dark:text-white"
+                            className="w-full bg-transparent p-2 text-sm outline-none dark:text-white font-medium"
                         />
                     </div>
 
                     {isSearchFocused && (searchQuery || isSearching) && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-50">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-50 animate-fade-in">
                             {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
                                 <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors">
                                     <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-700" />
                                     <span className="text-sm font-bold">{user.username}</span>
                                 </div>
-                            )) : <p className="p-8 text-center text-sm text-zinc-500">{t('header.noResults')}</p>}
+                            )) : <p className="p-8 text-center text-sm text-zinc-500 font-bold">{t('header.noResults')}</p>}
                         </div>
                     )}
                 </div>
 
                 {isMobileSearchOpen ? (
                     <div ref={mobileSearchRef} className="flex-grow flex items-center gap-2 sm:hidden animate-slide-right">
-                        <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-full px-3 py-1 border dark:border-zinc-800">
+                        <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-1.5 border dark:border-zinc-800">
                             <SearchIcon className="h-4 w-4 text-zinc-400" />
                             <input
                                 autoFocus
@@ -285,7 +285,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                 placeholder={t('header.searchPlaceholder')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-transparent p-1.5 text-sm outline-none dark:text-white"
+                                className="w-full bg-transparent p-1.5 text-sm outline-none dark:text-white font-medium"
                             />
                             {searchQuery && (
                                 <button onClick={() => setSearchQuery('')} className="text-zinc-400">
@@ -293,27 +293,16 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                 </button>
                             )}
                         </div>
-                        <button onClick={() => setIsMobileSearchOpen(false)} className="text-sm font-semibold text-sky-500">
+                        <button onClick={() => setIsMobileSearchOpen(false)} className="text-sm font-black text-sky-500 uppercase tracking-tighter">
                             {t('common.cancel')}
                         </button>
-                        
-                        {(searchQuery || isSearching) && (
-                            <div className="absolute top-full left-0 right-0 bg-white dark:bg-black border-b dark:border-zinc-800 shadow-xl max-h-[80vh] overflow-y-auto z-50">
-                                {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
-                                    <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 border-b dark:border-zinc-900 last:border-0">
-                                        <img src={user.avatar} className="w-12 h-12 rounded-full object-cover border dark:border-zinc-700" />
-                                        <span className="text-sm font-bold">{user.username}</span>
-                                    </div>
-                                )) : <p className="p-10 text-center text-sm text-zinc-500">{t('header.noResults')}</p>}
-                            </div>
-                        )}
                     </div>
                 ) : (
-                    <nav className="flex items-center gap-4 shrink-0">
+                    <nav className="flex items-center gap-5 shrink-0">
                         <button 
                             onClick={() => setIsMobileSearchOpen(true)}
                             className="p-1.5 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                            aria-label="Search"
+                            aria-label="Busca"
                         >
                             <SearchIcon className="h-7 w-7 text-zinc-800 dark:text-zinc-200" />
                         </button>
@@ -325,16 +314,16 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                             </button>
                             
                             {isActivityDropdownOpen && (
-                                <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-zinc-950 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 z-50 max-h-[70vh] overflow-y-auto">
+                                <div className="absolute right-0 top-full mt-4 w-80 bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 z-50 max-h-[70vh] overflow-y-auto animate-fade-in">
                                     {notifications.length > 0 ? notifications.map(n => (
-                                        <div key={n.id} onClick={() => { handleNotificationClick(n); setIsActivityDropdownOpen(false); }} className="flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer border-b last:border-0 dark:border-zinc-800">
-                                            <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0"/>
+                                        <div key={n.id} onClick={() => { handleNotificationClick(n); setIsActivityDropdownOpen(false); }} className="flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer border-b last:border-0 dark:border-zinc-800 transition-colors">
+                                            <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700"/>
                                             <div className="ml-3 text-sm flex-grow text-left">
-                                                <p className="leading-tight" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b>${n.fromUsername}</b>`) }} />
+                                                <p className="leading-snug" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
                                                 {(n.type === 'duo_request' || n.type === 'tag_request') && (
                                                     <div className="flex gap-2 mt-3">
-                                                        <button onClick={(e) => { e.stopPropagation(); n.type === 'duo_request' ? handleAcceptDuoRequest(n) : handleAcceptTagRequest(n); }} className="text-xs font-bold text-white bg-sky-500 px-4 py-1.5 rounded-lg shadow-sm hover:bg-sky-600 transition-colors">{t('header.accept')}</button>
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); }} className="text-xs font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">{t('header.decline')}</button>
+                                                        <button onClick={(e) => { e.stopPropagation(); n.type === 'duo_request' ? handleAcceptDuoRequest(n) : handleAcceptTagRequest(n); }} className="text-xs font-black text-white bg-sky-500 px-4 py-2 rounded-xl shadow-sm hover:bg-sky-600 transition-colors uppercase tracking-widest">{t('header.accept')}</button>
+                                                        <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); }} className="text-xs font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors uppercase tracking-widest">{t('header.decline')}</button>
                                                     </div>
                                                 )}
                                             </div>
@@ -344,7 +333,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                             <div className="w-16 h-16 rounded-full border-2 border-zinc-200 dark:border-zinc-800 flex items-center justify-center mb-4">
                                                 <HeartIcon className="w-8 h-8 text-zinc-300" />
                                             </div>
-                                            <p className="text-sm font-bold">{t('header.noActivity')}</p>
+                                            <p className="text-sm font-black text-zinc-400 uppercase tracking-widest">{t('header.noActivity')}</p>
                                         </div>
                                     )}
                                 </div>

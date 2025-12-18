@@ -79,8 +79,8 @@
     "delete": "Excluir",
     "editCaption": "Editar legenda",
     "addCaption": "Adicionar legenda",
-    "changeMusic": "Trocar música",
-    "addMusic": "Adicionar música",
+    "changeMusic": "Trocar trilha sonora",
+    "addMusic": "Adicionar trilha sonora",
     "tagFriends": "Marcar amigos",
     "inviteDuo": "Convidar Duo",
     "deletePostTitle": "Excluir publicação?",
@@ -98,36 +98,16 @@
   "musicSearch": {
     "fetchError": "Erro ao buscar músicas",
     "searchError": "Ocorreu um erro durante a busca.",
-    "trimInstructions": "Deslize para escolher os 25s da música",
-    "done": "Concluir"
+    "trimInstructions": "Deslize para escolher os 25s perfeitos",
+    "done": "Concluir",
+    "suggestions": "Sugestões para você",
+    "trending": "Bombando no Vibe",
+    "lyricsTitle": "Letras sincronizadas"
   },
   "addMusicModal": {
-    "title": "Música"
-  },
-  "vibes": {
-    "title": "Vibes",
-    "loading": "Carregando Vibes...",
-    "deleteTitle": "Excluir Vibe?",
-    "deleteBody": "Tem certeza que deseja remover este vídeo?"
-  },
-  "time": {
-    "seconds": "há {count}s",
-    "minutes": "há {count}min",
-    "hours": "há {count}h",
-    "days": "há {count}d"
+    "title": "Selecionar Música"
   },
   "welcome": {
     "title": "Bem-vindo(a) ao Vibe"
-  },
-  "createPost": {
-    "title": "Nova Publicação",
-    "share": "Compartilhar",
-    "sharing": "Compartilhando...",
-    "captionLabel": "Escreva uma legenda...",
-    "selectFromComputer": "Selecionar do computador",
-    "publishError": "Erro ao publicar. Tente novamente.",
-    "searchMusicPlaceholder": "Pesquisar música ou artista...",
-    "search": "Buscar",
-    "selectMusic": "Selecionar"
   }
 }
