@@ -29,6 +29,7 @@ type PostType = {
 
 interface PostProps {
     post: PostType;
+    isActive?: boolean;
     onPostDeleted: (id: string) => void;
     onForward?: (post: PostType) => void;
     onEditCaption?: (post: PostType) => void;
@@ -39,6 +40,7 @@ interface PostProps {
 
 const Post: React.FC<PostProps> = ({ 
     post, 
+    isActive = true,
     onPostDeleted, 
     onForward, 
     onEditCaption, 
@@ -59,23 +61,18 @@ const Post: React.FC<PostProps> = ({
     const media = post.media || [{ url: post.imageUrl, type: 'image' }];
     const currentUser = auth.currentUser;
     const videoRef = useRef<HTMLVideoElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // Controle de reprodução de vídeo baseado na prop isActive
     useEffect(() => {
-        if (media[currentMediaIndex].type !== 'video') return;
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && videoRef.current) {
-                    videoRef.current.play().catch(() => {});
-                } else if (videoRef.current) {
-                    videoRef.current.pause();
-                }
-            });
-        }, { threshold: 0.7 });
-        if (containerRef.current) observer.observe(containerRef.current);
-        return () => observer.disconnect();
-    }, [currentMediaIndex, media]);
+        if (media[currentMediaIndex].type !== 'video' || !videoRef.current) return;
+        
+        if (isActive) {
+            videoRef.current.play().catch(() => {});
+        } else {
+            videoRef.current.pause();
+        }
+    }, [isActive, currentMediaIndex, media]);
 
     useEffect(() => {
         const q = query(collection(db, 'posts', post.id, 'comments'), orderBy('timestamp', 'asc'));
@@ -118,7 +115,7 @@ const Post: React.FC<PostProps> = ({
     const isAuthor = currentUser?.uid === post.userId;
 
     return (
-        <article ref={containerRef} className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm mb-4">
+        <article className="bg-white dark:bg-black border border-zinc-300 dark:border-zinc-800 rounded-lg overflow-hidden shadow-sm mb-4 lg:max-w-xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
@@ -191,10 +188,10 @@ const Post: React.FC<PostProps> = ({
                 )}
             </div>
 
-            {/* Music Info */}
+            {/* Music Info - Só toca se isActive for true */}
             {post.musicInfo && (
                 <div className="border-t dark:border-zinc-800">
-                    <MusicPlayer musicInfo={post.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={setGlobalMuted} />
+                    <MusicPlayer musicInfo={post.musicInfo} isPlaying={isActive} isMuted={isGlobalMuted} setIsMuted={setGlobalMuted} />
                 </div>
             )}
 

@@ -40,13 +40,13 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
     const { t } = useLanguage();
 
     return (
-        <div className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm sticky top-0 z-20">
+        <div className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-black/50 backdrop-blur-sm sticky top-0 z-20 lg:rounded-xl lg:border lg:mb-4">
             <div className="flex items-center gap-3 px-4 py-4 overflow-x-auto no-scrollbar scroll-smooth">
                 {/* Cartões de Transmissão ao Vivo */}
                 {activeLives.map((live) => (
                     <div 
                         key={`live-${live.liveId}`}
-                        className="relative flex-shrink-0 w-24 h-40 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border-[3px] border-red-500 transition-all duration-300 hover:scale-105 active:scale-95"
+                        className="relative flex-shrink-0 w-24 h-40 lg:w-28 lg:h-44 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border-[3px] border-red-500 transition-all duration-300 hover:scale-105 active:scale-95"
                         onClick={() => onJoinLive && onJoinLive(live.liveId, live.host)}
                         role="button"
                     >
@@ -76,7 +76,7 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                     return (
                         <div 
                             key={author.id} 
-                            className="relative flex-shrink-0 w-24 h-40 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:scale-105 active:scale-95"
+                            className="relative flex-shrink-0 w-24 h-40 lg:w-28 lg:h-44 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:scale-105 active:scale-95"
                             onClick={() => onViewPulses(author.id)}
                             role="button"
                         >
