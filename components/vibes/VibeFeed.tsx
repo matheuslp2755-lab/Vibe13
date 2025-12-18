@@ -28,6 +28,19 @@ type VibeType = {
     };
 };
 
+const VolumeOnIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+    </svg>
+);
+
+const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+    </svg>
+);
+
 const VibeCommentsModal: React.FC<{ isOpen: boolean; onClose: () => void; vibeId: string }> = ({ isOpen, onClose, vibeId }) => {
     const [comments, setComments] = useState<any[]>([]);
     const [text, setText] = useState('');
@@ -60,7 +73,7 @@ const VibeCommentsModal: React.FC<{ isOpen: boolean; onClose: () => void; vibeId
             <div className="bg-white dark:bg-zinc-900 rounded-t-2xl h-2/3 flex flex-col p-4 animate-slide-up" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-4 border-b dark:border-zinc-800 pb-2">
                     <h3 className="font-bold">Comentários</h3>
-                    <button onClick={onClose} className="text-xl">&times;</button>
+                    <button onClick={onClose} className="text-xl font-light">&times;</button>
                 </div>
                 <div className="flex-grow overflow-y-auto space-y-4">
                     {comments.map(c => (
@@ -109,18 +122,13 @@ const VibeItem: React.FC<{
         });
     };
 
-    const handleLikeOnly = async () => {
-        if (!currentUser || vibe.likes.includes(currentUser.uid)) return;
-        await updateDoc(doc(db, 'vibes', vibe.id), { 
-            likes: arrayUnion(currentUser.uid) 
-        });
-    };
-
     const handleDoubleTap = () => {
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
         if (now - lastTap.current < DOUBLE_TAP_DELAY) {
-            handleLikeOnly();
+            if (!isLiked) {
+                handleLikeAction();
+            }
             setShowHeartAnim(true);
             setTimeout(() => setShowHeartAnim(false), 800);
         }
@@ -142,13 +150,20 @@ const VibeItem: React.FC<{
                     )}
                 </div>
             ) : (
-                <video ref={videoRef} src={vibe.videoUrl} className="w-full h-full object-contain" loop playsInline muted={isGlobalMuted} onClick={(e) => { e.stopPropagation(); setGlobalMuted(!isGlobalMuted); }} />
+                <video 
+                    ref={videoRef} 
+                    src={vibe.videoUrl} 
+                    className="w-full h-full object-contain" 
+                    loop 
+                    playsInline 
+                    muted={isGlobalMuted} 
+                />
             )}
 
             {/* Like Animation Overlay */}
             {showHeartAnim && (
                 <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-                    <svg className="w-32 h-32 text-white fill-current animate-heart-pop" viewBox="0 0 24 24">
+                    <svg className="w-32 h-32 text-white fill-current animate-heart-pop drop-shadow-2xl" viewBox="0 0 24 24">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                     </svg>
                 </div>
@@ -174,6 +189,14 @@ const VibeItem: React.FC<{
 
                 <div className="flex flex-col items-center cursor-pointer group">
                     <svg className="w-9 h-9 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </div>
+
+                <div className="flex flex-col items-center cursor-pointer" onClick={(e) => { e.stopPropagation(); setGlobalMuted(!isGlobalMuted); }}>
+                    {isGlobalMuted ? (
+                        <VolumeOffIcon className="w-9 h-9 text-white drop-shadow-md" />
+                    ) : (
+                        <VolumeOnIcon className="w-9 h-9 text-white drop-shadow-md" />
+                    )}
                 </div>
                 
                 {currentUser?.uid === vibe.userId && (
@@ -201,13 +224,13 @@ const VibeItem: React.FC<{
             <style>{`
                 @keyframes heart-pop {
                     0% { transform: scale(0); opacity: 0; }
-                    15% { transform: scale(1.2); opacity: 0.9; }
+                    15% { transform: scale(1.25); opacity: 0.9; }
                     30% { transform: scale(1); opacity: 1; }
                     80% { transform: scale(1); opacity: 1; }
-                    100% { transform: scale(1.5); opacity: 0; }
+                    100% { transform: scale(1.6); opacity: 0; }
                 }
                 .animate-heart-pop {
-                    animation: heart-pop 0.8s ease-out forwards;
+                    animation: heart-pop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                 }
             `}</style>
         </div>
