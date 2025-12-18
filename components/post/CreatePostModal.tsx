@@ -43,7 +43,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                 username: auth.currentUser?.displayName,
                 userAvatar: auth.currentUser?.photoURL,
                 media: mediaUrls,
-                imageUrl: mediaUrls[0].url, // Compatibilidade com código antigo
+                imageUrl: mediaUrls[0].url, 
                 caption,
                 likes: [],
                 timestamp: serverTimestamp(),
@@ -65,14 +65,23 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                     </Button>
                 </header>
                 <div className="flex-grow overflow-y-auto p-4 flex flex-col md:flex-row gap-4">
-                    <div className="w-full md:w-1/2 grid grid-cols-2 gap-1 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg">
+                    <div className="w-full md:w-1/2 grid grid-cols-2 sm:grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-900 p-2 rounded-lg">
                         {images.map((img, i) => (
-                            <div key={i} className="aspect-square relative">
-                                {img.file.type.startsWith('video/') ? <video src={img.preview} className="w-full h-full object-cover" /> : <img src={img.preview} className="w-full h-full object-cover" />}
+                            <div key={i} className="aspect-square relative rounded-md overflow-hidden">
+                                {img.file.type.startsWith('video/') ? (
+                                    <video src={img.preview} className="w-full h-full object-cover" />
+                                ) : (
+                                    <img src={img.preview} className="w-full h-full object-cover" />
+                                )}
+                                <div className="absolute top-1 right-1 bg-black/50 text-white text-[10px] px-1.5 rounded-full">{i + 1}</div>
                             </div>
                         ))}
                     </div>
                     <div className="w-full md:w-1/2 flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            <img src={auth.currentUser?.photoURL || ''} className="w-8 h-8 rounded-full object-cover" />
+                            <span className="font-semibold text-sm">{auth.currentUser?.displayName}</span>
+                        </div>
                         <TextAreaInput label={t('createPost.captionLabel')} value={caption} onChange={e => setCaption(e.target.value)} id="post-caption" />
                     </div>
                 </div>
