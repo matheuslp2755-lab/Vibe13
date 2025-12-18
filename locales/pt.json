@@ -140,6 +140,7 @@
     "userUnavailable": "Usuário indisponível.",
     "options": "Opções de Perfil",
     "addAccount": "Adicionar outra conta",
+    "switchAccount": "Trocar de conta",
     "logout": "Sair"
   },
   "editProfile": {

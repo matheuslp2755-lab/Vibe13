@@ -52,6 +52,12 @@ const HeartIcon: React.FC<{className?: string, filled?: boolean}> = ({ className
     </svg>
 );
 
+const TrashIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+);
+
 const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPulseIndex, authorInfo, onClose, onDelete, onViewProfile }) => {
     const { t } = useLanguage();
     const { isGlobalMuted, setGlobalMuted } = useCall();
@@ -59,6 +65,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
     const [isMusicMuted, setIsMusicMuted] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [isReplying, setIsReplying] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
     const currentPulse = pulses[currentIndex];
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -94,6 +101,23 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
             });
         } catch (err) {
             console.error("Error liking pulse:", err);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!isOwner || !currentPulse) return;
+        try {
+            await deleteDoc(doc(db, 'pulses', currentPulse.id));
+            onDelete(currentPulse);
+            if (pulses.length === 1) {
+                onClose();
+            } else {
+                goToNext();
+            }
+        } catch (error) {
+            console.error("Error deleting pulse:", error);
+        } finally {
+            setShowDeleteConfirm(false);
         }
     };
 
@@ -194,6 +218,15 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 </div>
 
                 <div className="absolute top-8 right-4 z-50 flex items-center gap-2">
+                    {isOwner && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} 
+                            className="text-white bg-black/20 rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-500 transition-colors"
+                            title={t('pulseViewer.delete')}
+                        >
+                            <TrashIcon className="w-5 h-5" />
+                        </button>
+                    )}
                     <button onClick={onClose} className="text-white text-3xl font-light hover:scale-110 transition-transform bg-black/20 rounded-full w-10 h-10 flex items-center justify-center ml-2">&times;</button>
                 </div>
 
@@ -224,6 +257,19 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 </div>
             </div>
             
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[120]" onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}>
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl max-w-sm w-full mx-4 text-center border dark:border-zinc-800" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg mb-2">{t('pulseViewer.deleteTitle')}</h3>
+                        <p className="text-zinc-500 dark:text-zinc-400 mb-6">{t('pulseViewer.deleteBody')}</p>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={handleDelete} className="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors">{t('common.delete')}</button>
+                            <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-3 bg-zinc-200 dark:bg-zinc-800 font-bold rounded-xl">{t('common.cancel')}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {currentPulse.musicInfo && (
                 <div className="fixed bottom-10 left-4 right-4 z-50 pointer-events-none overflow-hidden h-0 w-0">
                     <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={() => {}} />

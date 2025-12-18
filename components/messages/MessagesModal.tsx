@@ -188,16 +188,18 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
             }
         });
 
+        // Simplified diary query: Fetch all by user and sort in JS to avoid index
         const q = query(
             collection(db, 'diaries'), 
-            where('userId', '==', currentUser.uid),
-            orderBy('createdAt', 'desc'),
-            limit(1)
+            where('userId', '==', currentUser.uid)
         );
     
         const unsubDiary = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
-                const latestDiary = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as DiaryEntry;
+                const latestDiary = snapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() } as DiaryEntry))
+                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))[0];
+
                 if (!isToday(latestDiary.createdAt)) {
                    setMyLatestDiary(null);
                    setHasPostedToday(false);

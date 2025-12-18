@@ -32,7 +32,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [stats, setStats] = useState({ posts: 0, followers: 0, following: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
-    const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [viewingPulses, setViewingPulses] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -62,21 +61,34 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setIsBlocked(blockSnap.exists());
                 }
 
-                const postsQ = query(collection(db, 'posts'), where('userId', '==', userId), orderBy('timestamp', 'desc'));
+                // Simplified query to avoid index requirement: Fetch by userId only, then sort in JS
+                const postsQ = query(collection(db, 'posts'), where('userId', '==', userId));
                 unsubscribePosts = onSnapshot(postsQ, (snap) => {
-                    setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                    const sortedPosts = snap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .sort((a: any, b: any) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    
+                    setPosts(sortedPosts);
                     setStats(prev => ({ ...prev, posts: snap.size }));
                 });
 
-                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                // Simplified query for pulses: Fetch by authorId only, filter and sort in JS
                 const pulsesQ = query(
                     collection(db, 'pulses'), 
-                    where('authorId', '==', userId), 
-                    where('createdAt', '>=', twentyFourHoursAgo),
-                    orderBy('createdAt', 'asc')
+                    where('authorId', '==', userId)
                 );
                 unsubscribePulses = onSnapshot(pulsesQ, (snap) => {
-                    setPulses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+                    const activePulses = snap.docs
+                        .map(d => ({ id: d.id, ...d.data() } as any))
+                        .filter(p => {
+                            if (!p.createdAt) return false;
+                            const createdAtMs = p.createdAt.seconds * 1000;
+                            return createdAtMs >= twentyFourHoursAgo;
+                        })
+                        .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                    
+                    setPulses(activePulses);
                 });
 
                 const fers = await getDocs(collection(db, 'users', userId, 'followers'));
@@ -216,6 +228,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                                     {t('profile.logout')}
+                                </button>
+                                <button 
+                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
+                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 border-t dark:border-zinc-800"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                                    {t('profile.switchAccount')}
                                 </button>
                                 <button 
                                     onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}

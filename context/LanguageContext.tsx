@@ -143,6 +143,7 @@ const ptMessages = {
     "userUnavailable": "Usuário indisponível.",
     "options": "Opções de Perfil",
     "addAccount": "Adicionar outra conta",
+    "switchAccount": "Trocar de conta",
     "logout": "Sair"
   },
   "editProfile": {
@@ -241,7 +242,7 @@ const ptMessages = {
     "placeholder": "No que você está pensando hoje?",
     "empty": "O diário está vazio.",
     "emptySuggestion": "Siga pessoas para ver as entradas do diário delas aqui ou escreva a sua!",
-    "alreadyPosted": "Você já publicou no diário hoje. Volte amanhã!"
+    "alreadyPosted": "Você já publicou no diário hoje. Volte amãnhã!"
   },
   "forwardModal": {
     "title": "Encaminhar para",
@@ -585,7 +586,7 @@ const enMessages = {
     "pulsesTab": "PULSES",
     "noPosts": "No Posts Yet",
     "noPostsSuggestion": "When this user shares photos, you'll see them here.",
-    "noPulses": "No Pulses Yet",
+    "noPulses": "No Posts Yet",
     "noPulsesSuggestion": "This user hasn't shared any pulses.",
     "privateAccountMessage": "This Account is Private",
     "privateAccountSuggestion": "Follow to see their photos and videos.",
@@ -602,6 +603,7 @@ const enMessages = {
     "userUnavailable": "User unavailable.",
     "options": "Profile Options",
     "addAccount": "Add another account",
+    "switchAccount": "Switch account",
     "logout": "Log Out"
   },
   "editProfile": {
