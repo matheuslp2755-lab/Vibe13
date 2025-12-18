@@ -117,7 +117,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
         }
     }, [isOpen]);
 
-    // Busca de locais reais
+    // Busca de locais reais com prompt otimizado para apenas NOMES (estilo Instagram)
     useEffect(() => {
         if (tempLoc.length < 3) {
             setLocationSuggestions([]);
@@ -130,10 +130,7 @@ const CreatePulseModal: React.FC<CreatePulseModalProps> = ({ isOpen, onClose, on
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const response = await ai.models.generateContent({
                     model: "gemini-3-flash-preview",
-                    contents: `Atue como um buscador de locais do Instagram. Retorne APENAS uma lista separada por ponto e vírgula de 5 nomes de locais reais, endereços ou cidades que correspondam ao termo: "${tempLoc}". Não adicione explicações ou introduções.`,
-                    config: {
-                        tools: [{ googleMaps: {} }],
-                    },
+                    contents: `Atue como o sistema de tags de localização do Instagram. O usuário digitou "${tempLoc}". Retorne APENAS uma lista com os 5 nomes de lugares mais prováveis (ex: "São Paulo, Brasil", "Parque Ibirapuera", "Shopping Iguatemi"). Use APENAS nomes amigáveis, evite endereços completos com CEP ou números. Separe os nomes por ponto e vírgula.`,
                 });
 
                 const text = response.text || "";

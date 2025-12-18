@@ -57,6 +57,7 @@ const Post: React.FC<PostProps> = ({
     const [newComment, setNewComment] = useState('');
     const [isLiked, setIsLiked] = useState(post.likes.includes(auth.currentUser?.uid || ''));
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
     const media = post.media || [{ url: post.imageUrl, type: 'image' }];
     const currentUser = auth.currentUser;
@@ -149,7 +150,7 @@ const Post: React.FC<PostProps> = ({
                                 <button onClick={() => { onInviteDuo?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.duoPartner ? t('post.changeDuo') : t('post.inviteDuo')}</button>
                                 <button onClick={() => { onManageTags?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{t('post.tagFriends')}</button>
                                 <div className="border-t dark:border-zinc-800 my-1"></div>
-                                <button onClick={() => { if(confirm(t('post.deletePostBody'))) onPostDeleted(post.id); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold">{t('common.delete')}</button>
+                                <button onClick={() => { setShowDeleteConfirm(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold">{t('common.delete')}</button>
                             </div>
                         )}
                     </div>
@@ -242,6 +243,30 @@ const Post: React.FC<PostProps> = ({
                 
                 <p className="text-[10px] text-zinc-400 mt-2 uppercase">{formatTimestamp(post.timestamp)}</p>
             </div>
+
+            {/* Custom Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl w-full max-w-xs text-center border dark:border-zinc-800">
+                        <h3 className="font-bold mb-2">{t('post.deletePostTitle')}</h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{t('post.deletePostBody')}</p>
+                        <div className="flex flex-col gap-2">
+                            <button 
+                                onClick={() => { onPostDeleted(post.id); setShowDeleteConfirm(false); }} 
+                                className="w-full py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors"
+                            >
+                                {t('common.delete')}
+                            </button>
+                            <button 
+                                onClick={() => setShowDeleteConfirm(false)} 
+                                className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-white font-bold rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                            >
+                                {t('common.cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </article>
     );
 };

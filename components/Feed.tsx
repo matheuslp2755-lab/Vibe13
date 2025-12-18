@@ -16,7 +16,7 @@ import ForwardModal from './messages/ForwardModal';
 import AddCaptionModal from './post/AddCaptionModal';
 import AddMusicModal from './post/AddMusicModal';
 import SearchFollowingModal from './post/SearchFollowingModal';
-import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp } from '../firebase';
+import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp, deleteDoc } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 
 const Feed: React.FC = () => {
@@ -28,6 +28,7 @@ const Feed: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [isAnyPulseOpen, setIsAnyPulseOpen] = useState(false);
   
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
@@ -147,6 +148,15 @@ const Feed: React.FC = () => {
     alert(t('post.requestSent'));
   };
 
+  const handlePostDeleted = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'posts', id));
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Error deleting post from Firestore:", error);
+    }
+  };
+
   const DesktopSidebar = () => (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
       <h1 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className="text-2xl font-serif mb-10 cursor-pointer">{t('header.title')}</h1>
@@ -197,15 +207,18 @@ const Feed: React.FC = () => {
           <div className="container mx-auto max-w-lg py-4 pb-24 px-4 pt-16 lg:pt-8">
             <PulseBar usersWithPulses={usersWithPulses} onViewPulses={id => {
                 const author = usersWithPulses.find(u => u.author.id === id);
-                if (author) setActivePulseAuthor(author);
+                if (author) {
+                  setActivePulseAuthor(author);
+                  setIsAnyPulseOpen(true);
+                }
             }} />
             <div className="flex flex-col gap-4 mt-4">
                 {posts.map(p => (
                   <div key={p.id} data-post-id={p.id}>
                     <Post 
                       post={p} 
-                      isActive={p.id === activePostId}
-                      onPostDeleted={id => setPosts(prev => prev.filter(x => x.id !== id))} 
+                      isActive={p.id === activePostId && !isAnyPulseOpen}
+                      onPostDeleted={handlePostDeleted} 
                       onForward={setForwardingPost}
                       onEditCaption={setEditingCaptionPost}
                       onEditMusic={setEditingMusicPost}
@@ -246,12 +259,15 @@ const Feed: React.FC = () => {
             pulses={activePulseAuthor.pulses} 
             authorInfo={activePulseAuthor.author} 
             initialPulseIndex={0} 
-            onClose={() => setActivePulseAuthor(null)} 
+            onClose={() => { setActivePulseAuthor(null); setIsAnyPulseOpen(false); }} 
             onDelete={(deletedPulse) => {
                 setActivePulseAuthor((prev: any) => {
                     if (!prev) return null;
                     const updatedPulses = prev.pulses.filter((p: any) => p.id !== deletedPulse.id);
-                    if (updatedPulses.length === 0) return null;
+                    if (updatedPulses.length === 0) {
+                      setIsAnyPulseOpen(false);
+                      return null;
+                    }
                     return { ...prev, pulses: updatedPulses };
                 });
             }} 
