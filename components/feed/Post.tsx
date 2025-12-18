@@ -11,9 +11,13 @@ type PostType = {
     userId: string;
     username: string;
     userAvatar: string;
-    imageUrl: string; 
+    type?: 'status' | 'media';
+    text?: string;
+    bgColor?: string;
+    font?: string;
+    imageUrl?: string; 
     media?: { url: string, type: 'image' | 'video' }[];
-    caption: string;
+    caption?: string;
     likes: string[];
     reposts?: string[];
     timestamp: any;
@@ -38,6 +42,13 @@ interface PostProps {
     onInviteDuo?: (post: PostType) => void;
     onManageTags?: (post: PostType) => void;
 }
+
+const FONT_FAMILIES: Record<string, string> = {
+    classic: 'sans-serif',
+    modern: 'serif',
+    neon: 'cursive',
+    strong: 'Impact, sans-serif'
+};
 
 const RepostIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -66,17 +77,17 @@ const Post: React.FC<PostProps> = ({
     const [isReposted, setIsReposted] = useState(post.reposts?.includes(auth.currentUser?.uid || '') || false);
     
     const [reposterData, setReposterData] = useState<{username: string, avatar: string, isMe: boolean} | null>(null);
-    
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
-    const media = post.media || [{ url: post.imageUrl, type: 'image' }];
+    const media = post.media || (post.imageUrl ? [{ url: post.imageUrl, type: 'image' as const }] : []);
+    const isStatusPost = post.type === 'status' || (!post.imageUrl && !post.media);
     const currentUser = auth.currentUser;
     const videoRef = useRef<HTMLVideoElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (media[currentMediaIndex].type !== 'video' || !videoRef.current) return;
+        if (!media[currentMediaIndex] || media[currentMediaIndex].type !== 'video' || !videoRef.current) return;
         if (isActive) { videoRef.current.play().catch(() => {}); } else { videoRef.current.pause(); }
     }, [isActive, currentMediaIndex, media]);
 
@@ -95,11 +106,7 @@ const Post: React.FC<PostProps> = ({
 
         const fetchReposter = async () => {
             if (post.reposts?.includes(currentUser.uid)) {
-                setReposterData({ 
-                    username: t('common.you'), 
-                    avatar: currentUser.photoURL || '', 
-                    isMe: true 
-                });
+                setReposterData({ username: t('common.you'), avatar: currentUser.photoURL || '', isMe: true });
                 return;
             }
 
@@ -113,11 +120,7 @@ const Post: React.FC<PostProps> = ({
                     const userSnap = await getDoc(doc(db, 'users', followedReposterId));
                     if (userSnap.exists()) {
                         const data = userSnap.data();
-                        setReposterData({ 
-                            username: data.username, 
-                            avatar: data.avatar, 
-                            isMe: false 
-                        });
+                        setReposterData({ username: data.username, avatar: data.avatar, isMe: false });
                     }
                 } else {
                     setReposterData(null);
@@ -178,21 +181,10 @@ const Post: React.FC<PostProps> = ({
 
             <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2">
-                    <div className="relative flex">
-                        <img src={post.userAvatar} className="w-8 h-8 rounded-full object-cover border border-zinc-200 dark:border-zinc-800" />
-                        {post.duoPartner && (
-                            <img src={post.duoPartner.userAvatar} className="w-8 h-8 rounded-full object-cover -ml-3 border-2 border-white dark:border-black shadow-sm" />
-                        )}
-                    </div>
+                    <img src={post.userAvatar} className="w-8 h-8 rounded-full object-cover border border-zinc-200 dark:border-zinc-800" />
                     <div className="flex flex-col">
-                        <span className="font-bold text-xs">
-                            {post.username} {post.duoPartner && `& ${post.duoPartner.username}`}
-                        </span>
-                        {post.tags && post.tags.length > 0 && (
-                            <span className="text-[10px] text-zinc-500">
-                                com {post.tags.map(t => t.username).join(', ')}
-                            </span>
-                        )}
+                        <span className="font-bold text-xs">{post.username}</span>
+                        {post.tags && post.tags.length > 0 && <span className="text-[10px] text-zinc-500">com {post.tags.map(t => t.username).join(', ')}</span>}
                     </div>
                 </div>
 
@@ -203,10 +195,8 @@ const Post: React.FC<PostProps> = ({
                         </button>
                         {isMenuOpen && (
                             <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1">
-                                <button onClick={() => { onEditCaption?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.caption ? t('post.editCaption') : t('post.addCaption')}</button>
+                                {!isStatusPost && <button onClick={() => { onEditCaption?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.caption ? t('post.editCaption') : t('post.addCaption')}</button>}
                                 <button onClick={() => { onEditMusic?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.musicInfo ? t('post.changeMusic') : t('post.addMusic')}</button>
-                                <button onClick={() => { onManageTags?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{t('post.tagFriends')}</button>
-                                <div className="border-t dark:border-zinc-800 my-1"></div>
                                 <button onClick={() => { setShowDeleteConfirm(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold">{t('common.delete')}</button>
                             </div>
                         )}
@@ -214,20 +204,30 @@ const Post: React.FC<PostProps> = ({
                 )}
             </div>
 
-            <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-900">
-                {media[currentMediaIndex].type === 'video' ? (
-                    <video ref={videoRef} src={media[currentMediaIndex].url} loop muted={isGlobalMuted} playsInline className="w-full h-full object-cover" />
-                ) : (
-                    <img src={media[currentMediaIndex].url} className="w-full h-full object-cover" />
-                )}
-                {media.length > 1 && (
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
-                        {media.map((_, i) => (
-                            <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentMediaIndex ? 'bg-sky-500' : 'bg-white/50'}`} />
-                        ))}
-                    </div>
-                )}
-            </div>
+            {isStatusPost ? (
+                <div className={`aspect-square w-full bg-gradient-to-br ${post.bgColor || 'from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-black'} flex flex-col items-center justify-center p-10 text-center`}>
+                    <p className="text-white text-3xl font-bold break-words leading-tight" style={{ fontFamily: FONT_FAMILIES[post.font || 'classic'] }}>{post.text}</p>
+                </div>
+            ) : (
+                <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-900">
+                    {media[currentMediaIndex].type === 'video' ? (
+                        <video ref={videoRef} src={media[currentMediaIndex].url} loop muted={isGlobalMuted} playsInline className="w-full h-full object-cover" />
+                    ) : (
+                        <img src={media[currentMediaIndex].url} className="w-full h-full object-cover" />
+                    )}
+                    {media.length > 1 && (
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
+                            {media.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentMediaIndex ? 'bg-sky-500' : 'bg-white/50'}`} />)}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {post.musicInfo && (
+                <div className="border-t dark:border-zinc-800">
+                    <MusicPlayer musicInfo={post.musicInfo} isPlaying={isActive} isMuted={isGlobalMuted} setIsMuted={setGlobalMuted} />
+                </div>
+            )}
 
             <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -249,12 +249,24 @@ const Post: React.FC<PostProps> = ({
 
                 <div className="text-sm">
                     <p className="font-bold mb-1">{post.likes.length} {t('post.likes')}</p>
-                    {post.caption && <p><span className="font-bold mr-2">{post.username}</span>{post.caption}</p>}
+                    {!isStatusPost && post.caption && <p><span className="font-bold mr-2">{post.username}</span>{post.caption}</p>}
                     <button onClick={() => setShowComments(true)} className="text-zinc-500 text-xs mt-2">
                         {t('post.viewAllComments', { count: comments.length })}
                     </button>
                 </div>
             </div>
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl w-full max-w-xs text-center border dark:border-zinc-800 shadow-2xl">
+                        <h3 className="font-bold mb-2">{t('post.deletePostTitle')}</h3>
+                        <p className="text-zinc-500 text-xs mb-6">{t('post.deletePostBody')}</p>
+                        <div className="flex flex-col gap-2">
+                            <button onClick={async () => { onPostDeleted(post.id); setShowDeleteConfirm(false); }} className="w-full py-3 bg-red-600 text-white font-bold rounded-xl">Excluir</button>
+                            <button onClick={() => setShowDeleteConfirm(false)} className="w-full py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-white font-bold rounded-xl">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </article>
     );
 };

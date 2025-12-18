@@ -49,6 +49,7 @@
     "createPost": "Publicação",
     "createPulse": "Pulse (Story)",
     "createVibe": "Vibe (Reel)",
+    "createStatus": "Música ou Texto",
     "vibes": "Vibes",
     "logOut": "Sair",
     "cancel": "Cancelar",
@@ -83,6 +84,14 @@
     "deletePostTitle": "Excluir publicação?",
     "deletePostBody": "Tem certeza? Esta ação não pode ser desfeita.",
     "addToMemory": "Salvar na Memória"
+  },
+  "createStatus": {
+    "title": "Nova Publicação",
+    "placeholder": "No que você está pensando?",
+    "share": "Compartilhar",
+    "sharing": "Compartilhando...",
+    "background": "Fundo",
+    "font": "Fonte"
   },
   "vibes": {
     "title": "Vibes",

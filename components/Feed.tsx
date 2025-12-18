@@ -6,6 +6,7 @@ import UserProfile from './profile/UserProfile';
 import Post from './feed/Post';
 import CreatePostModal from './post/CreatePostModal';
 import CreatePulseModal from './pulse/CreatePulseModal';
+import CreateStatusModal from './post/CreateStatusModal';
 import PulseViewerModal from './pulse/PulseViewerModal';
 import MessagesModal from './messages/MessagesModal';
 import PulseBar from './feed/PulseBar';
@@ -34,6 +35,7 @@ const Feed: React.FC = () => {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isCreatePulseOpen, setIsCreatePulseOpen] = useState(false);
   const [isCreateVibeOpen, setIsCreateVibeOpen] = useState(false);
+  const [isCreateStatusOpen, setIsCreateStatusOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
@@ -112,42 +114,6 @@ const Feed: React.FC = () => {
     setViewMode('profile');
   };
 
-  const handleDuoRequest = async (user: any) => {
-    if (!duoTargetPost || !currentUser) return;
-    
-    const notificationRef = collection(db, 'users', user.id, 'notifications');
-    await addDoc(notificationRef, {
-        type: 'duo_request',
-        fromUserId: currentUser.uid,
-        fromUsername: currentUser.displayName,
-        fromUserAvatar: currentUser.photoURL,
-        postId: duoTargetPost.id,
-        timestamp: serverTimestamp(),
-        read: false,
-    });
-    
-    setDuoTargetPost(null);
-    alert(t('post.requestSent'));
-  };
-
-  const handleTagRequest = async (user: any) => {
-    if (!tagTargetPost || !currentUser) return;
-    
-    const notificationRef = collection(db, 'users', user.id, 'notifications');
-    await addDoc(notificationRef, {
-        type: 'tag_request',
-        fromUserId: currentUser.uid,
-        fromUsername: currentUser.displayName,
-        fromUserAvatar: currentUser.photoURL,
-        postId: tagTargetPost.id,
-        timestamp: serverTimestamp(),
-        read: false,
-    });
-    
-    setTagTargetPost(null);
-    alert(t('post.requestSent'));
-  };
-
   const handlePostDeleted = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'posts', id));
@@ -157,41 +123,37 @@ const Feed: React.FC = () => {
     }
   };
 
-  const DesktopSidebar = () => (
-    <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
-      <h1 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className="text-2xl font-serif mb-10 cursor-pointer">{t('header.title')}</h1>
-      <nav className="flex flex-col gap-4">
-        <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'feed' ? 'font-bold' : ''}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7-7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-          <span>Página Inicial</span>
-        </button>
-        <button onClick={() => setViewMode('vibes')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'vibes' ? 'font-bold' : ''}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span>Vibes</span>
-        </button>
-        <button onClick={() => setIsMessagesOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-          <span>Mensagens</span>
-        </button>
-        <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          <span>Criar</span>
-        </button>
-        <button onClick={() => handleSelectUser(currentUser?.uid || '')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'profile' && viewingProfileId === currentUser?.uid ? 'font-bold' : ''}`}>
-          <img src={currentUser?.photoURL || ''} className="w-6 h-6 rounded-full object-cover" />
-          <span>Perfil</span>
-        </button>
-      </nav>
-      <button onClick={() => auth.signOut()} className="mt-auto flex items-center gap-4 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-        <span>Sair</span>
-      </button>
-    </aside>
-  );
-
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <DesktopSidebar />
+      <div className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
+        <h1 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className="text-2xl font-serif mb-10 cursor-pointer">{t('header.title')}</h1>
+        <nav className="flex flex-col gap-4">
+            <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'feed' ? 'font-bold' : ''}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7-7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                <span>Página Inicial</span>
+            </button>
+            <button onClick={() => setViewMode('vibes')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'vibes' ? 'font-bold' : ''}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Vibes</span>
+            </button>
+            <button onClick={() => setIsMessagesOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                <span>Mensagens</span>
+            </button>
+            <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span>Criar</span>
+            </button>
+            <button onClick={() => handleSelectUser(currentUser?.uid || '')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'profile' && viewingProfileId === currentUser?.uid ? 'font-bold' : ''}`}>
+                <img src={currentUser?.photoURL || ''} className="w-6 h-6 rounded-full object-cover" />
+                <span>Perfil</span>
+            </button>
+        </nav>
+        <button onClick={() => auth.signOut()} className="mt-auto flex items-center gap-4 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            <span>Sair</span>
+        </button>
+      </div>
       
       <div className="lg:hidden">
         <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={() => setIsMessagesOpen(true)} />
@@ -240,9 +202,10 @@ const Feed: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end lg:items-center lg:justify-center" onClick={() => setIsMenuOpen(false)}>
           <div className="bg-white dark:bg-zinc-900 rounded-t-2xl lg:rounded-2xl p-4 flex flex-col gap-2 pb-10 lg:pb-4 lg:w-96 lg:shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="hidden lg:block text-center font-bold mb-4 border-b dark:border-zinc-800 pb-4">O que deseja criar?</h3>
-            <button onClick={() => { setIsMenuOpen(false); setIsGalleryOpen(true); }} className="w-full p-4 text-left font-bold border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Publicação</button>
-            <button onClick={() => { setIsMenuOpen(false); setIsCreatePulseOpen(true); }} className="w-full p-4 text-left font-bold border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Pulse (Story)</button>
-            <button onClick={() => { setIsMenuOpen(false); setIsCreateVibeOpen(true); }} className="w-full p-4 text-left font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Vibe (Reel)</button>
+            <button onClick={() => { setIsMenuOpen(false); setIsGalleryOpen(true); }} className="w-full p-4 text-left font-bold border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">{t('header.createPost')}</button>
+            <button onClick={() => { setIsMenuOpen(false); setIsCreatePulseOpen(true); }} className="w-full p-4 text-left font-bold border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">{t('header.createPulse')}</button>
+            <button onClick={() => { setIsMenuOpen(false); setIsCreateVibeOpen(true); }} className="w-full p-4 text-left font-bold border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">{t('header.createVibe')}</button>
+            <button onClick={() => { setIsMenuOpen(false); setIsCreateStatusOpen(true); }} className="w-full p-4 text-left font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">{t('header.createStatus')}</button>
             <button onClick={() => setIsMenuOpen(false)} className="w-full p-4 text-center text-zinc-500 font-semibold mt-2 lg:hidden">{t('common.cancel')}</button>
           </div>
         </div>
@@ -252,6 +215,7 @@ const Feed: React.FC = () => {
       <CreatePostModal isOpen={isCreatePostOpen} onClose={() => setIsCreatePostOpen(false)} onPostCreated={() => setIsCreatePostOpen(false)} initialImages={selectedMedia} />
       <CreatePulseModal isOpen={isCreatePulseOpen} onClose={() => setIsCreatePulseOpen(false)} onPulseCreated={() => setIsCreatePulseOpen(false)} />
       <CreateVibeModal isOpen={isCreateVibeOpen} onClose={() => setIsCreateVibeOpen(false)} onVibeCreated={() => setViewMode('vibes')} />
+      <CreateStatusModal isOpen={isCreateStatusOpen} onClose={() => setIsCreateStatusOpen(false)} onPostCreated={() => { setViewMode('feed'); setViewingProfileId(null); }} />
       <MessagesModal isOpen={isMessagesOpen} onClose={() => setIsMessagesOpen(false)} initialTargetUser={null} initialConversationId={null} />
       
       {activePulseAuthor && (
@@ -279,8 +243,8 @@ const Feed: React.FC = () => {
       {editingCaptionPost && <AddCaptionModal isOpen={true} onClose={() => setEditingCaptionPost(null)} postId={editingCaptionPost.id} onCaptionSaved={() => setEditingCaptionPost(null)} />}
       {editingMusicPost && <AddMusicModal isOpen={true} onClose={() => setEditingMusicPost(null)} postId={editingMusicPost.id} onMusicAdded={() => setEditingMusicPost(null)} />}
       
-      <SearchFollowingModal isOpen={!!duoTargetPost} onClose={() => setDuoTargetPost(null)} title={t('post.inviteDuo')} onSelect={handleDuoRequest} />
-      <SearchFollowingModal isOpen={!!tagTargetPost} onClose={() => setTagTargetPost(null)} title={t('post.tagFriends')} onSelect={handleTagRequest} />
+      <SearchFollowingModal isOpen={!!duoTargetPost} onClose={() => setDuoTargetPost(null)} title={t('post.inviteDuo')} onSelect={u => {}} />
+      <SearchFollowingModal isOpen={!!tagTargetPost} onClose={() => setTagTargetPost(null)} title={t('post.tagFriends')} onSelect={u => {}} />
     </div>
   );
 };
