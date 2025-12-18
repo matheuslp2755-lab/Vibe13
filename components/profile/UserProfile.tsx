@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTimestamp, updateDoc, query, where, orderBy, onSnapshot, writeBatch, storage, storageRef, uploadBytes, getDownloadURL } from '../../firebase';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, signOut } from 'firebase/auth';
 import Button from '../common/Button';
 import EditProfileModal from './EditProfileModal';
 import FollowersModal from './FollowersModal';
@@ -33,6 +33,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [isFollowing, setIsFollowing] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
     const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [viewingPulses, setViewingPulses] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
@@ -42,6 +43,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     
     const currentUser = auth.currentUser;
     const isOwner = currentUser?.uid === userId;
+    const profileMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let unsubscribePosts: (() => void) | undefined;
@@ -89,6 +91,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
             if (unsubscribePulses) unsubscribePulses();
         };
     }, [userId, currentUser]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+                setIsProfileMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleFollow = async () => {
         if (!currentUser || !user) return;
@@ -168,13 +180,55 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error("Logout error", error);
+        }
+    };
+
     if (!user) return <div className="p-8 text-center">Carregando...</div>;
 
     const hasActivePulses = pulses.length > 0;
 
     return (
         <div className="container mx-auto max-w-4xl p-4 sm:p-8">
-            <header className="flex flex-col sm:flex-row items-center gap-8 mb-8">
+            <header className="flex flex-col sm:flex-row items-center gap-8 mb-8 relative">
+                {isOwner && (
+                    <div className="absolute top-0 right-0" ref={profileMenuRef}>
+                        <button 
+                            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                            className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                            aria-label={t('profile.options')}
+                        >
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="1.5"></circle>
+                                <circle cx="6" cy="12" r="1.5"></circle>
+                                <circle cx="18" cy="12" r="1.5"></circle>
+                            </svg>
+                        </button>
+                        {isProfileMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1 backdrop-blur-md bg-opacity-95">
+                                <button 
+                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
+                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                    {t('profile.logout')}
+                                </button>
+                                <button 
+                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
+                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 border-t dark:border-zinc-800"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                    {t('profile.addAccount')}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div 
                     className={`relative w-32 h-32 flex-shrink-0 cursor-pointer ${hasActivePulses ? 'p-1 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500' : ''}`}
                     onClick={() => hasActivePulses && setViewingPulses(true)}

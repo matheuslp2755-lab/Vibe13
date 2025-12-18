@@ -129,6 +129,7 @@ const ptMessages = {
     "noPulsesSuggestion": "Este usuário não compartilhou nenhum pulse.",
     "privateAccountMessage": "Esta Conta é Privada",
     "privateAccountSuggestion": "Siga para ver as fotos e vídeos.",
+    "privateListsMessage": "Esta lista é privada. Apenas o proprietário pode visualizá-la.",
     "notFound": "Usuário não encontrado.",
     "followersModalTitle": "Seguidores",
     "followingModalTitle": "Seguindo",
@@ -139,12 +140,16 @@ const ptMessages = {
     "blockConfirmTitle": "Cancelar amizade?",
     "blockConfirmBody": "Eles não poderão enviar mensagens ou encontrar seu perfil ou conteúdo no Vibe.",
     "blockedMessage": "Você cancelou a amizade com este usuário.",
-    "userUnavailable": "Usuário indisponível."
+    "userUnavailable": "Usuário indisponível.",
+    "options": "Opções de Perfil",
+    "addAccount": "Adicionar outra conta",
+    "logout": "Sair"
   },
   "editProfile": {
     "title": "Editar Perfil",
     "changePhoto": "Alterar foto do perfil",
     "usernameLabel": "Nome de usuário",
+    "nicknameLabel": "Apelido",
     "bioLabel": "Biografia",
     "privateAccount": "Conta Privada",
     "privateAccountInfo": "Apenas seus seguidores poderão ver suas fotos e vídeos.",
@@ -154,7 +159,13 @@ const ptMessages = {
     "profileMusic": "Música do Perfil",
     "noProfileMusic": "Nenhuma música selecionada.",
     "changeMusic": "Alterar música",
-    "removeMusic": "Remover"
+    "removeMusic": "Remover",
+    "usernameCooldown": "Você só pode alterar o nome de usuário uma vez a cada 30 dias.",
+    "nicknameCooldown": "Você só pode alterar o apelido uma vez a cada 15 dias.",
+    "vibeLabel": "Vibe do Momento",
+    "vibeJoy": "Alegria",
+    "vibeAnger": "Raiva",
+    "vibeSloth": "Tédio"
   },
   "createPost": {
     "title": "Criar nova publicação",
@@ -304,7 +315,9 @@ const ptMessages = {
     "viewedBy": "Visto por",
     "noViews": "Nenhuma visualização ainda.",
     "viewSingular": "visualização",
-    "viewPlural": "visualizações"
+    "viewPlural": "visualizações",
+    "save": "Salvar pulso",
+    "replyPlaceholder": "Responder ao pulse..."
   },
   "pulseBar": {
     "viewPulse": "Ver o pulso de {username}",
@@ -586,7 +599,10 @@ const enMessages = {
     "blockConfirmTitle": "Block User?",
     "blockConfirmBody": "They won't be able to message you or find your profile or content on Vibe.",
     "blockedMessage": "You have blocked this user.",
-    "userUnavailable": "User unavailable."
+    "userUnavailable": "User unavailable.",
+    "options": "Profile Options",
+    "addAccount": "Add another account",
+    "logout": "Log Out"
   },
   "editProfile": {
     "title": "Edit Profile",

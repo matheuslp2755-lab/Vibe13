@@ -137,7 +137,10 @@
     "blockConfirmTitle": "Cancelar amizade?",
     "blockConfirmBody": "Eles não poderão enviar mensagens ou encontrar seu perfil ou conteúdo no Vibe.",
     "blockedMessage": "Você cancelou a amizade com este usuário.",
-    "userUnavailable": "Usuário indisponível."
+    "userUnavailable": "Usuário indisponível.",
+    "options": "Opções de Perfil",
+    "addAccount": "Adicionar outra conta",
+    "logout": "Sair"
   },
   "editProfile": {
     "title": "Editar Perfil",
@@ -157,9 +160,9 @@
     "usernameCooldown": "Você só pode alterar o nome de usuário uma vez a cada 30 dias.",
     "nicknameCooldown": "Você só pode alterar o apelido uma vez a cada 15 dias.",
     "vibeLabel": "Vibe do Momento",
-    "vibeJoy": "Alegria (Alegria)",
-    "vibeAnger": "Raiva (Raiva)",
-    "vibeSloth": "Preguiça (Tédio)"
+    "vibeJoy": "Alegria",
+    "vibeAnger": "Raiva",
+    "vibeSloth": "Tédio"
   },
   "createPost": {
     "title": "Criar nova publicação",
@@ -289,19 +292,7 @@
     "publishError": "Falha ao criar o pulso. Por favor, tente novamente.",
     "ventMode": "Modo Desabafo",
     "ventModeInfo": "Apenas seguidores selecionados verão este pulso.",
-    "showMusicCover": "Mostrar capa da música",
-    "location": "Localização",
-    "countdown": "Contagem Regressiva",
-    "poll": "Enquete",
-    "pollQuestion": "Pergunta da enquete...",
-    "pollOption1": "Sim",
-    "pollOption2": "Não",
-    "countdownTitle": "Título do evento...",
-    "locationPlaceholder": "Onde você está?",
-    "days": "DIAS",
-    "hours": "HORAS",
-    "mins": "MINS",
-    "searchingLocations": "Buscando endereços reais..."
+    "showMusicCover": "Mostrar capa da música"
   },
   "createVibe": {
     "title": "Nova Vibe",
