@@ -68,8 +68,7 @@ const VibeItem: React.FC<{
     useEffect(() => {
         if (isActive && vibe.mediaType !== 'image') {
             videoRef.current?.play().catch(err => {
-                // Silently catch play() errors without logging complex circular objects
-                console.warn("Vibe autoplay blocked or failed:", err?.message || "User interaction required");
+                console.warn("Vibe autoplay blocked:", err?.message || "User interaction required");
             });
         } else {
             videoRef.current?.pause();
@@ -166,8 +165,8 @@ const VibeItem: React.FC<{
                 </div>
             )}
 
-            {/* BOTÕES DE AÇÃO LATERAIS */}
-            <div className="absolute right-4 bottom-20 flex flex-col gap-5 items-center z-30">
+            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados para mobile full screen */}
+            <div className="absolute right-4 bottom-24 flex flex-col gap-5 items-center z-30">
                 <div className="relative group">
                     <img src={vibe.user?.avatar} className="w-11 h-11 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
                     <div className="absolute -bottom-1 -right-1 bg-sky-500 rounded-full p-1 border-2 border-black">
@@ -195,7 +194,7 @@ const VibeItem: React.FC<{
             </div>
 
             {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL */}
-            <div className="absolute left-4 bottom-6 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
+            <div className="absolute left-4 bottom-10 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
                 {reposterData && (
                     <div className="flex items-center gap-1.5 mb-2.5 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
                         <img src={reposterData.avatar} className="w-4 h-4 rounded-full border border-white/30" />
@@ -222,7 +221,8 @@ const VibeItem: React.FC<{
                 )}
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none z-10" />
+            {/* Overlay gradiente inferior mais alto para leitura da legenda */}
+            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
             
             <style>{`
                 @keyframes heart-pop { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.25); opacity: 0.9; } 30% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
@@ -278,7 +278,8 @@ const VibeFeed: React.FC = () => {
     );
 
     return (
-        <div className="relative h-[calc(100dvh-8rem)] lg:h-[calc(100vh-2rem)] bg-black overflow-hidden lg:rounded-3xl shadow-2xl lg:mt-4">
+        /* ALTURA AJUSTADA: h-full para ocupar todo o main, que no mobile agora é h-screen menos o BottomNav */
+        <div className="relative h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
             <div 
                 ref={containerRef} 
                 onScroll={handleScroll} 

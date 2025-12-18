@@ -125,7 +125,7 @@ const Feed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      {/* Sidebar Desktop com Logo Vibe em Destaque Neon */}
+      {/* Sidebar Desktop */}
       <div className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
         <div className="mb-14 pt-6">
             <h1 
@@ -163,18 +163,19 @@ const Feed: React.FC = () => {
         </button>
       </div>
       
-      <div className="lg:hidden">
+      {/* Oculta Header no Mobile se for Vibes */}
+      <div className={`${viewMode === 'vibes' ? 'hidden' : 'block'} lg:hidden`}>
         <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={() => setIsMessagesOpen(true)} />
       </div>
 
-      <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64' : 'lg:pl-64 lg:pr-4'}`}>
+      <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64 h-screen lg:h-auto' : 'lg:pl-64 lg:pr-4 pt-16 lg:pt-8'}`}>
         {viewMode === 'vibes' ? <VibeFeed /> : 
          viewMode === 'profile' || viewingProfileId ? (
-           <div className="container mx-auto max-w-4xl py-4 pt-16 lg:pt-8">
+           <div className="container mx-auto max-w-4xl py-4">
              <UserProfile userId={viewingProfileId || currentUser?.uid || ''} onStartMessage={() => setIsMessagesOpen(true)} onSelectUser={handleSelectUser} />
            </div>
          ) : (
-          <div className="container mx-auto max-w-lg py-4 pb-24 px-4 pt-16 lg:pt-8">
+          <div className="container mx-auto max-w-lg py-4 pb-24 px-4">
             <PulseBar usersWithPulses={usersWithPulses} onViewPulses={id => {
                 const author = usersWithPulses.find(u => u.author.id === id);
                 if (author) {
