@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { signOut } from 'firebase/auth';
-import { auth, db, collection, query, where, getDocs, limit, doc, setDoc, deleteDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, addDoc, updateDoc } from '../../firebase';
+import { auth, db, collection, query, where, getDocs, limit, doc, setDoc, deleteDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, addDoc, updateDoc, arrayUnion } from '../../firebase';
 import OnlineIndicator from './OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -15,7 +15,7 @@ type UserSearchResult = {
 
 type Notification = {
     id: string;
-    type: 'follow' | 'message' | 'follow_request' | 'mention_comment' | 'duo_request' | 'duo_accepted' | 'duo_refused';
+    type: 'follow' | 'message' | 'follow_request' | 'mention_comment' | 'duo_request' | 'duo_accepted' | 'duo_refused' | 'tag_request' | 'tag_accepted';
     fromUserId: string;
     fromUsername: string;
     fromUserAvatar: string;
@@ -76,7 +76,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     const activityRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
 
-    // Listen for notifications
     useEffect(() => {
         if (!currentUser) return;
 
@@ -99,7 +98,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         return () => unsubscribe();
     }, [currentUser]);
 
-    // Listen for unread messages
     useEffect(() => {
         if (!currentUser) return;
 
@@ -275,340 +273,111 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         }
     };
 
-     const handleCancelRequest = async (targetUserId: string) => {
-        if (!auth.currentUser) return;
-        setRequestedIds(prev => prev.filter(id => id !== targetUserId));
-        
-        const targetUserRequestRef = doc(db, 'users', targetUserId, 'followRequests', auth.currentUser.uid);
-        const currentUserSentRequestRef = doc(db, 'users', auth.currentUser.uid, 'sentFollowRequests', targetUserId);
-        
-        try {
-            const batch = writeBatch(db);
-            batch.delete(targetUserRequestRef);
-            batch.delete(currentUserSentRequestRef);
-            await batch.commit();
-        } catch (error) {
-            console.error("Error cancelling follow request:", error);
-            setRequestedIds(prev => [...prev, targetUserId]);
+    const handleNotificationClick = (notification: Notification) => {
+        if (notification.type === 'message' && notification.conversationId) {
+            onOpenMessages(notification.conversationId);
+        } else if (['follow', 'mention_comment', 'duo_accepted', 'duo_refused', 'tag_accepted'].includes(notification.type)) {
+            onSelectUser(notification.fromUserId);
         }
-    };
-
-    const handleUserClick = (user: UserSearchResult) => {
-        onSelectUser(user.id);
-        setSearchQuery('');
-        setIsSearchFocused(false);
-        setIsMobileSearchVisible(false);
-    };
-
-    const handleOpenActivity = async () => {
-        setIsActivityDropdownOpen(prev => !prev);
-        if (hasUnreadNotifications && currentUser) {
-            setHasUnreadNotifications(false); // Optimistic update
-            const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
-            const q = query(notificationsRef, where('read', '==', false));
-            const snapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(doc => {
-                batch.update(doc.ref, { read: true });
-            });
-            await batch.commit();
-        }
-    };
-
-    const handleAcceptFollowRequest = async (notification: Notification) => {
-        if (!currentUser) return;
-    
-        const requesterId = notification.fromUserId;
-        const batch = writeBatch(db);
-    
-        const followerRef = doc(db, 'users', currentUser.uid, 'followers', requesterId);
-        batch.set(followerRef, {
-            username: notification.fromUsername,
-            avatar: notification.fromUserAvatar,
-            timestamp: serverTimestamp()
-        });
-    
-        const followingRef = doc(db, 'users', requesterId, 'following', currentUser.uid);
-        batch.set(followingRef, {
-            username: currentUser.displayName,
-            avatar: currentUser.photoURL,
-            timestamp: serverTimestamp()
-        });
-    
-        const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', requesterId);
-        batch.delete(requestRef);
-        const sentRequestRef = doc(db, 'users', requesterId, 'sentFollowRequests', currentUser.uid);
-        batch.delete(sentRequestRef);
-    
-        const notificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
-        batch.delete(notificationRef);
-    
-        try {
-            await batch.commit();
-            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        } catch (error) {
-            console.error("Error accepting follow request:", error);
-        }
-    };
-    
-    const handleDeclineFollowRequest = async (notification: Notification) => {
-        if (!currentUser) return;
-        const requesterId = notification.fromUserId;
-    
-        const batch = writeBatch(db);
-        
-        const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', requesterId);
-        batch.delete(requestRef);
-        const sentRequestRef = doc(db, 'users', requesterId, 'sentFollowRequests', currentUser.uid);
-        batch.delete(sentRequestRef);
-    
-        const notificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
-        batch.delete(notificationRef);
-    
-        try {
-            await batch.commit();
-            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        } catch (error) {
-            console.error("Error declining follow request:", error);
+        if(!['follow_request', 'duo_request', 'tag_request'].includes(notification.type)) {
+             setIsActivityDropdownOpen(false);
         }
     };
 
     const handleAcceptDuoRequest = async (notification: Notification) => {
         if (!currentUser || !notification.postId) return;
-    
-        const requesterId = notification.fromUserId;
         const batch = writeBatch(db);
-    
         const postRef = doc(db, 'posts', notification.postId);
         batch.update(postRef, {
             duoPartner: {
                 userId: currentUser.uid,
                 username: currentUser.displayName,
                 userAvatar: currentUser.photoURL,
-            },
-            pendingDuoPartner: null
+            }
         });
-    
-        const requestNotificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
-        batch.delete(requestNotificationRef);
-    
-        const acceptedNotificationRef = doc(collection(db, 'users', requesterId, 'notifications'));
-        batch.set(acceptedNotificationRef, {
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
+        const successNotify = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
+        batch.set(successNotify, {
             type: 'duo_accepted',
             fromUserId: currentUser.uid,
             fromUsername: currentUser.displayName,
             fromUserAvatar: currentUser.photoURL,
-            postId: notification.postId,
             timestamp: serverTimestamp(),
-            read: false,
+            read: false
         });
-    
-        try {
-            await batch.commit();
-            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        } catch (error) {
-            console.error("Error accepting duo request:", error);
-        }
+        await batch.commit();
+        setIsActivityDropdownOpen(false);
     };
 
-    const handleDeclineDuoRequest = async (notification: Notification) => {
+    const handleAcceptTagRequest = async (notification: Notification) => {
         if (!currentUser || !notification.postId) return;
-    
-        const requesterId = notification.fromUserId;
         const batch = writeBatch(db);
-    
         const postRef = doc(db, 'posts', notification.postId);
-        batch.update(postRef, { pendingDuoPartner: null });
-    
-        const requestNotificationRef = doc(db, 'users', currentUser.uid, 'notifications', notification.id);
-        batch.delete(requestNotificationRef);
-    
-        const refusedNotificationRef = doc(collection(db, 'users', requesterId, 'notifications'));
-        batch.set(refusedNotificationRef, {
-            type: 'duo_refused',
+        batch.update(postRef, {
+            tags: arrayUnion({ userId: currentUser.uid, username: currentUser.displayName })
+        });
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
+        const successNotify = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
+        batch.set(successNotify, {
+            type: 'tag_accepted',
             fromUserId: currentUser.uid,
             fromUsername: currentUser.displayName,
             fromUserAvatar: currentUser.photoURL,
-            postId: notification.postId,
             timestamp: serverTimestamp(),
-            read: false,
+            read: false
         });
-    
-        try {
-            await batch.commit();
-            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        } catch (error) {
-            console.error("Error declining duo request:", error);
-        }
+        await batch.commit();
+        setIsActivityDropdownOpen(false);
     };
-
-    const handleNotificationClick = (notification: Notification) => {
-        if (notification.type === 'message' && notification.conversationId) {
-            onOpenMessages(notification.conversationId);
-        } else if (['follow', 'mention_comment', 'duo_accepted', 'duo_refused'].includes(notification.type)) {
-            onSelectUser(notification.fromUserId);
-        }
-        if(!['follow_request', 'duo_request'].includes(notification.type)) {
-             setIsActivityDropdownOpen(false);
-        }
-    };
-    
-    const getButtonForUser = (user: UserSearchResult) => {
-        if (following.includes(user.id)) {
-            return <button onClick={(e) => { e.stopPropagation(); handleUnfollow(user.id); }} className="ml-auto text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 px-4 py-1 rounded-lg transition-colors">{t('header.following')}</button>;
-        }
-        if (requestedIds.includes(user.id)) {
-            return <button onClick={(e) => { e.stopPropagation(); handleCancelRequest(user.id); }} className="ml-auto text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 px-4 py-1 rounded-lg transition-colors">{t('header.requested')}</button>;
-        }
-        return <button onClick={(e) => { e.stopPropagation(); handleFollow(user); }} className="ml-auto text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600 px-4 py-1 rounded-lg transition-colors">{t('header.follow')}</button>;
-    };
-
-    const searchResultContent = (
-        <>
-           {isSearching && <SpinnerIcon />}
-           {!isSearching && searchQuery && searchResults.length === 0 && <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 p-4">{t('header.noResults')}</p>}
-           {!isSearching && searchResults.map(user => {
-               const isOnline = user.lastSeen && (new Date().getTime() / 1000 - user.lastSeen.seconds) < 600;
-               return (
-               <div key={user.id} onClick={() => handleUserClick(user)} className="w-full text-left flex items-center p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
-                   <div className="relative">
-                        <img src={user.avatar} alt={user.username} className="w-11 h-11 rounded-full object-cover" />
-                        {isOnline && <OnlineIndicator />}
-                   </div>
-                   <div className="ml-3 flex-grow">
-                       <p className="font-semibold text-sm">{user.username}</p>
-                   </div>
-                   {getButtonForUser(user)}
-               </div>
-           )})}
-        </>
-    );
 
     const getNotificationText = (notification: Notification) => {
         const params = { username: notification.fromUsername, commentText: notification.commentText || '' };
         switch (notification.type) {
-            case 'follow':
-                return t('header.followNotification', params);
-            case 'message':
-                return t('header.messageNotification', params);
-            case 'follow_request':
-                return t('header.followRequestNotification', params);
-            case 'mention_comment':
-                return t('header.mentionCommentNotification', params);
-            case 'duo_request':
-                return t('header.duoRequestNotification', params);
-            case 'duo_accepted':
-                return t('header.duoAcceptedNotification', params);
-            case 'duo_refused':
-                return t('header.duoRefusedNotification', params);
-            default:
-                return '';
+            case 'follow': return t('header.followNotification', params);
+            case 'message': return t('header.messageNotification', params);
+            case 'follow_request': return t('header.followRequestNotification', params);
+            case 'mention_comment': return t('header.mentionCommentNotification', params);
+            case 'duo_request': return t('header.duoRequestNotification', params);
+            case 'tag_request': return t('header.tagRequestNotification', params);
+            case 'duo_accepted': return t('header.duoAcceptedNotification', params);
+            case 'tag_accepted': return t('header.tagAcceptedNotification', params);
+            default: return '';
         }
     };
 
     return (
         <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-300 dark:border-zinc-800 z-10">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-lg gap-4">
-                
                 <h1 onClick={onGoHome} className={`text-2xl font-serif cursor-pointer transition-all duration-300 ${isMobileSearchVisible ? 'hidden' : 'block'}`}>
                     {t('header.title')}
                 </h1>
 
-                <div 
-                    className={`relative flex-grow ${isMobileSearchVisible ? 'block' : 'hidden'}`}
-                    ref={searchRef}
-                >
-                    <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <SearchIcon />
-                        </span>
-                        <input
-                            type="text"
-                            placeholder={t('header.searchPlaceholder')}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setIsSearchFocused(true)}
-                            className={`bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md py-1.5 pl-10 pr-4 w-full text-sm focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-500 dark:text-zinc-100`}
-                            autoFocus={isMobileSearchVisible}
-                        />
-                    </div>
-                    {isSearchFocused && (
-                        <div className={`absolute top-full mt-2 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-80 overflow-y-auto w-full`}>
-                           {searchResultContent}
-                        </div>
-                    )}
-                </div>
-
                 <nav className={`flex items-center gap-4 ${isMobileSearchVisible ? 'hidden' : 'flex'}`}>
-                    <button onClick={() => setIsMobileSearchVisible(true)}>
-                        <SearchIcon className="h-6 w-6 text-zinc-800 dark:text-zinc-200" />
-                    </button>
-                    
                     <div ref={activityRef} className="relative">
-                        <button onClick={handleOpenActivity} className="relative" title={t('header.notifications')}>
-                            <HeartIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                            {hasUnreadNotifications && (
-                                <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-black"></span>
-                            )}
+                        <button onClick={() => setIsActivityDropdownOpen(!isActivityDropdownOpen)} className="relative">
+                            <HeartIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200" />
+                            {hasUnreadNotifications && <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-black"></span>}
                         </button>
                         {isActivityDropdownOpen && (
                              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-950 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-800 z-20 max-h-96 overflow-y-auto">
-                                {notifications.length > 0 ? (
-                                    notifications.map(notification => (
-                                        <div 
-                                            key={notification.id} 
-                                            onClick={() => handleNotificationClick(notification)}
-                                            className="flex items-center p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer"
-                                        >
-                                            <img src={notification.fromUserAvatar} alt={notification.fromUsername} className="w-11 h-11 rounded-full object-cover"/>
-                                            <div className="ml-3 text-sm flex-grow">
-                                                <p
-                                                    dangerouslySetInnerHTML={{ __html: getNotificationText(notification)
-                                                        .replace(notification.fromUsername, `<b>${notification.fromUsername}</b>`)
-                                                    }}
-                                                />
-                                                {notification.type === 'follow_request' && (
-                                                    <div className="flex gap-2 mt-2">
-                                                        <button onClick={(e) => { e.stopPropagation(); handleAcceptFollowRequest(notification); }} className="text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600 px-4 py-1 rounded-lg">{t('header.accept')}</button>
-                                                        <button onClick={(e) => { e.stopPropagation(); handleDeclineFollowRequest(notification); }} className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 px-4 py-1 rounded-lg">{t('header.decline')}</button>
-                                                    </div>
-                                                )}
-                                                {notification.type === 'duo_request' && (
-                                                    <div className="flex gap-2 mt-2">
-                                                        <button onClick={(e) => { e.stopPropagation(); handleAcceptDuoRequest(notification); }} className="text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600 px-4 py-1 rounded-lg">{t('header.accept')}</button>
-                                                        <button onClick={(e) => { e.stopPropagation(); handleDeclineDuoRequest(notification); }} className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 px-4 py-1 rounded-lg">{t('header.decline')}</button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                {notifications.map(n => (
+                                    <div key={n.id} onClick={() => handleNotificationClick(n)} className="flex items-center p-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
+                                        <img src={n.fromUserAvatar} className="w-11 h-11 rounded-full object-cover"/>
+                                        <div className="ml-3 text-sm flex-grow">
+                                            <p dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b>${n.fromUsername}</b>`) }} />
+                                            {(n.type === 'duo_request' || n.type === 'tag_request') && (
+                                                <div className="flex gap-2 mt-2">
+                                                    <button onClick={(e) => { e.stopPropagation(); n.type === 'duo_request' ? handleAcceptDuoRequest(n) : handleAcceptTagRequest(n); }} className="text-xs font-bold text-white bg-sky-500 px-3 py-1 rounded-md">{t('header.accept')}</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); }} className="text-xs font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-md">{t('header.decline')}</button>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 p-4">{t('header.noActivity')}</p>
-                                )}
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
-
-                    <button onClick={() => onOpenMessages()} className="relative" title={t('header.messages')}>
-                        <MessagesIcon className="w-6 h-6 text-zinc-800 dark:text-zinc-200 hover:text-zinc-500 dark:hover:text-zinc-400"/>
-                        {hasUnreadMessages && (
-                            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-pink-500 ring-2 ring-white dark:ring-black"></span>
-                        )}
-                    </button>
                 </nav>
-
-                <div className={`${isMobileSearchVisible ? 'flex' : 'hidden'} items-center`}>
-                    <button 
-                        onClick={() => {
-                            setIsMobileSearchVisible(false);
-                            setSearchQuery('');
-                            setIsSearchFocused(false);
-                        }} 
-                        className="text-sm font-semibold"
-                    >
-                        {t('header.cancel')}
-                    </button>
-                </div>
             </div>
         </header>
     );

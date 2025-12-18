@@ -16,7 +16,7 @@ import ForwardModal from './messages/ForwardModal';
 import AddCaptionModal from './post/AddCaptionModal';
 import AddMusicModal from './post/AddMusicModal';
 import SearchFollowingModal from './post/SearchFollowingModal';
-import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion } from '../firebase';
+import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 
 const Feed: React.FC = () => {
@@ -27,7 +27,6 @@ const Feed: React.FC = () => {
   const [usersWithPulses, setUsersWithPulses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Controle de reprodução exclusiva
   const [activePostId, setActivePostId] = useState<string | null>(null);
   
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -58,7 +57,6 @@ const Feed: React.FC = () => {
     }
   }, [viewMode, viewingProfileId]);
 
-  // Observer para detectar qual post está no centro da tela
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -68,7 +66,7 @@ const Feed: React.FC = () => {
           }
         });
       },
-      { threshold: 0.6 } // Dispara quando 60% do post estiver visível
+      { threshold: 0.6 }
     );
 
     const elements = document.querySelectorAll('[data-post-id]');
@@ -113,20 +111,40 @@ const Feed: React.FC = () => {
     setViewMode('profile');
   };
 
-  const handleDuoSelect = async (user: any) => {
-    if (!duoTargetPost) return;
-    await updateDoc(doc(db, 'posts', duoTargetPost.id), {
-        duoPartner: { userId: user.id, username: user.username, userAvatar: user.avatar }
+  const handleDuoRequest = async (user: any) => {
+    if (!duoTargetPost || !currentUser) return;
+    
+    const notificationRef = collection(db, 'users', user.id, 'notifications');
+    await addDoc(notificationRef, {
+        type: 'duo_request',
+        fromUserId: currentUser.uid,
+        fromUsername: currentUser.displayName,
+        fromUserAvatar: currentUser.photoURL,
+        postId: duoTargetPost.id,
+        timestamp: serverTimestamp(),
+        read: false,
     });
+    
     setDuoTargetPost(null);
+    alert(t('post.requestSent'));
   };
 
-  const handleTagSelect = async (user: any) => {
-    if (!tagTargetPost) return;
-    await updateDoc(doc(db, 'posts', tagTargetPost.id), {
-        tags: arrayUnion({ userId: user.id, username: user.username })
+  const handleTagRequest = async (user: any) => {
+    if (!tagTargetPost || !currentUser) return;
+    
+    const notificationRef = collection(db, 'users', user.id, 'notifications');
+    await addDoc(notificationRef, {
+        type: 'tag_request',
+        fromUserId: currentUser.uid,
+        fromUsername: currentUser.displayName,
+        fromUserAvatar: currentUser.photoURL,
+        postId: tagTargetPost.id,
+        timestamp: serverTimestamp(),
+        read: false,
     });
+    
     setTagTargetPost(null);
+    alert(t('post.requestSent'));
   };
 
   const DesktopSidebar = () => (
@@ -134,7 +152,7 @@ const Feed: React.FC = () => {
       <h1 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className="text-2xl font-serif mb-10 cursor-pointer">{t('header.title')}</h1>
       <nav className="flex flex-col gap-4">
         <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'feed' ? 'font-bold' : ''}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7-7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
           <span>Página Inicial</span>
         </button>
         <button onClick={() => setViewMode('vibes')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'vibes' ? 'font-bold' : ''}`}>
@@ -165,7 +183,6 @@ const Feed: React.FC = () => {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <DesktopSidebar />
       
-      {/* Mobile Header */}
       <div className="lg:hidden">
         <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={() => setIsMessagesOpen(true)} />
       </div>
@@ -202,7 +219,6 @@ const Feed: React.FC = () => {
         )}
       </main>
 
-      {/* Mobile Bottom Nav */}
       <div className="lg:hidden">
         <BottomNav currentView={viewingProfileId ? 'profile' : viewMode} onChangeView={v => { setViewMode(v); setViewingProfileId(null); }} onCreateClick={() => setIsMenuOpen(true)} />
       </div>
@@ -247,8 +263,8 @@ const Feed: React.FC = () => {
       {editingCaptionPost && <AddCaptionModal isOpen={true} onClose={() => setEditingCaptionPost(null)} postId={editingCaptionPost.id} onCaptionSaved={() => setEditingCaptionPost(null)} />}
       {editingMusicPost && <AddMusicModal isOpen={true} onClose={() => setEditingMusicPost(null)} postId={editingMusicPost.id} onMusicAdded={() => setEditingMusicPost(null)} />}
       
-      <SearchFollowingModal isOpen={!!duoTargetPost} onClose={() => setDuoTargetPost(null)} title={t('post.inviteDuo')} onSelect={handleDuoSelect} />
-      <SearchFollowingModal isOpen={!!tagTargetPost} onClose={() => setTagTargetPost(null)} title={t('post.tagFriends')} onSelect={handleTagSelect} />
+      <SearchFollowingModal isOpen={!!duoTargetPost} onClose={() => setDuoTargetPost(null)} title={t('post.inviteDuo')} onSelect={handleDuoRequest} />
+      <SearchFollowingModal isOpen={!!tagTargetPost} onClose={() => setTagTargetPost(null)} title={t('post.tagFriends')} onSelect={handleTagRequest} />
     </div>
   );
 };

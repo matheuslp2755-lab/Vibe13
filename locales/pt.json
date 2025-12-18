@@ -58,9 +58,10 @@
     "messageNotification": "{username} te enviou uma mensagem.",
     "followRequestNotification": "{username} quer seguir você.",
     "mentionCommentNotification": "{username} mencionou você em um comentário: \"{commentText}\"",
-    "duoRequestNotification": "<b>{username}</b> quer criar uma foto em dupla com você.",
-    "duoAcceptedNotification": "<b>{username}</b> aceitou sua solicitação de foto em dupla.",
-    "duoRefusedNotification": "<b>{username}</b> recusou sua solicitação de foto em dupla.",
+    "duoRequestNotification": "<b>{username}</b> te convidou para uma foto em dupla.",
+    "tagRequestNotification": "<b>{username}</b> marcou você em uma publicação.",
+    "duoAcceptedNotification": "<b>{username}</b> aceitou o convite de foto em dupla.",
+    "tagAcceptedNotification": "<b>{username}</b> aceitou ser marcado na publicação.",
     "accept": "Aceitar",
     "decline": "Recusar",
     "live": "Iniciar Live"
@@ -101,7 +102,8 @@
     "changeMusic": "Trocar música",
     "inviteDuo": "Convidar parceiro duo",
     "tagFriends": "Marcar amigos",
-    "addToMemory": "Adicionar à Lembrança"
+    "addToMemory": "Adicionar à Lembrança",
+    "requestSent": "Solicitação enviada!"
   },
   "time": {
     "seconds": "há {count}s",
