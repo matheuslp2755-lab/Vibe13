@@ -184,7 +184,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         setIsActivityDropdownOpen(false);
     };
 
-    // Fix: Added handleNotificationClick to mark notifications as read and perform navigation actions
     const handleNotificationClick = async (notification: Notification) => {
         if (!currentUser) return;
 
@@ -198,7 +197,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             }
         }
 
-        // Handle navigation based on notification type
         switch (notification.type) {
             case 'message':
                 if (notification.conversationId) onOpenMessages(notification.conversationId);
@@ -210,7 +208,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                 onSelectUser(notification.fromUserId);
                 break;
             case 'mention_comment':
-                onGoHome(); // Default action for mentions if post navigation is not direct
+                onGoHome(); 
                 break;
             default:
                 break;
@@ -243,14 +241,15 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-300 dark:border-zinc-800 z-50">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl gap-4">
                 
-                {/* Logo - Esconde se a busca mobile estiver aberta */}
                 {!isMobileSearchOpen && (
-                    <h1 onClick={onGoHome} className="text-2xl font-serif cursor-pointer shrink-0 animate-fade-in">
+                    <h1 
+                        onClick={onGoHome} 
+                        className="text-3xl font-serif cursor-pointer shrink-0 font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text animate-fade-in tracking-tighter"
+                    >
                         {t('header.title')}
                     </h1>
                 )}
 
-                {/* Barra de Pesquisa Desktop */}
                 <div ref={searchRef} className="relative flex-grow max-w-xs hidden sm:block">
                     <div className={`flex items-center bg-zinc-100 dark:bg-zinc-900 border border-transparent focus-within:border-zinc-300 dark:focus-within:border-zinc-700 rounded-lg px-3 transition-all ${isSearchFocused ? 'ring-2 ring-sky-500/20' : ''}`}>
                         <SearchIcon />
@@ -264,7 +263,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                         />
                     </div>
 
-                    {/* Resultados Desktop */}
                     {isSearchFocused && (searchQuery || isSearching) && (
                         <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-50">
                             {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
@@ -277,7 +275,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                     )}
                 </div>
 
-                {/* Busca Mobile (Expandível) */}
                 {isMobileSearchOpen ? (
                     <div ref={mobileSearchRef} className="flex-grow flex items-center gap-2 sm:hidden animate-slide-right">
                         <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-full px-3 py-1 border dark:border-zinc-800">
@@ -300,7 +297,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                             {t('common.cancel')}
                         </button>
                         
-                        {/* Resultados Mobile */}
                         {(searchQuery || isSearching) && (
                             <div className="absolute top-full left-0 right-0 bg-white dark:bg-black border-b dark:border-zinc-800 shadow-xl max-h-[80vh] overflow-y-auto z-50">
                                 {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
@@ -313,9 +309,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                         )}
                     </div>
                 ) : (
-                    /* Ações do Header (Notificações e Lupa no Mobile) */
                     <nav className="flex items-center gap-4 shrink-0">
-                        {/* Ícone de Busca Mobile */}
                         <button 
                             onClick={() => setIsMobileSearchOpen(true)}
                             className="p-1.5 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"

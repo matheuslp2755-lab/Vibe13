@@ -43,7 +43,7 @@ const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const SNIPPET_DURATION = 25;
+const SNIPPET_DURATION = 25; // Atualizado para 25 segundos
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted, setIsMuted }) => {
     const { t } = useLanguage();
@@ -87,7 +87,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
             const time = audio.currentTime;
             const startTime = musicInfo.startTime || 0;
             if (time >= startTime + SNIPPET_DURATION) {
-                audio.currentTime = startTime; // Loop
+                audio.currentTime = startTime;
             }
             setCurrentTime(time);
         };
@@ -115,25 +115,24 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
         <div className="p-3">
             <div className="flex items-center gap-3">
                 <div className="relative flex-shrink-0 w-12 h-12">
-                    <img src={musicInfo.capa} alt={musicInfo.nome} className="w-full h-full rounded-md object-cover"/>
+                    <img src={musicInfo.capa} alt={musicInfo.nome} className="w-full h-full rounded-md object-cover border dark:border-zinc-800"/>
                     <button 
                         onClick={togglePlayPause} 
                         className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 text-white rounded-md opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity"
-                        aria-label={isAudioPlaying ? t('musicPlayer.pause') : t('musicPlayer.play')}
                     >
                        {isAudioPlaying ? <PauseIcon className="w-8 h-8" /> : <PlayIcon className="w-8 h-8" />}
                     </button>
                 </div>
                 <div className="flex-grow overflow-hidden">
-                    <p className="font-semibold text-sm truncate">{musicInfo.nome}</p>
-                    <p className="text-xs text-current opacity-70 truncate">{musicInfo.artista}</p>
-                     <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1 mt-2">
-                        <div className="bg-sky-500 h-1 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+                    <p className="font-bold text-sm truncate">{musicInfo.nome}</p>
+                    <p className="text-xs text-zinc-500 truncate">{musicInfo.artista}</p>
+                     <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-1 mt-2">
+                        <div className="bg-sky-500 h-1 rounded-full transition-all duration-100" style={{ width: `${progressPercentage}%` }}></div>
                     </div>
                 </div>
                  <button 
                     onClick={() => setIsMuted(!isMuted)} 
-                    className="p-1 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full flex-shrink-0"
+                    className="p-1 text-zinc-400 hover:text-sky-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full flex-shrink-0 transition-colors"
                     aria-label={isMuted ? "Unmute" : "Mute"}
                 >
                     {isMuted ? <VolumeOffIcon className="w-5 h-5" /> : <VolumeOnIcon className="w-5 h-5" />}

@@ -54,6 +54,8 @@
     "logOut": "Sair",
     "cancel": "Cancelar",
     "messages": "Direct",
+    "home": "Página Inicial",
+    "create": "Criar",
     "accept": "Aceitar",
     "decline": "Recusar",
     "followNotification": "{username} começou a seguir você.",
@@ -93,6 +95,15 @@
     "background": "Fundo",
     "font": "Fonte"
   },
+  "musicSearch": {
+    "fetchError": "Erro ao buscar músicas",
+    "searchError": "Ocorreu um erro durante a busca.",
+    "trimInstructions": "Deslize para escolher os 25s da música",
+    "done": "Concluir"
+  },
+  "addMusicModal": {
+    "title": "Música"
+  },
   "vibes": {
     "title": "Vibes",
     "loading": "Carregando Vibes...",
@@ -105,12 +116,18 @@
     "hours": "há {count}h",
     "days": "há {count}d"
   },
+  "welcome": {
+    "title": "Bem-vindo(a) ao Vibe"
+  },
   "createPost": {
     "title": "Nova Publicação",
     "share": "Compartilhar",
     "sharing": "Compartilhando...",
     "captionLabel": "Escreva uma legenda...",
     "selectFromComputer": "Selecionar do computador",
-    "publishError": "Erro ao publicar. Tente novamente."
+    "publishError": "Erro ao publicar. Tente novamente.",
+    "searchMusicPlaceholder": "Pesquisar música ou artista...",
+    "search": "Buscar",
+    "selectMusic": "Selecionar"
   }
 }

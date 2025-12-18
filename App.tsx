@@ -5,7 +5,7 @@ import { auth, db, doc, updateDoc, serverTimestamp, collection, query, where, on
 import Login from './components/Login';
 import SignUp from './context/SignUp';
 import Feed from './components/Feed';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { CallProvider, useCall } from './context/CallContext';
 import WelcomeAnimation from './components/feed/WelcomeAnimation';
 import Toast from './components/common/Toast';
@@ -53,6 +53,7 @@ const GalaxyBackground = ({ variant = 'default' }: { variant?: 'default' | 'subt
 );
 
 const AppContent: React.FC = () => {
+  const { t } = useLanguage();
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [authPage, setAuthPage] = useState<'login' | 'signup'>('login');
@@ -74,12 +75,8 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const requestMediaPermissions = async () => {
       try {
-        console.log("Requesting camera and microphone permissions...");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        
-        // Stop tracks immediately after granting permission
         stream.getTracks().forEach(track => track.stop());
-        console.log("Media permissions granted.");
       } catch (err: any) {
         console.warn("Media permissions denied or error:", err);
       }
@@ -91,18 +88,18 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser && !prevUser.current) {
-        setToastMessage(`Seja bem-vindo(a) ao Vibe`);
+        setToastMessage(t('welcome.title'));
         setShowToast(true);
         setTimeout(() => {
           setShowToast(false);
-        }, 3000); 
+        }, 4000); 
       }
       prevUser.current = currentUser;
       setUser(currentUser);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [t]);
   
   // Listener for incoming calls
   useEffect(() => {
@@ -213,6 +210,5 @@ const App: React.FC = () => (
     </LanguageProvider>
   </StrictMode>
 );
-
 
 export default App;

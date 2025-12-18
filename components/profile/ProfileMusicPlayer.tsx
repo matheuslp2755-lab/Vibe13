@@ -26,7 +26,7 @@ const PauseIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-const SNIPPET_DURATION = 25;
+const SNIPPET_DURATION = 25; // Atualizado para 25 segundos
 
 const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) => {
     const { t } = useLanguage();
@@ -67,7 +67,6 @@ const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) =>
         const handlePlay = () => setIsAudioPlaying(true);
         const handlePause = () => setIsAudioPlaying(false);
         const handleEnded = () => {
-             // When the preview ends naturally, restart from the desired startTime
             setIsAudioPlaying(false);
             setCurrentTime(startTime);
             audio.currentTime = startTime;
@@ -78,7 +77,6 @@ const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) =>
         audio.addEventListener('pause', handlePause);
         audio.addEventListener('ended', handleEnded);
 
-        // Set initial time when component mounts or musicInfo changes
         audio.currentTime = startTime;
         setCurrentTime(startTime);
 
@@ -100,7 +98,7 @@ const ProfileMusicPlayer: React.FC<ProfileMusicPlayerProps> = ({ musicInfo }) =>
                  <button 
                     onClick={togglePlayPause} 
                     className="flex-shrink-0 text-sky-500"
-                    aria-label={isAudioPlaying ? t('musicPlayer.pause') : t('musicPlayer.play')}
+                    aria-label={isAudioPlaying ? "Pausar" : "Tocar"}
                 >
                    {isAudioPlaying ? <PauseIcon className="w-8 h-8" /> : <PlayIcon className="w-8 h-8" />}
                 </button>

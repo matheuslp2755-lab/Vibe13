@@ -125,33 +125,41 @@ const Feed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      {/* Sidebar Desktop com Logo Destacado */}
       <div className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
-        <h1 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className="text-2xl font-serif mb-10 cursor-pointer">{t('header.title')}</h1>
+        <div className="mb-10 pt-2">
+            <h1 
+                onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} 
+                className="text-4xl font-serif cursor-pointer font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-transparent bg-clip-text tracking-tighter"
+            >
+                {t('header.title')}
+            </h1>
+        </div>
         <nav className="flex flex-col gap-4">
             <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'feed' ? 'font-bold' : ''}`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7-7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                <span>Página Inicial</span>
+                <span>{t('header.home')}</span>
             </button>
             <button onClick={() => setViewMode('vibes')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'vibes' ? 'font-bold' : ''}`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span>Vibes</span>
+                <span>{t('header.vibes')}</span>
             </button>
             <button onClick={() => setIsMessagesOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                <span>Mensagens</span>
+                <span>{t('header.messages')}</span>
             </button>
             <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                <span>Criar</span>
+                <span>{t('header.create')}</span>
             </button>
             <button onClick={() => handleSelectUser(currentUser?.uid || '')} className={`flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors ${viewMode === 'profile' && viewingProfileId === currentUser?.uid ? 'font-bold' : ''}`}>
                 <img src={currentUser?.photoURL || ''} className="w-6 h-6 rounded-full object-cover" />
-                <span>Perfil</span>
+                <span>{t('header.profile')}</span>
             </button>
         </nav>
         <button onClick={() => auth.signOut()} className="mt-auto flex items-center gap-4 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            <span>Sair</span>
+            <span>{t('header.logOut')}</span>
         </button>
       </div>
       

@@ -37,33 +37,29 @@ const PauseIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 
-
-const SNIPPET_DURATION = 25; // Updated to 25 seconds
+const SNIPPET_DURATION = 25; // Solicitado trecho de 25 segundos
 
 const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack }) => {
   const { t } = useLanguage();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [startTime, setStartTime] = useState(0);
-  const [trackDuration, setTrackDuration] = useState(30); // iTunes previews are usually 30s
+  const [trackDuration, setTrackDuration] = useState(30);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     
-    // Set volume to max
     audio.volume = 1.0;
 
     const handleLoadedMetadata = () => {
         setTrackDuration(audio.duration);
-        // Start playing when loaded
         audio.currentTime = startTime;
         audio.play().catch(() => setIsPlaying(false));
         setIsPlaying(true);
     };
 
     const handleTimeUpdate = () => {
-        // Loop logic: if current playhead exceeds selected window, restart from start of window
         if (audio.currentTime >= startTime + SNIPPET_DURATION) {
             audio.currentTime = startTime; 
         }
@@ -84,9 +80,8 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
     };
-  }, [startTime]); // Re-run effect when window start changes to ensure loop is correct
+  }, [startTime]);
 
-  // When user drags, update start time and seek audio immediately
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newStartTime = parseFloat(e.target.value);
     setStartTime(newStartTime);
@@ -105,7 +100,6 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     if (isPlaying) {
       audio.pause();
     } else {
-      // Ensure we start playing from the selected start time if stopped
       if (audio.currentTime < startTime || audio.currentTime > startTime + SNIPPET_DURATION) {
           audio.currentTime = startTime;
       }
@@ -123,57 +117,43 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     });
   };
 
-  // Max valid start time to ensure we always have SNIPPET_DURATION remaining
-  // If track is shorter than snippet, max start is 0
   const maxStartTime = Math.max(0, trackDuration - SNIPPET_DURATION);
-  
-  // Visual calculation for the "window"
-  // If track is shorter than snippet, window is 100%
-  const windowPercentage = Math.min(100, (SNIPPET_DURATION / trackDuration) * 100);
-  const leftPositionPercentage = (startTime / trackDuration) * 100;
+  const barCount = 60;
 
   return (
     <div className="p-4 flex flex-col items-center gap-6 text-center">
       <audio ref={audioRef} src={track.previewUrl} preload="auto" />
-      <img src={track.artworkUrl100.replace('100x100', '400x400')} alt={track.trackName} className="w-48 h-48 rounded-lg shadow-lg" />
+      <img src={track.artworkUrl100.replace('100x100', '400x400')} alt={track.trackName} className="w-48 h-48 rounded-lg shadow-lg border dark:border-zinc-800" />
       <div>
         <p className="font-bold text-lg">{track.trackName}</p>
         <p className="text-sm text-zinc-500">{track.artistName}</p>
       </div>
 
-      <div className="w-full flex items-center gap-4">
-        <button onClick={togglePlayPause} className="text-sky-500 flex-shrink-0">
+      <div className="w-full flex items-center gap-4 bg-transparent p-4 rounded-2xl border dark:border-zinc-800">
+        <button onClick={togglePlayPause} className="text-sky-500 flex-shrink-0 active:scale-90 transition-transform">
           {isPlaying ? <PauseIcon className="w-10 h-10" /> : <PlayIcon className="w-10 h-10" />}
         </button>
         
         <div className="flex-grow flex flex-col gap-2">
-            <p className="text-xs text-zinc-400 text-left">{t('musicSearch.trimInstructions')}</p>
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-left">{t('musicSearch.trimInstructions')}</p>
             
-            {/* Custom Visual Timeline Control */}
-            <div className="relative h-12 w-full bg-zinc-200 dark:bg-zinc-800 rounded-md overflow-hidden flex items-center">
-                {/* Simulated Waveform Background (Static pattern for visual cue) */}
-                <div className="absolute inset-0 opacity-20 flex items-center justify-center gap-[2px]">
-                    {Array.from({ length: 40 }).map((_, i) => (
-                        <div 
-                            key={i} 
-                            className="bg-zinc-500 dark:bg-zinc-400 w-1 rounded-full" 
-                            style={{ height: `${Math.random() * 80 + 20}%` }}
-                        />
-                    ))}
+            <div className="relative h-16 w-full flex items-center">
+                {/* Ondas Sonoras da Música Inteira */}
+                <div className="absolute inset-0 flex items-center justify-between gap-[2px]">
+                    {Array.from({ length: barCount }).map((_, i) => {
+                        const barTime = (i / barCount) * trackDuration;
+                        const isActive = barTime >= startTime && barTime <= startTime + SNIPPET_DURATION;
+                        
+                        return (
+                            <div 
+                                key={i} 
+                                className={`w-1 rounded-full transition-colors duration-300 ${isActive ? 'bg-sky-500' : 'bg-zinc-300 dark:bg-zinc-700'}`} 
+                                style={{ height: `${25 + Math.abs(Math.sin(i * 0.5)) * 65}%` }}
+                            />
+                        );
+                    })}
                 </div>
 
-                {/* Highlighted Window (The selected 15s) */}
-                <div 
-                    className="absolute h-full border-2 border-sky-500 bg-sky-500/20 backdrop-blur-sm z-10 pointer-events-none rounded-md transition-all duration-75 ease-linear"
-                    style={{ 
-                        left: `${leftPositionPercentage}%`, 
-                        width: `${windowPercentage}%` 
-                    }}
-                >
-                    {/* Optional: Add grab handles visuals if desired */}
-                </div>
-
-                {/* Invisible Range Input on top for interaction */}
                 <input
                     type="range"
                     min="0"
@@ -186,16 +166,21 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
                 />
             </div>
 
-             <div className="flex justify-between text-xs text-zinc-500 mt-1 font-mono">
+             <div className="flex justify-between text-[10px] text-zinc-500 mt-1 font-mono font-bold">
                 <span>0:00</span>
-                <span>0:{Math.floor(trackDuration)}</span>
+                <span>0:{Math.floor(trackDuration).toString().padStart(2, '0')}</span>
             </div>
         </div>
       </div>
       
-      <Button onClick={handleConfirm} className="w-full">
-        {t('musicSearch.done')}
-      </Button>
+      <div className="w-full flex gap-3">
+          <button onClick={onBack} className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-full font-bold text-sm">
+            {t('common.cancel')}
+          </button>
+          <Button onClick={handleConfirm} className="flex-1 !rounded-full !py-3">
+            {t('musicSearch.done')}
+          </Button>
+      </div>
     </div>
   );
 };
