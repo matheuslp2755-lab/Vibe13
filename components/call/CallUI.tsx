@@ -215,13 +215,67 @@ const CallUI: React.FC = () => {
                 );
             case 'ringing-incoming':
                 return (
-                    <div className="text-center">
-                        <img src={otherUser.avatar} alt={otherUser.username} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-zinc-700 animate-pulse object-cover" />
-                        <h3 className="text-xl font-semibold">{isVideoCall ? t('call.incomingVideoCall') : t('call.incomingCall', { username: otherUser.username })}</h3>
-                        <div className="mt-6 grid grid-cols-2 gap-4">
-                            <Button onClick={declineCall} className="!bg-red-600 hover:!bg-red-700">{t('call.decline')}</Button>
-                            <Button onClick={answerCall} className="!bg-green-600 hover:!bg-green-700">{t('call.answer')}</Button>
+                    <div className="flex flex-col items-center justify-center p-4">
+                        <div className="relative mb-8">
+                            {/* Efeito de Radar/Pulso */}
+                            <div className="absolute inset-0 rounded-full bg-sky-500/20 animate-ping scale-150"></div>
+                            <div className="absolute inset-0 rounded-full bg-sky-500/10 animate-ping scale-125 delay-150"></div>
+                            
+                            <img 
+                                src={otherUser.avatar} 
+                                alt={otherUser.username} 
+                                className="relative w-32 h-32 rounded-full border-4 border-white dark:border-zinc-800 shadow-2xl object-cover z-10" 
+                            />
                         </div>
+
+                        <h2 className="text-2xl font-black text-white mb-1 drop-shadow-md">{otherUser.username}</h2>
+                        <p className="text-sky-400 font-bold uppercase tracking-[0.2em] text-xs mb-12">
+                            {isVideoCall ? t('call.incomingVideoCall') : t('call.incomingCall')}
+                        </p>
+
+                        <div className="flex items-center gap-12">
+                            {/* Botão RECUSAR */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button 
+                                    onClick={declineCall} 
+                                    className="w-20 h-20 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90"
+                                    aria-label={t('call.decline')}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">{t('call.decline')}</span>
+                            </div>
+
+                            {/* Botão ACEITAR */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button 
+                                    onClick={answerCall} 
+                                    className="w-20 h-20 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-xl transition-all active:scale-90 animate-bounce-subtle"
+                                    aria-label={t('call.answer')}
+                                >
+                                    {isVideoCall ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                    )}
+                                </button>
+                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">{t('call.answer')}</span>
+                            </div>
+                        </div>
+                        
+                        <style>{`
+                            @keyframes bounce-subtle {
+                                0%, 100% { transform: translateY(0); }
+                                50% { transform: translateY(-5px); }
+                            }
+                            .animate-bounce-subtle { animation: bounce-subtle 2s infinite ease-in-out; }
+                        `}</style>
                     </div>
                 );
             case 'connected':
@@ -260,8 +314,8 @@ const CallUI: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-[100]" aria-modal="true" role="dialog">
-            <div className="bg-zinc-900 text-white rounded-3xl shadow-2xl w-full max-w-sm p-6 border border-white/10">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-lg flex justify-center items-center z-[100]" aria-modal="true" role="dialog">
+            <div className="bg-zinc-900/90 text-white rounded-[3rem] shadow-2xl w-full max-w-sm p-8 border border-white/10 animate-fade-in">
                 {renderContent()}
             </div>
             {!isVideoCall && (

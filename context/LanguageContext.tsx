@@ -223,9 +223,9 @@ const ptMessages = {
   "call": {
     "call": "Chamada",
     "calling": "Chamando {username}...",
-    "incomingCall": "Chamada de voz de {username}",
-    "incomingVideoCall": "Chamada de vídeo de {username}",
-    "answer": "Atender",
+    "incomingCall": "Chamada de voz",
+    "incomingVideoCall": "Chamada de vídeo",
+    "answer": "Aceitar",
     "decline": "Recusar",
     "hangUp": "Encerrar",
     "callEnded": "Chamada encerrada",
