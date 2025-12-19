@@ -39,9 +39,12 @@ const AIGeneratorModal: React.FC<AIGeneratorModalProps> = ({ isOpen, onClose, on
                 }
             });
 
+            if (!response.candidates || response.candidates.length === 0) {
+                throw new Error("Nenhum resultado gerado pela IA.");
+            }
+
             let foundImage = false;
-            // O retorno do Gemini 2.5 Flash Image vem como inlineData em uma das partes
-            const parts = response.candidates?.[0]?.content?.parts || [];
+            const parts = response.candidates[0].content?.parts || [];
             
             for (const part of parts) {
                 if (part.inlineData) {
@@ -49,7 +52,10 @@ const AIGeneratorModal: React.FC<AIGeneratorModalProps> = ({ isOpen, onClose, on
                     const mimeType = part.inlineData.mimeType || 'image/png';
                     const imageUrl = `data:${mimeType};base64,${base64Data}`;
                     
-                    // Converter para File para ser compatível com o fluxo de upload do app
+                    // Validação básica da string base64
+                    if (!base64Data || base64Data.length < 100) continue;
+
+                    // Converter para File
                     const res = await fetch(imageUrl);
                     const blob = await res.blob();
                     const file = new File([blob], `ia-vibe-${Date.now()}.png`, { type: mimeType });
@@ -62,12 +68,12 @@ const AIGeneratorModal: React.FC<AIGeneratorModalProps> = ({ isOpen, onClose, on
             }
 
             if (!foundImage) {
-                setError(t('aiGenerator.error'));
+                setError(t('aiGenerator.error') + " (Não foi possível extrair a imagem)");
             }
 
         } catch (err: any) {
             console.error("Erro na geração IA:", err);
-            setError(t('aiGenerator.error'));
+            setError(t('aiGenerator.error') + ` (${err.message || 'Erro desconhecido'})`);
         } finally {
             setIsGenerating(false);
         }

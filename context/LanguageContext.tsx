@@ -74,6 +74,29 @@ const ptMessages = {
     "duoAcceptedNotification": "<b>{username}</b> aceitou seu convite de Duo.",
     "tagAcceptedNotification": "<b>{username}</b> aceitou sua marcação."
   },
+  "createPost": {
+    "title": "Criar Publicação",
+    "share": "Compartilhar",
+    "captionLabel": "Escreva uma legenda...",
+    "addMusic": "Adicionar música"
+  },
+  "createPulse": {
+    "title": "Novo Pulse",
+    "effects": "Efeitos",
+    "filters": "Filtros",
+    "lenses": "Lentes",
+    "takePhoto": "Tirar Foto",
+    "gallery": "Galeria",
+    "effectNone": "Nenhum",
+    "effectBloom": "Suave",
+    "effectGrain": "Cinema",
+    "effectRetro": "Vintage",
+    "effectPrism": "Prisma",
+    "effectAura": "Aura",
+    "effectCyber": "Cyber",
+    "effectStars": "Estrelas",
+    "effectHearts": "Corações"
+  },
   "post": {
     "like": "Curtir",
     "comment": "Comentar",
@@ -97,7 +120,7 @@ const ptMessages = {
     "youRepublicated": "Você republicou",
     "republishedBy": "Republicado por {username}",
     "addToMemory": "Salvar na Memória",
-    "anonymousComment": "Modo Anônimo",
+    "anonymousComment": "Anônimo",
     "anonymousCommentTaken": "Esta publicação já possui o limite de 1 comentário anônimo.",
     "vibeAnon": "Vibe Anon"
   },
