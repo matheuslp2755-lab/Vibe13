@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { auth, db, storage, addDoc, collection, serverTimestamp, storageRef, uploadString, getDownloadURL } from '../../firebase';
+import { auth, db, storage, addDoc, collection, serverTimestamp, storageRef, uploadString, getDownloadURL, getDocs, query, where, doc, getDoc } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
 import AddMusicModal from '../post/AddMusicModal';
+import SearchFollowingModal from '../post/SearchFollowingModal';
 
 const PHOTO_FILTERS = [
     { id: 'none', label: 'Original', emoji: '🚫', filter: 'none' },
@@ -86,6 +87,11 @@ const CreatePulseModal: React.FC<{ isOpen: boolean; onClose: () => void; onPulse
     const [musicStyleIndex, setMusicStyleIndex] = useState(0);
     const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
     
+    // Group Pulse
+    const [isGroupPulse, setIsGroupPulse] = useState(false);
+    const [selectedMembers, setSelectedMembers] = useState<any[]>([]);
+    const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+
     // Menu de Ferramentas
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
     const [activeControl, setActiveControl] = useState<'filters' | 'styles' | 'scale' | 'background' | null>(null);
@@ -216,7 +222,9 @@ const CreatePulseModal: React.FC<{ isOpen: boolean; onClose: () => void; onPulse
                 createdAt: serverTimestamp(),
                 type: initialSharedContent ? 'shared_post' : 'normal',
                 sharedPostData: initialSharedContent || null,
-                filter: PHOTO_FILTERS[filterIndex].id
+                filter: PHOTO_FILTERS[filterIndex].filter,
+                isGroup: isGroupPulse,
+                members: selectedMembers.map(m => m.id)
             });
             onPulseCreated();
             onClose();
@@ -316,6 +324,12 @@ const CreatePulseModal: React.FC<{ isOpen: boolean; onClose: () => void; onPulse
                                 icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>}
                                 isActive={!!selectedMusic}
                             />
+                            <ActionListButton 
+                                onClick={() => { setIsMemberModalOpen(true); setIsActionMenuOpen(false); }}
+                                label={t('createPulse.groupPulse')}
+                                icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+                                isActive={isGroupPulse}
+                            />
                             {selectedMusic && (
                                 <ActionListButton 
                                     onClick={() => { setActiveControl('styles'); setIsActionMenuOpen(false); }}
@@ -376,6 +390,12 @@ const CreatePulseModal: React.FC<{ isOpen: boolean; onClose: () => void; onPulse
                                 </div>
                             )}
                         </div>
+
+                        {isGroupPulse && (
+                            <div className="absolute top-32 left-1/2 -translate-x-1/2 bg-sky-500 text-white px-6 py-2 rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl animate-bounce">
+                                {t('createPulse.groupPulseBadge')}
+                            </div>
+                        )}
 
                         {stickers.map(s => (
                             <div 
@@ -507,6 +527,19 @@ const CreatePulseModal: React.FC<{ isOpen: boolean; onClose: () => void; onPulse
             )}
             
             <AddMusicModal isOpen={isMusicModalOpen} onClose={() => setIsMusicModalOpen(false)} postId="" isProfileModal={true} onMusicAdded={(m) => { setSelectedMusic(m); setIsMusicModalOpen(false); setIsActionMenuOpen(true); }} />
+            
+            <SearchFollowingModal 
+                isOpen={isMemberModalOpen} 
+                onClose={() => setIsMemberModalOpen(false)} 
+                title={t('createPulse.groupPulse')}
+                onSelect={(u) => {
+                    if (selectedMembers.length < 9) {
+                        setSelectedMembers([...selectedMembers, u]);
+                        setIsGroupPulse(true);
+                    }
+                }}
+            />
+
             <style>{`
                 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .animate-spin-slow { animation: spin-slow 8s linear infinite; }

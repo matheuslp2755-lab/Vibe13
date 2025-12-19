@@ -27,6 +27,8 @@ type Pulse = {
     musicCoverPosition?: { x: number, y: number };
     location?: { name: string; x: number; y: number };
     likes?: string[];
+    isGroup?: boolean;
+    members?: string[];
 };
 
 const FONT_FAMILIES: Record<string, string> = {
@@ -59,7 +61,6 @@ const TrashIcon: React.FC<{className?: string}> = ({ className }) => (
 
 const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPulseIndex, authorInfo, onClose, onDelete, onViewProfile }) => {
     const { t } = useLanguage();
-    const { isGlobalMuted } = useCall();
     const [currentIndex, setCurrentIndex] = useState(initialPulseIndex);
     const [replyText, setReplyText] = useState('');
     const [isReplying, setIsReplying] = useState(false);
@@ -230,7 +231,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={{ filter: currentPulse.filter || 'none' }}>
                         {currentPulse.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) ? (
-                            <video ref={videoRef} src={currentPulse.mediaUrl} autoPlay loop muted={isGlobalMuted} playsInline className="w-full h-full object-contain" />
+                            <video ref={videoRef} src={currentPulse.mediaUrl} autoPlay loop muted={false} playsInline className="w-full h-full object-contain" />
                         ) : <img src={currentPulse.mediaUrl} className="w-full h-full object-contain shadow-2xl" />}
                     </div>
                   )}
@@ -253,8 +254,13 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                 <div className="absolute top-8 left-4 flex items-center gap-3 z-50 bg-black/20 p-2 pr-4 rounded-full backdrop-blur-md border border-white/10" onClick={() => onViewProfile?.(authorInfo.id)}>
                     <img src={authorInfo.avatar} className="w-10 h-10 rounded-full object-cover border-2 border-white/40 shadow-lg" />
                     <div className="flex flex-col">
-                        <p className="text-white font-black text-sm drop-shadow-md">{authorInfo.username}</p>
-                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Pulse agora</p>
+                        <p className="text-white font-black text-sm drop-shadow-md">
+                            {authorInfo.username}
+                            {currentPulse.isGroup && <span className="ml-2 text-[8px] bg-sky-500 px-1.5 py-0.5 rounded-sm">GRUPO</span>}
+                        </p>
+                        <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">
+                            {currentPulse.isGroup ? `Colaborativo (${currentPulse.members?.length || 1}/10)` : 'Pulse agora'}
+                        </p>
                     </div>
                 </div>
 
@@ -295,7 +301,7 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
 
             {currentPulse.musicInfo && (
                 <div className="fixed bottom-10 left-4 right-4 z-50 pointer-events-none overflow-hidden h-0 w-0">
-                    <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={() => {}} />
+                    <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={false} setIsMuted={() => {}} hideMuteButton />
                 </div>
             )}
 

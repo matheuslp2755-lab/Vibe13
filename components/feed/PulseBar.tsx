@@ -8,6 +8,8 @@ type Pulse = {
     legenda: string;
     createdAt: { seconds: number; nanoseconds: number };
     authorId: string;
+    isGroup?: boolean;
+    members?: string[];
 };
 
 type UserWithPulses = {
@@ -72,11 +74,12 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                 {usersWithPulses.map(({ author, pulses }) => {
                     const latestPulse = pulses[pulses.length - 1];
                     const isVideo = latestPulse.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i);
+                    const isGroup = pulses.some(p => p.isGroup);
 
                     return (
                         <div 
                             key={author.id} 
-                            className="relative flex-shrink-0 w-24 h-40 lg:w-28 lg:h-44 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border border-zinc-200 dark:border-zinc-800 transition-all duration-300 hover:scale-105 active:scale-95"
+                            className={`relative flex-shrink-0 w-24 h-40 lg:w-28 lg:h-44 cursor-pointer group rounded-2xl overflow-hidden shadow-lg border transition-all duration-300 hover:scale-105 active:scale-95 ${isGroup ? 'border-sky-500 ring-2 ring-sky-500/20' : 'border-zinc-200 dark:border-zinc-800'}`}
                             onClick={() => onViewPulses(author.id)}
                             role="button"
                         >
@@ -87,6 +90,12 @@ const PulseBar: React.FC<PulseBarProps> = ({ usersWithPulses, onViewPulses, acti
                                     <img src={latestPulse.mediaUrl} className="w-full h-full object-cover" />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80"></div>
+                                
+                                {isGroup && (
+                                    <div className="absolute top-2 left-2 bg-sky-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-sm shadow-sm z-10 uppercase tracking-widest">
+                                        {t('createPulse.groupPulseBadge')}
+                                    </div>
+                                )}
                             </div>
                             <div className="absolute bottom-2 left-0 right-0 px-2 text-center">
                                 <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 mx-auto mb-1 shadow-lg ring-2 ring-black">

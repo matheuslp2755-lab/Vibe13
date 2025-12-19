@@ -20,6 +20,7 @@ type PostType = {
     caption?: string;
     likes: string[];
     reposts?: string[];
+    commentsDisabled?: boolean;
     timestamp: any;
     musicInfo?: {
       nome: string;
@@ -146,9 +147,16 @@ const Post: React.FC<PostProps> = ({
         await updateDoc(ref, { reposts: newStatus ? arrayUnion(currentUser.uid) : arrayRemove(currentUser.uid) });
     };
 
+    const toggleComments = async () => {
+        if (!isAuthor) return;
+        const ref = doc(db, 'posts', post.id);
+        await updateDoc(ref, { commentsDisabled: !post.commentsDisabled });
+        setIsMenuOpen(false);
+    };
+
     const handleAddComment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newComment.trim() || !currentUser) return;
+        if (!newComment.trim() || !currentUser || post.commentsDisabled) return;
 
         if (isAnonymousComment && hasAnonymousComment) {
             alert(t('post.anonymousCommentTaken'));
@@ -201,9 +209,12 @@ const Post: React.FC<PostProps> = ({
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"></circle><circle cx="6" cy="12" r="1.5"></circle><circle cx="18" cy="12" r="1.5"></circle></svg>
                         </button>
                         {isMenuOpen && (
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1">
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1">
                                 {!isStatusPost && <button onClick={() => { onEditCaption?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.caption ? t('post.editCaption') : t('post.addCaption')}</button>}
                                 <button onClick={() => { onEditMusic?.(post); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">{post.musicInfo ? t('post.changeMusic') : t('post.addMusic')}</button>
+                                <button onClick={toggleComments} className="w-full text-left px-4 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                                    {post.commentsDisabled ? t('post.enableComments') : t('post.disableComments')}
+                                </button>
                                 <button onClick={() => { setShowDeleteConfirm(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-semibold">{t('common.delete')}</button>
                             </div>
                         )}
@@ -242,9 +253,11 @@ const Post: React.FC<PostProps> = ({
                         <button onClick={handleLike} className="transition-transform active:scale-125">
                             <svg className={`w-7 h-7 ${isLiked ? 'text-red-500 fill-current' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                         </button>
-                        <button onClick={() => setShowComments(!showComments)} className="hover:opacity-60">
-                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                        </button>
+                        {!post.commentsDisabled && (
+                            <button onClick={() => setShowComments(!showComments)} className="hover:opacity-60">
+                                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                            </button>
+                        )}
                         <button onClick={handleRepost} className={`transition-all active:scale-125 ${isReposted ? 'text-green-500' : 'text-zinc-900 dark:text-white'}`}>
                             <RepostIcon className="w-7 h-7" />
                         </button>
@@ -258,25 +271,31 @@ const Post: React.FC<PostProps> = ({
                     <p className="font-bold mb-1">{post.likes.length} {t('post.likes')}</p>
                     {!isStatusPost && post.caption && <p><span className="font-bold mr-2">{post.username}</span>{post.caption}</p>}
                     
-                    <div className="mt-2 space-y-1">
-                        {comments.slice(-2).map(c => (
-                            <p key={c.id} className="text-xs">
-                                <span className={`font-bold mr-2 ${c.isAnonymous ? 'text-purple-500' : ''}`}>
-                                    {c.username}
-                                </span>
-                                {c.text}
-                            </p>
-                        ))}
-                    </div>
+                    {post.commentsDisabled ? (
+                        <p className="text-zinc-400 text-xs italic mt-2">{t('post.commentsDisabled')}</p>
+                    ) : (
+                        <>
+                            <div className="mt-2 space-y-1">
+                                {comments.slice(-2).map(c => (
+                                    <p key={c.id} className="text-xs">
+                                        <span className={`font-bold mr-2 ${c.isAnonymous ? 'text-purple-500' : ''}`}>
+                                            {c.username}
+                                        </span>
+                                        {c.text}
+                                    </p>
+                                ))}
+                            </div>
 
-                    <button onClick={() => setShowComments(true)} className="text-zinc-500 text-xs mt-2">
-                        {t('post.viewAllComments', { count: comments.length })}
-                    </button>
+                            <button onClick={() => setShowComments(true)} className="text-zinc-500 text-xs mt-2">
+                                {t('post.viewAllComments', { count: comments.length })}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Modal de Comentários */}
-            {showComments && (
+            {showComments && !post.commentsDisabled && (
                 <div className="fixed inset-0 bg-black/60 z-[60] flex items-end md:items-center justify-center p-0 md:p-10 animate-fade-in" onClick={() => setShowComments(false)}>
                     <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-t-3xl md:rounded-3xl h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                         <header className="p-4 border-b dark:border-zinc-800 text-center font-bold relative">

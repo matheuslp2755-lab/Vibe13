@@ -4,11 +4,12 @@ import { useLanguage } from '../../context/LanguageContext';
 import Button from '../common/Button';
 
 type MusicTrackFromAPI = {
-  trackId: number;
-  trackName: string;
-  artistName: string;
-  artworkUrl100: string;
-  previewUrl: string;
+  id: string;
+  name: string;
+  artist_name: string;
+  image: string;
+  audio: string;
+  duration: number;
 };
 
 type MusicInfo = {
@@ -25,17 +26,17 @@ interface MusicTrimmerProps {
   onBack: () => void;
 }
 
-const SNIPPET_DURATION = 25;
+const SNIPPET_DURATION = 25; // Mantido em 25s para os posts
 
 const MOCK_LYRICS = [
-  { time: 0, text: "🎶 Aumenta o som, sente a batida..." },
-  { time: 4, text: "O universo conspira a nosso favor ✨" },
-  { time: 8, text: "Nada pode nos parar agora 🚀" },
-  { time: 12, text: "Vivendo intensamente cada segundo 🌟" },
-  { time: 16, text: "Nossa conexão brilha mais que neon 🔥" },
-  { time: 20, text: "Dançando sob as luzes da cidade 🏙️" },
-  { time: 24, text: "A vibe que contagia todo mundo 🌈" },
-  { time: 28, text: "O melhor momento é o agora 💎" }
+  { time: 0, text: "🎶 Sente a batida, aumenta o volume..." },
+  { time: 4, text: "A música certa pro momento perfeito ✨" },
+  { time: 8, text: "Tudo que a gente viveu agora faz sentido 🚀" },
+  { time: 12, text: "Vivendo cada nota dessa canção 🌟" },
+  { time: 16, text: "Nossa vibe brilha mais que as luzes 🔥" },
+  { time: 20, text: "Sob o céu da cidade, o som nos guia 🏙️" },
+  { time: 24, text: "O ritmo que contagia o coração 🌈" },
+  { time: 28, text: "Esse é o nosso momento, agora! 💎" }
 ];
 
 const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack }) => {
@@ -44,7 +45,7 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
   const [isPlaying, setIsPlaying] = useState(false);
   const [startTime, setStartTime] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0); 
+  const [duration, setDuration] = useState(30); // Previews do Deezer são fixos em 30s
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -97,14 +98,14 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
     return index;
   }, [currentTime, startTime, isDragging]);
 
-  const maxStartTime = Math.max(0, duration - SNIPPET_DURATION);
+  // Max startTime ajustado para sobrar ao menos 1s de áudio
+  const maxStartTime = Math.max(0, 30 - SNIPPET_DURATION - 1); 
   const barCount = 60;
 
   return (
     <div className="flex flex-col items-center gap-6 p-6 h-full bg-white dark:bg-black animate-fade-in overflow-hidden">
-      <audio ref={audioRef} src={track.previewUrl} />
+      <audio ref={audioRef} src={track.audio} />
 
-      {/* LYRICS ENGINE: Letras em estilo cinematográfico */}
       <div className="w-full h-40 flex flex-col items-center justify-center relative mt-4">
          <div className="absolute inset-0 bg-gradient-to-b from-white dark:from-black via-transparent to-white dark:to-black z-10 pointer-events-none" />
          <div 
@@ -130,38 +131,34 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
          </div>
       </div>
 
-      {/* Disco Rotativo */}
       <div className="relative mt-2">
         <div className={`w-48 h-48 rounded-full border-[10px] border-zinc-100 dark:border-zinc-900 shadow-2xl overflow-hidden relative ${isPlaying ? 'animate-spin-slow' : ''}`}>
-             <img src={track.artworkUrl100.replace('100x100', '600x600')} className="w-full h-full object-cover" alt={track.trackName} />
+             <img src={track.image} className="w-full h-full object-cover" alt={track.name} />
              <div className="absolute inset-0 border-[30px] border-black/10 rounded-full pointer-events-none" />
              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-zinc-800 rounded-full border-4 border-black/40 shadow-inner" />
         </div>
         <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-sky-500 px-4 py-1.5 rounded-full shadow-xl border-4 border-white dark:border-black animate-pulse">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" /></svg>
+            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 001.555-.832l3.197-1.998z" /></svg>
         </div>
       </div>
 
       <div className="text-center space-y-1">
-        <h3 className="font-black text-2xl tracking-tighter">{track.trackName}</h3>
-        <p className="text-sky-500 font-black text-[10px] uppercase tracking-[0.25em] opacity-80">{track.artistName}</p>
+        <h3 className="font-black text-2xl tracking-tighter">{track.name}</h3>
+        <p className="text-sky-500 font-black text-[10px] uppercase tracking-[0.25em] opacity-80">{track.artist_name}</p>
       </div>
 
-      {/* Waveform Neon Seletor */}
       <div className="w-full space-y-6 px-4 mt-4">
         <div className="relative h-24 w-full flex items-center bg-zinc-50 dark:bg-zinc-900/20 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 overflow-hidden group">
             
-            {/* Base Waveform */}
             <div className="absolute inset-0 flex items-center justify-between gap-[2px] px-6 opacity-10">
                 {Array.from({ length: barCount }).map((_, i) => (
                     <div key={i} className="w-[3px] rounded-full bg-zinc-500" style={{ height: `${20 + Math.abs(Math.sin(i * 0.5)) * 50}%` }} />
                 ))}
             </div>
 
-            {/* Neon Highlight */}
             <div 
                 className="absolute inset-0 flex items-center justify-between gap-[2px] px-6 pointer-events-none transition-all duration-100"
-                style={{ clipPath: `inset(0 ${100 - ((startTime + SNIPPET_DURATION) / (duration || 1)) * 100}% 0 ${(startTime / (duration || 1)) * 100}%)` }}
+                style={{ clipPath: `inset(0 ${100 - ((startTime + SNIPPET_DURATION) / (duration || 30)) * 100}% 0 ${(startTime / (duration || 30)) * 100}%)` }}
             >
                 {Array.from({ length: barCount }).map((_, i) => (
                     <div key={i} className="w-[3px] rounded-full bg-sky-500 shadow-[0_0_10px_#0ea5e9]" style={{ height: `${25 + Math.abs(Math.sin(i * 0.5)) * 65}%` }} />
@@ -178,7 +175,7 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
 
             <div 
                 className="absolute h-full border-x-4 border-sky-500 bg-sky-500/10 pointer-events-none transition-all duration-75 shadow-[0_0_25px_rgba(14,165,233,0.2)]"
-                style={{ left: `${(startTime / (duration || 1)) * 100}%`, width: `${(SNIPPET_DURATION / (duration || 1)) * 100}%` }}
+                style={{ left: `${(startTime / (duration || 30)) * 100}%`, width: `${(SNIPPET_DURATION / (duration || 30)) * 100}%` }}
             >
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-sky-500 text-[8px] font-black text-white px-3 py-0.5 rounded-full whitespace-nowrap shadow-lg">Recortar 25s</div>
             </div>
@@ -186,12 +183,11 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
 
         <div className="flex justify-between items-center text-[9px] font-black text-zinc-400 uppercase tracking-widest px-4">
             <span className="text-sky-500/60">0:00</span>
-            <span className="text-zinc-500 animate-pulse">{t('musicSearch.trimInstructions')}</span>
-            <span className="text-zinc-500">{Math.floor(duration)}s</span>
+            <span className="text-zinc-500 animate-pulse">Deslize para escolher a melhor parte</span>
+            <span className="text-zinc-500">0:30s</span>
         </div>
       </div>
 
-      {/* Ações */}
       <div className="w-full flex gap-3 mt-auto pb-4">
         <button 
             onClick={onBack} 
@@ -201,10 +197,10 @@ const MusicTrimmer: React.FC<MusicTrimmerProps> = ({ track, onConfirm, onBack })
         </button>
         <Button 
             onClick={() => onConfirm({
-                nome: track.trackName,
-                artista: track.artistName,
-                capa: track.artworkUrl100,
-                preview: track.previewUrl,
+                nome: track.name,
+                artista: track.artist_name,
+                capa: track.image,
+                preview: track.audio,
                 startTime: startTime,
             })} 
             className="flex-1 !rounded-3xl !py-4 !text-xs !font-black !uppercase !tracking-widest !bg-zinc-900 dark:!bg-white !text-white dark:!text-black shadow-2xl active:scale-95"

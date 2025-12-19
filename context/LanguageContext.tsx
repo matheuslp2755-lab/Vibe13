@@ -66,6 +66,7 @@ const ptMessages = {
     "accept": "Aceitar",
     "decline": "Recusar",
     "browser": "Explorar Web",
+    "vibeMusic": "Vibe Music",
     "followNotification": "{username} começou a seguir você.",
     "messageNotification": "{username} enviou uma mensagem.",
     "followRequestNotification": "{username} quer seguir você.",
@@ -99,7 +100,10 @@ const ptMessages = {
     "chooseSticker": "Escolha uma Figurinha",
     "scaleLabel": "Zoom / Escala",
     "musicStyle": "Estilo da Capa",
-    "musicStyleLabel": "Visual da Música"
+    "musicStyleLabel": "Visual da Música",
+    "groupPulse": "Pulso em Grupo",
+    "groupPulseInfo": "Até 10 pessoas podem colaborar.",
+    "groupPulseBadge": "GRUPO"
   },
   "diary": {
     "title": "Notas",
@@ -147,7 +151,10 @@ const ptMessages = {
     "addToMemory": "Salvar na Memória",
     "anonymousComment": "Anônimo",
     "anonymousCommentTaken": "Esta publicação já possui o limite de 1 comentário anônimo.",
-    "vibeAnon": "Vibe Anon"
+    "vibeAnon": "Vibe Anon",
+    "disableComments": "Desativar comentários",
+    "enableComments": "Ativar comentários",
+    "commentsDisabled": "Os comentários estão desativados."
   },
   "gallery": {
     "title": "Nova Publicação",
@@ -313,6 +320,13 @@ const ptMessages = {
   },
   "pulseBar": {
     "live": "AO VIVO"
+  },
+  "musicApp": {
+    "title": "Vibe Music",
+    "search": "Buscar trilhas, álbuns ou artistas...",
+    "nowPlaying": "Ouvindo agora",
+    "trending": "Top Mundiais",
+    "recommended": "Para sua Vibe"
   }
 };
 

@@ -15,6 +15,7 @@ interface MusicPlayerProps {
   isPlaying: boolean;
   isMuted: boolean;
   setIsMuted: (isMuted: boolean) => void;
+  hideMuteButton?: boolean;
 }
 
 const PlayIcon: React.FC<{className?: string}> = ({ className }) => (
@@ -45,7 +46,7 @@ const VolumeOffIcon: React.FC<{className?: string}> = ({ className }) => (
 
 const SNIPPET_DURATION = 25; 
 
-const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted, setIsMuted }) => {
+const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted, setIsMuted, hideMuteButton }) => {
     const { t } = useLanguage();
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -68,7 +69,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
 
         if (isPlaying) {
             const startTime = musicInfo.startTime || 0;
-            // Garante que o áudio comece no ponto selecionado
             if (audio.currentTime < startTime || audio.currentTime >= startTime + SNIPPET_DURATION) {
                 audio.currentTime = startTime;
             }
@@ -87,7 +87,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
         const handleTimeUpdate = () => {
             const time = audio.currentTime;
             const startTime = musicInfo.startTime || 0;
-            // Loop dentro dos 25 segundos
             if (time >= startTime + SNIPPET_DURATION) {
                 audio.currentTime = startTime;
             }
@@ -132,14 +131,15 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicInfo, isPlaying, isMuted
                         <div className="bg-sky-500 h-1 rounded-full transition-all duration-100" style={{ width: `${progressPercentage}%` }}></div>
                     </div>
                 </div>
-                 <button 
-                    onClick={() => setIsMuted(!isMuted)} 
-                    className="p-1 text-zinc-400 hover:text-sky-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full flex-shrink-0 transition-colors"
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                    {isMuted ? <VolumeOffIcon className="w-5 h-5" /> : <VolumeOnIcon className="w-5 h-5" />}
-                </button>
-                {/* Aqui o audio src carrega a trilha inteira (original) */}
+                 {!hideMuteButton && (
+                    <button 
+                        onClick={() => setIsMuted(!isMuted)} 
+                        className="p-1 text-zinc-400 hover:text-sky-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full flex-shrink-0 transition-colors"
+                        aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted ? <VolumeOffIcon className="w-5 h-5" /> : <VolumeOnIcon className="w-5 h-5" />}
+                    </button>
+                 )}
                 <audio ref={audioRef} src={musicInfo.preview} preload="metadata" muted={isMuted} />
             </div>
         </div>

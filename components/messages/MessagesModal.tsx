@@ -153,7 +153,6 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
     const [showMusicSearch, setShowMusicSearch] = useState(false);
     const [editingDiary, setEditingDiary] = useState<DiaryEntry | null>(null);
     const [confirmDeleteDiary, setConfirmDeleteDiary] = useState<DiaryEntry | null>(null);
-    const [isMusicMuted, setIsMusicMuted] = useState(false);
 
     const currentUser = auth.currentUser;
 
@@ -588,7 +587,7 @@ const MessagesModal: React.FC<MessagesModalProps> = ({ isOpen, onClose, initialT
                         
                         {viewingDiary.musicInfo && (
                             <div className="bg-zinc-50 dark:bg-zinc-900 rounded-3xl overflow-hidden border dark:border-zinc-800">
-                                <MusicPlayer musicInfo={viewingDiary.musicInfo} isPlaying={true} isMuted={isMusicMuted} setIsMuted={setIsMusicMuted} />
+                                <MusicPlayer musicInfo={viewingDiary.musicInfo} isPlaying={true} isMuted={false} setIsMuted={() => {}} hideMuteButton />
                             </div>
                         )}
                         

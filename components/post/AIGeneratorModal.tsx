@@ -72,7 +72,7 @@ const AIGeneratorModal: React.FC<AIGeneratorModalProps> = ({ isOpen, onClose, on
             }
 
         } catch (err: any) {
-            console.error("Erro na geração IA:", err);
+            console.error("Erro na geração IA:", err?.message || String(err));
             setError(t('aiGenerator.error') + ` (${err.message || 'Erro desconhecido'})`);
         } finally {
             setIsGenerating(false);

@@ -45,8 +45,8 @@ const VibeBrowser: React.FC<VibeBrowserProps> = ({ onClose }) => {
                     }));
                 setSources(urls);
             }
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error("Browser Error:", err?.message || String(err));
             setResultText("Ops! Ocorreu um erro ao navegar na rede. Verifique sua conexão.");
         } finally {
             setLoading(false);

@@ -4,6 +4,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db, collection, query, where, getDocs, limit, doc, setDoc, deleteDoc, serverTimestamp, orderBy, onSnapshot, writeBatch, addDoc, updateDoc, arrayUnion } from '../../firebase';
 import OnlineIndicator from './OnlineIndicator';
 import { useLanguage } from '../../context/LanguageContext';
+import VibeMusicApp from '../music/VibeMusicApp';
 
 type UserSearchResult = {
     id: string;
@@ -51,6 +52,12 @@ const MessageIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) =>
     </svg>
 );
 
+const MusicIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+    </svg>
+);
+
 const BrowserIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -64,6 +71,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
     const [isSearching, setIsSearching] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
+    const [isMusicAppOpen, setIsMusicAppOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
     
@@ -271,6 +279,10 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
                         <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.099l7 5.185V20.5a1 1 0 01-1 1h-5v-6h-2v6H5a1 1 0 01-1-1V7.284l7-5.185z"/></svg>
                     </button>
                     
+                    <button onClick={() => setIsMusicAppOpen(true)} className="hover:scale-110 transition-transform text-zinc-800 dark:text-zinc-200" title={t('header.vibeMusic')}>
+                         <MusicIcon />
+                    </button>
+
                     <div ref={activityRef} className="relative">
                         <button onClick={() => setIsActivityDropdownOpen(!isActivityDropdownOpen)} className="relative hover:scale-110 transition-transform">
                             <HeartIcon className="text-zinc-800 dark:text-zinc-200" />
@@ -340,6 +352,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
                     </button>
                 </nav>
             </div>
+            {isMusicAppOpen && <VibeMusicApp isOpen={isMusicAppOpen} onClose={() => setIsMusicAppOpen(false)} />}
         </header>
     );
 };
