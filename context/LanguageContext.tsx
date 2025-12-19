@@ -89,13 +89,28 @@ const ptMessages = {
     "gallery": "Galeria",
     "effectNone": "Nenhum",
     "effectBloom": "Suave",
-    "effectGrain": "Cinema",
+    "effectNoir": "Cinema Noir",
+    "effectCyber": "Cyberpunk",
     "effectRetro": "Vintage",
-    "effectPrism": "Prisma",
-    "effectAura": "Aura",
-    "effectCyber": "Cyber",
-    "effectStars": "Estrelas",
-    "effectHearts": "Corações"
+    "effectAura": "Aura Mística"
+  },
+  "diary": {
+    "title": "Notas",
+    "publish": "Publicar",
+    "publishing": "Publicando...",
+    "placeholder": "No que você está pensando hoje?",
+    "empty": "O diário está vazio.",
+    "emptySuggestion": "Siga pessoas para ver as notas delas aqui ou escreva a sua!",
+    "alreadyPosted": "Você já postou sua nota de hoje. Volte amanhã!"
+  },
+  "musicSearch": {
+    "fetchError": "Erro ao buscar músicas",
+    "searchError": "Ocorreu um erro durante a busca.",
+    "trimInstructions": "Deslize para escolher os 25s perfeitos",
+    "done": "Concluir",
+    "suggestions": "Sugestões para você",
+    "trending": "Bombando no Vibe",
+    "lyricsTitle": "Letras sincronizadas"
   },
   "post": {
     "like": "Curtir",
