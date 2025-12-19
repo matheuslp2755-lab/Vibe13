@@ -104,6 +104,103 @@ const ptMessages = {
     "empty": "O que você quer descobrir hoje?",
     "sources": "Fontes da pesquisa:"
   },
+  "forwardModal": {
+    "title": "Encaminhar para",
+    "search": "Pesquisar amigos...",
+    "noFollowing": "Você não segue ninguém ainda.",
+    "noResults": "Nenhum usuário encontrado.",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "sent": "Enviado"
+  },
+  "diary": {
+    "title": "Notas",
+    "publish": "Publicar",
+    "publishing": "Publicando...",
+    "placeholder": "O que você está pensando?",
+    "empty": "Nenhuma nota no momento.",
+    "emptySuggestion": "Siga pessoas para ver as notas delas aqui!",
+    "alreadyPosted": "Você já postou uma nota hoje. Volte amanhã!"
+  },
+  "duoModal": {
+    "title": "Criar Foto em Dupla",
+    "description": "Escolha um amigo para compartilhar este post. Ele receberá um convite para aceitar.",
+    "sendRequest": "Enviar Convite",
+    "sending": "Enviando...",
+    "noFollowing": "Você não segue ninguém para convidar.",
+    "requestSent": "Convite enviado!",
+    "alreadyPartnered": "Este post já é um Duo.",
+    "requestPending": "Já existe um convite pendente para este post.",
+    "requestError": "Erro ao enviar convite."
+  },
+  "memories": {
+    "new": "Nova",
+    "add": "Adicionar",
+    "title": "Memórias",
+    "edit": "Editar Memória",
+    "delete": "Excluir Memória",
+    "deleteConfirm": "Tem certeza que deseja excluir esta memória? Isso não pode ser desfeito.",
+    "selectContent": "Selecionar Conteúdo",
+    "next": "Próximo",
+    "name": "Nome",
+    "editCover": "Editar Capa",
+    "create": "Criar",
+    "save": "Salvar",
+    "selectItems": "Selecione as publicações que deseja adicionar.",
+    "noContent": "Você não tem publicações para adicionar.",
+    "memoryName": "Nome da Memória",
+    "selectCover": "Escolha uma capa",
+    "creating": "Criando...",
+    "saving": "Salvando...",
+    "error": "Ocorreu um erro. Tente novamente.",
+    "addToMemoryTitle": "Salvar na Memória",
+    "createNew": "Criar Nova Memória",
+    "added": "Adicionado!",
+    "uploadPhoto": "Enviar Foto"
+  },
+  "call": {
+    "call": "Chamada",
+    "calling": "Chamando {username}...",
+    "incomingCall": "Chamada de {username}",
+    "incomingVideoCall": "Vídeo chamada de {username}",
+    "answer": "Atender",
+    "decline": "Recusar",
+    "hangUp": "Desligar",
+    "callEnded": "Chamada encerrada",
+    "onCallWith": "Em chamada com {username}",
+    "shareScreen": "Compartilhar Tela",
+    "stopShare": "Parar de Compartilhar",
+    "videoCall": "Chamada de Vídeo",
+    "voiceCall": "Chamada de Voz",
+    "filters": {
+        "none": "Normal",
+        "bw": "P&B",
+        "vintage": "Vintage",
+        "soft": "Suave",
+        "cool": "Frio",
+        "focus": "Foco"
+    }
+  },
+  "choiceModal": {
+    "title": "O que você deseja criar?",
+    "post": "Publicação",
+    "pulse": "Pulse"
+  },
+  "vibeFeed": {
+    "loading": "Carregando Vibes...",
+    "noVibes": "Nenhum Vibe encontrado.",
+    "comments": "Comentários",
+    "share": "Compartilhar",
+    "addComment": "Adicionar comentário...",
+    "deleteTitle": "Excluir Vibe?",
+    "deleteBody": "Tem certeza que deseja excluir este vídeo?",
+    "sendTo": "Enviar para",
+    "shareExternal": "Compartilhar via",
+    "whatsapp": "WhatsApp / Status"
+  },
+  "welcome": {
+    "title": "Bem-vindo ao Vibe"
+  },
   "profile": {
     "editProfile": "Editar Perfil",
     "posts": "publicações",
@@ -141,49 +238,6 @@ const ptMessages = {
     "updateError": "Erro ao atualizar perfil.",
     "usernameCooldown": "Você só pode mudar o usuário a cada 30 dias.",
     "nicknameCooldown": "Você só pode mudar o apelido a cada 15 dias."
-  },
-  "createPost": {
-    "title": "Nova Publicação",
-    "share": "Compartilhar",
-    "sharing": "Compartilhando...",
-    "captionLabel": "Escreva uma legenda...",
-    "publishError": "Erro ao publicar.",
-    "addMusic": "Adicionar Música",
-    "changeMusic": "Trocar Música",
-    "searchMusicPlaceholder": "Buscar música ou artista...",
-    "musicNoResults": "Nenhuma música encontrada.",
-    "selectFromComputer": "Selecionar do dispositivo",
-    "editingPanel": "Painel de Edição",
-    "duo": "Convidar Duo",
-    "tags": "Marcar Pessoas"
-  },
-  "messages": {
-    "title": "Mensagens",
-    "newMessage": "Nova mensagem",
-    "newMessageTitle": "Nova Mensagem",
-    "createGroup": "Criar Grupo",
-    "groupName": "Nome do Grupo",
-    "groupLimit": "Máximo de 15 pessoas.",
-    "close": "Fechar",
-    "loading": "Carregando...",
-    "noConversations": "Nenhuma conversa ainda.",
-    "back": "Voltar",
-    "yourMessages": "Suas Mensagens",
-    "messagePlaceholder": "Mensagem...",
-    "send": "Enviar",
-    "seen": "Visualizada",
-    "typing": "Digitando...",
-    "recordingAudio": "Gravando áudio...",
-    "anonymousModeOn": "Modo Anônimo ativado",
-    "anonymousModeOff": "Modo Online ativado",
-    "deleteTitle": "Excluir Mensagem?",
-    "deleteBody": "Isso não poderá ser desfeito.",
-    "deleteConversationTitle": "Excluir Conversa?",
-    "deleteConversationBody": "A conversa será apagada para ambos.",
-    "deleteConversationConfirm": "Excluir",
-    "searchUsers": "Pesquisar pessoas...",
-    "diariesTitle": "Notas",
-    "addNote": "Sua Nota"
   }
 };
 

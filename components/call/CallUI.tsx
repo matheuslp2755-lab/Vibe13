@@ -34,7 +34,7 @@ const CallTimer: React.FC = () => {
 };
 
 const CallUI: React.FC = () => {
-    const { activeCall, localStream, remoteStream, hangUp, answerCall, declineCall, error } = useCall();
+    const { activeCall, localStream, remoteStream, hangUp, answerCall, declineCall, error, isScreenSharing, toggleScreenSharing } = useCall();
     const { t } = useLanguage();
     
     const localAudioRef = useRef<HTMLAudioElement>(null);
@@ -96,7 +96,7 @@ const CallUI: React.FC = () => {
                                     {CALL_FILTERS.map(f => (
                                         <button key={f.id} onClick={() => setSelectedFilter(f)} className="flex-shrink-0 flex flex-col items-center gap-1">
                                             <div className={`w-12 h-12 rounded-full border-2 ${f.preview} ${selectedFilter.id === f.id ? 'border-sky-500 scale-110' : 'border-white/20'}`} />
-                                            <span className="text-[10px] text-white/70 font-bold">{t(`call.${f.label}`)}</span>
+                                            <span className="text-[10px] text-white/70 font-bold">{t(`call.filters.${f.id}`)}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -104,18 +104,29 @@ const CallUI: React.FC = () => {
                         )}
 
                         <div className="flex items-center gap-4 mb-8">
+                            {/* Botão Compartilhar Tela */}
+                            <button 
+                                onClick={() => toggleScreenSharing()} 
+                                className={`p-4 rounded-full backdrop-blur-md border border-white/10 transition-all ${isScreenSharing ? 'bg-orange-500 text-white' : 'bg-white/10 text-white'}`}
+                                title={isScreenSharing ? t('call.stopShare') : t('call.shareScreen')}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+
                             <button onClick={() => setShowEffectsMenu(!showEffectsMenu)} className={`p-4 rounded-full backdrop-blur-md border border-white/10 ${showEffectsMenu ? 'bg-sky-500' : 'bg-white/10 text-white'}`}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </button>
                             <button onClick={() => hangUp()} className="bg-red-600 p-5 rounded-full text-white shadow-2xl hover:bg-red-700 transition-all active:scale-95">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div className="absolute bottom-32 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-zinc-900">
-                    <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)', filter: selectedFilter.filter }} />
+                    <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" style={{ transform: isScreenSharing ? 'none' : 'scaleX(-1)', filter: selectedFilter.filter }} />
                 </div>
             </div>
         );

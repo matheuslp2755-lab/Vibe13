@@ -53,6 +53,8 @@ interface CallContextType {
     leaveLive: () => void;
     isGlobalMuted: boolean;
     setGlobalMuted: (muted: boolean) => void;
+    isScreenSharing: boolean;
+    toggleScreenSharing: () => Promise<void>;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
@@ -63,20 +65,64 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isGlobalMuted, setIsGlobalMuted] = useState(true);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    
     const pc = useRef<RTCPeerConnection | null>(null);
     const candidatesQueue = useRef<RTCIceCandidate[]>([]);
+    const screenStreamRef = useRef<MediaStream | null>(null);
 
     const [activeLive, setActiveLive] = useState<LiveSession | null>(null);
     const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
     
-    const hostConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
-    const viewerPC = useRef<RTCPeerConnection | null>(null);
-    const liveUnsubs = useRef<Unsubscribe[]>([]);
-
     const activeCallRef = useRef(activeCall);
     useEffect(() => {
         activeCallRef.current = activeCall;
     }, [activeCall]);
+
+    const stopScreenSharing = useCallback(async () => {
+        if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(track => track.stop());
+            screenStreamRef.current = null;
+        }
+        
+        if (pc.current && localStream) {
+            const videoTrack = localStream.getVideoTracks()[0];
+            const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
+            if (sender && videoTrack) {
+                await sender.replaceTrack(videoTrack);
+            }
+        }
+        setIsScreenSharing(false);
+    }, [localStream]);
+
+    const toggleScreenSharing = async () => {
+        if (!activeCallRef.current || !activeCallRef.current.isVideo || activeCallRef.current.status !== 'connected') return;
+
+        if (!isScreenSharing) {
+            try {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStreamRef.current = screenStream;
+                const screenTrack = screenStream.getVideoTracks()[0];
+
+                if (pc.current) {
+                    const sender = pc.current.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) {
+                        await sender.replaceTrack(screenTrack);
+                    }
+                }
+
+                screenTrack.onended = () => {
+                    stopScreenSharing();
+                };
+
+                setIsScreenSharing(true);
+            } catch (err) {
+                console.error("Erro ao compartilhar tela:", err);
+            }
+        } else {
+            await stopScreenSharing();
+        }
+    };
 
     const resetCallState = useCallback(() => {
         if (pc.current) {
@@ -88,9 +134,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStream.getTracks().forEach(track => track.stop());
             setLocalStream(null);
         }
+        if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(t => t.stop());
+            screenStreamRef.current = null;
+        }
         setRemoteStream(null);
         setActiveCall(null);
         setError(null);
+        setIsScreenSharing(false);
     }, [localStream]);
 
     useEffect(() => {
@@ -247,7 +298,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const value = {
         activeCall, localStream, remoteStream, startCall, answerCall, hangUp, declineCall, setIncomingCall: setActiveCall, error,
         activeLive, liveStream, startLive, joinLive, endLive, leaveLive,
-        isGlobalMuted, setGlobalMuted: (muted: boolean) => setIsGlobalMuted(muted)
+        isGlobalMuted, setGlobalMuted: (muted: boolean) => setIsGlobalMuted(muted),
+        isScreenSharing, toggleScreenSharing
     };
 
     return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
