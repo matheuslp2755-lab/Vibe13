@@ -61,7 +61,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImagesSe
                 setCameraStream(null);
             }
         }
-    }, [activeTab, isOpen]);
+    }, [activeTab, isOpen, t]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -111,7 +111,7 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImagesSe
             const preview = canvas.toDataURL('image/jpeg');
             canvas.toBlob((blob) => {
                 if (blob) {
-                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    const file = new File([blob], `vibe-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
                     const newImage = { file, preview };
                     setGalleryImages(prev => [newImage, ...prev]);
                     if (selectedImages.length < 20) setSelectedImages(prev => [...prev, newImage]);
@@ -126,50 +126,62 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImagesSe
     return (
         <div className="fixed inset-0 bg-white dark:bg-black z-[60] flex flex-col">
             <header className="flex-shrink-0 flex items-center justify-between p-4 border-b dark:border-zinc-800">
-                <button onClick={onClose}><XIcon className="w-6 h-6" /></button>
-                <h2 className="text-lg font-semibold">{t('gallery.title')} ({selectedImages.length}/20)</h2>
-                <Button onClick={() => onImagesSelected(selectedImages)} disabled={selectedImages.length === 0} className="!w-auto !py-1 !px-4 !text-sm">
+                <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"><XIcon className="w-6 h-6" /></button>
+                <h2 className="text-sm font-black uppercase tracking-widest">{t('gallery.title')} ({selectedImages.length}/20)</h2>
+                <Button onClick={() => onImagesSelected(selectedImages)} disabled={selectedImages.length === 0} className="!w-auto !py-1.5 !px-6 !text-xs !rounded-full !uppercase !font-black !tracking-widest">
                     {t('gallery.next')}
                 </Button>
             </header>
             
             <div className="flex-grow flex flex-col overflow-hidden">
                 {activeTab === 'gallery' ? (
-                    <div className="w-full aspect-square bg-black flex items-center justify-center flex-shrink-0">
+                    <div className="w-full aspect-square bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {selectedImages.length > 0 ? (
                             selectedImages[selectedImages.length - 1].file.type.startsWith('video/') ? (
                                 <video src={selectedImages[selectedImages.length - 1].preview} controls className="max-h-full max-w-full" />
                             ) : (
-                                <img src={selectedImages[selectedImages.length - 1].preview} className="max-h-full max-w-full object-contain" />
+                                <img src={selectedImages[selectedImages.length - 1].preview} className="max-h-full max-w-full object-contain" alt="Preview" />
                             )
-                        ) : <p className="text-zinc-500">Selecione até 20 fotos</p>}
+                        ) : <p className="text-zinc-400 font-bold text-sm uppercase tracking-widest">Selecione fotos ou vídeos</p>}
                     </div>
                 ) : (
                     <div className="relative flex-grow bg-black">
-                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover mirrored" style={{ transform: 'scaleX(-1)' }} />
-                        <button onClick={handleCapture} className="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-4 border-white flex items-center justify-center">
-                            <div className="w-12 h-12 bg-white rounded-full"></div>
-                        </button>
+                        {cameraError ? (
+                            <div className="flex flex-col items-center justify-center h-full p-10 text-center">
+                                <p className="text-white font-bold">{cameraError}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+                                <button onClick={handleCapture} className="absolute bottom-8 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition-transform">
+                                    <div className="w-16 h-16 bg-white rounded-full"></div>
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
 
-                <div className="flex justify-around border-b dark:border-zinc-800">
-                    <button onClick={() => setActiveTab('gallery')} className={`w-full py-3 text-sm font-semibold ${activeTab === 'gallery' ? 'border-b-2 border-black dark:border-white' : 'text-zinc-500'}`}>{t('gallery.galleryTab')}</button>
-                    <button onClick={() => setActiveTab('camera')} className={`w-full py-3 text-sm font-semibold ${activeTab === 'camera' ? 'border-b-2 border-black dark:border-white' : 'text-zinc-500'}`}>{t('gallery.cameraTab')}</button>
+                <div className="flex justify-around border-b dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                    <button onClick={() => setActiveTab('gallery')} className={`w-full py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'gallery' ? 'text-zinc-900 dark:text-white border-b-2 border-sky-500' : 'text-zinc-400'}`}>{t('gallery.galleryTab')}</button>
+                    <button onClick={() => setActiveTab('camera')} className={`w-full py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'camera' ? 'text-zinc-900 dark:text-white border-b-2 border-sky-500' : 'text-zinc-400'}`}>{t('gallery.cameraTab')}</button>
                 </div>
 
                 {activeTab === 'gallery' && (
-                    <div className="flex-grow overflow-y-auto grid grid-cols-3 gap-0.5">
-                        <div onClick={() => fileInputRef.current?.click()} className="aspect-square bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center cursor-pointer">
-                            <PlusIcon className="w-8 h-8 text-zinc-400" />
+                    <div className="flex-grow overflow-y-auto grid grid-cols-3 gap-0.5 p-0.5 no-scrollbar">
+                        <div onClick={() => fileInputRef.current?.click()} className="aspect-square bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                            <PlusIcon className="w-10 h-10 text-zinc-400" />
                         </div>
                         {galleryImages.map((img, i) => {
                             const index = selectedImages.findIndex(s => s.preview === img.preview);
                             return (
-                                <div key={i} onClick={() => toggleSelection(img)} className="relative aspect-square cursor-pointer">
-                                    {img.file.type.startsWith('video/') ? <video src={img.preview} className="w-full h-full object-cover" /> : <img src={img.preview} className="w-full h-full object-cover" />}
+                                <div key={i} onClick={() => toggleSelection(img)} className="relative aspect-square cursor-pointer overflow-hidden group">
+                                    {img.file.type.startsWith('video/') ? (
+                                        <video src={img.preview} className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${index !== -1 ? 'opacity-70' : ''}`} />
+                                    ) : (
+                                        <img src={img.preview} className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${index !== -1 ? 'opacity-70' : ''}`} alt="" />
+                                    )}
                                     {index !== -1 && (
-                                        <div className="absolute top-2 right-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">
+                                        <div className="absolute top-2 right-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center text-white text-[10px] font-black border-2 border-white shadow-lg">
                                             {index + 1}
                                         </div>
                                     )}
@@ -186,10 +198,10 @@ const GalleryModal: React.FC<GalleryModalProps> = ({ isOpen, onClose, onImagesSe
 };
 
 const XIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
 );
 const PlusIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
 );
 
 export default GalleryModal;

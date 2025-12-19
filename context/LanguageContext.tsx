@@ -11,7 +11,11 @@ const ptMessages = {
     "user": "Usuário",
     "send": "Enviar",
     "save": "Salvar",
-    "error": "Ocorreu um erro. Tente novamente."
+    "error": "Ocorreu um erro. Tente novamente.",
+    "back": "Voltar",
+    "next": "Próximo",
+    "done": "Concluir",
+    "loading": "Carregando..."
   },
   "login": {
     "title": "Vibe",
@@ -60,7 +64,7 @@ const ptMessages = {
     "home": "Início",
     "accept": "Aceitar",
     "decline": "Recusar",
-    "browser": "Navegar na Internet",
+    "browser": "Explorar Web",
     "followNotification": "{username} começou a seguir você.",
     "messageNotification": "{username} enviou uma mensagem.",
     "followRequestNotification": "{username} quer seguir você.",
@@ -82,8 +86,8 @@ const ptMessages = {
     "delete": "Excluir",
     "editCaption": "Editar legenda",
     "addCaption": "Adicionar legenda",
-    "changeMusic": "Trocar música",
-    "addMusic": "Adicionar música",
+    "changeMusic": "Trocar trilha sonora",
+    "addMusic": "Adicionar trilha sonora",
     "tagFriends": "Marcar amigos",
     "inviteDuo": "Convidar Duo",
     "duoPending": "Duo Pendente",
@@ -97,50 +101,70 @@ const ptMessages = {
     "anonymousCommentTaken": "Esta publicação já possui o limite de 1 comentário anônimo.",
     "vibeAnon": "Vibe Anon"
   },
-  "browser": {
-    "title": "Vibe Explorer",
-    "placeholder": "Pesquise qualquer coisa na web...",
-    "searching": "Navegando na internet...",
-    "empty": "O que você quer descobrir hoje?",
-    "sources": "Fontes da pesquisa:"
+  "gallery": {
+    "title": "Nova Publicação",
+    "selectPhotos": "Selecionar Fotos",
+    "next": "Avançar",
+    "galleryTab": "Galeria",
+    "cameraTab": "Câmera",
+    "capture": "Capturar",
+    "cameraError": "Não foi possível acessar a câmera. Verifique as permissões."
   },
   "aiGenerator": {
-    "title": "Vibe AI Creator",
+    "title": "Criador IA Vibe",
     "promptLabel": "O que você quer criar?",
-    "promptPlaceholder": "Descreva a foto dos seus sonhos...",
-    "generate": "Gerar Imagem",
+    "promptPlaceholder": "Descreva a foto dos seus sonhos em detalhes...",
+    "generate": "Gerar com IA",
     "generating": "Inspirando a IA...",
     "useImage": "Usar esta Foto",
-    "error": "Erro ao gerar. Tente novamente."
+    "error": "Erro ao gerar imagem. Tente novamente."
   },
-  "forwardModal": {
-    "title": "Encaminhar para",
-    "search": "Pesquisar amigos...",
-    "noFollowing": "Você não segue ninguém ainda.",
-    "noResults": "Nenhum usuário encontrado.",
-    "send": "Enviar",
-    "sending": "Enviando...",
-    "sent": "Enviado"
+  "pulseViewer": {
+    "previous": "Anterior",
+    "next": "Próximo",
+    "delete": "Excluir Pulse",
+    "deleteTitle": "Excluir Pulse?",
+    "deleteBody": "Tem certeza que deseja excluir? Isso não pode ser desfeito.",
+    "save": "Salvar",
+    "replyPlaceholder": "Enviar mensagem..."
   },
-  "diary": {
-    "title": "Notas",
-    "publish": "Publicar",
-    "publishing": "Publicando...",
-    "placeholder": "O que você está pensando?",
-    "empty": "Nenhuma nota no momento.",
-    "emptySuggestion": "Siga pessoas para ver as notas delas aqui!",
-    "alreadyPosted": "Você já postou uma nota hoje. Volte amanhã!"
+  "vibeFeed": {
+    "loading": "Carregando Vibes...",
+    "noVibes": "Nenhum Vibe encontrado.",
+    "comments": "Comentários",
+    "share": "Compartilhar",
+    "addComment": "Comentar...",
+    "deleteTitle": "Excluir Vibe?",
+    "deleteBody": "Tem certeza que deseja excluir este vídeo?",
+    "sendTo": "Enviar para",
+    "shareExternal": "Compartilhar via",
+    "whatsapp": "WhatsApp / Status"
   },
-  "duoModal": {
-    "title": "Criar Foto em Dupla",
-    "description": "Escolha um amigo para compartilhar este post. Ele receberá um convite para aceitar.",
-    "sendRequest": "Enviar Convite",
-    "sending": "Enviando...",
-    "noFollowing": "Você não segue ninguém para convidar.",
-    "requestSent": "Convite enviado!",
-    "alreadyPartnered": "Este post já é um Duo.",
-    "requestPending": "Já existe um convite pendente para este post.",
-    "requestError": "Erro ao enviar convite."
+  "browser": {
+    "title": "Vibe Explorer",
+    "placeholder": "Pesquise na internet...",
+    "searching": "Buscando resultados...",
+    "empty": "O que você quer descobrir hoje?",
+    "sources": "Fontes:"
+  },
+  "messages": {
+    "title": "Mensagens",
+    "newMessage": "Nova mensagem",
+    "close": "Fechar",
+    "loading": "Carregando conversas...",
+    "noConversations": "Nenhuma conversa ainda.",
+    "back": "Voltar",
+    "messagePlaceholder": "Mensagem...",
+    "diariesTitle": "Notas",
+    "addNote": "Sua Nota",
+    "replyToNote": "Responder a {username}...",
+    "anonymousModeOn": "Modo Anônimo Ativado",
+    "anonymousModeOff": "Modo Anônimo Desativado",
+    "createGroup": "Criar Grupo",
+    "groupName": "Nome do Grupo",
+    "groupLimit": "Limite de membros",
+    "searchUsers": "Pesquisar pessoas...",
+    "forwardedPost": "Encaminhou uma publicação"
   },
   "memories": {
     "new": "Nova",
@@ -148,24 +172,21 @@ const ptMessages = {
     "title": "Memórias",
     "edit": "Editar Memória",
     "delete": "Excluir Memória",
-    "deleteConfirm": "Tem certeza que deseja excluir esta memória? Isso não pode ser desfeito.",
+    "deleteConfirm": "Deseja excluir esta memória?",
     "selectContent": "Selecionar Conteúdo",
     "next": "Próximo",
     "name": "Nome",
     "editCover": "Editar Capa",
     "create": "Criar",
     "save": "Salvar",
-    "selectItems": "Selecione as publicações que deseja adicionar.",
-    "noContent": "Você não tem publicações para adicionar.",
+    "selectItems": "Selecione os itens para a memória.",
     "memoryName": "Nome da Memória",
     "selectCover": "Escolha uma capa",
     "creating": "Criando...",
-    "saving": "Salvando...",
-    "error": "Ocorreu um erro. Tente novamente.",
-    "addToMemoryTitle": "Salvar na Memória",
-    "createNew": "Criar Nova Memória",
     "added": "Adicionado!",
-    "uploadPhoto": "Enviar Foto"
+    "uploadPhoto": "Enviar Foto",
+    "addToMemoryTitle": "Salvar na Memória",
+    "createNew": "Criar Nova"
   },
   "call": {
     "call": "Chamada",
@@ -182,49 +203,13 @@ const ptMessages = {
     "videoCall": "Chamada de Vídeo",
     "voiceCall": "Chamada de Voz",
     "filters": {
-        "none": "Normal",
-        "bw": "P&B",
-        "vintage": "Vintage",
-        "soft": "Suave",
-        "cool": "Frio",
-        "focus": "Foco"
+      "none": "Normal",
+      "bw": "P&B",
+      "vintage": "Vintage",
+      "soft": "Suave",
+      "cool": "Frio",
+      "focus": "Foco"
     }
-  },
-  "choiceModal": {
-    "title": "O que você deseja criar?",
-    "post": "Publicação",
-    "pulse": "Pulse"
-  },
-  "vibeFeed": {
-    "loading": "Carregando Vibes...",
-    "noVibes": "Nenhum Vibe encontrado.",
-    "comments": "Comentários",
-    "share": "Compartilhar",
-    "addComment": "Adicionar comentário...",
-    "deleteTitle": "Excluir Vibe?",
-    "deleteBody": "Tem certeza que deseja excluir este vídeo?",
-    "sendTo": "Enviar para",
-    "shareExternal": "Compartilhar via",
-    "whatsapp": "WhatsApp / Status"
-  },
-  "welcome": {
-    "title": "Bem-vindo ao Vibe"
-  },
-  "profile": {
-    "editProfile": "Editar Perfil",
-    "posts": "publicações",
-    "followers": "seguidores",
-    "followingCount": "seguindo",
-    "message": "Mensagem",
-    "logout": "Sair",
-    "privateAccountMessage": "Esta conta é privada",
-    "privateAccountSuggestion": "Siga para ver as fotos e vídeos.",
-    "privateListsMessage": "Esta lista é privada.",
-    "options": "Opções de perfil",
-    "followersModalTitle": "Seguidores",
-    "followingModalTitle": "Seguindo",
-    "noFollowers": "Nenhum seguidor ainda.",
-    "notFollowingAnyone": "Não segue ninguém ainda."
   },
   "editProfile": {
     "title": "Editar Perfil",
@@ -237,16 +222,19 @@ const ptMessages = {
     "vibeAnger": "Focado",
     "vibeSloth": "Preguiça",
     "profileMusic": "Música do Perfil",
-    "noProfileMusic": "Nenhuma música selecionada.",
+    "noProfileMusic": "Nenhuma selecionada.",
     "changeMusic": "Trocar música",
     "removeMusic": "Remover",
     "privateAccount": "Conta Privada",
-    "privateAccountInfo": "Apenas seus seguidores verão suas fotos.",
+    "privateAccountInfo": "Apenas seguidores verão suas fotos.",
     "submit": "Salvar",
     "submitting": "Salvando...",
     "updateError": "Erro ao atualizar perfil.",
-    "usernameCooldown": "Você só pode mudar o usuário a cada 30 dias.",
-    "nicknameCooldown": "Você só pode mudar o apelido a cada 15 dias."
+    "usernameCooldown": "Mude o usuário a cada 30 dias.",
+    "nicknameCooldown": "Mude o apelido a cada 15 dias."
+  },
+  "welcome": {
+    "title": "Bem-vindo ao Vibe"
   }
 };
 
