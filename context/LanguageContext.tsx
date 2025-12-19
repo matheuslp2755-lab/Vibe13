@@ -41,7 +41,7 @@ const ptMessages = {
   },
   "header": {
     "title": "Vibe",
-    "searchPlaceholder": "Pesquisar",
+    "searchPlaceholder": "Pesquisar pessoas...",
     "noResults": "Nenhum resultado.",
     "following": "Seguindo",
     "follow": "Seguir",
@@ -60,6 +60,7 @@ const ptMessages = {
     "home": "Início",
     "accept": "Aceitar",
     "decline": "Recusar",
+    "browser": "Navegar na Internet",
     "followNotification": "{username} começou a seguir você.",
     "messageNotification": "{username} enviou uma mensagem.",
     "followRequestNotification": "{username} quer seguir você.",
@@ -91,7 +92,17 @@ const ptMessages = {
     "deletePostBody": "Tem certeza? Esta ação não pode ser desfeita.",
     "youRepublicated": "Você republicou",
     "republishedBy": "Republicado por {username}",
-    "addToMemory": "Salvar na Memória"
+    "addToMemory": "Salvar na Memória",
+    "anonymousComment": "Modo Anônimo",
+    "anonymousCommentTaken": "Esta publicação já possui o limite de 1 comentário anônimo.",
+    "vibeAnon": "Vibe Anon"
+  },
+  "browser": {
+    "title": "Vibe Explorer",
+    "placeholder": "Pesquise qualquer coisa na web...",
+    "searching": "Navegando na internet...",
+    "empty": "O que você quer descobrir hoje?",
+    "sources": "Fontes da pesquisa:"
   },
   "profile": {
     "editProfile": "Editar Perfil",
@@ -146,21 +157,6 @@ const ptMessages = {
     "duo": "Convidar Duo",
     "tags": "Marcar Pessoas"
   },
-  "createPulse": {
-    "title": "Criar Pulse",
-    "location": "Localização",
-    "locationPlaceholder": "Pesquisar local...",
-    "searchingLocations": "Buscando locais...",
-    "poll": "Enquete",
-    "pollQuestion": "Faça uma pergunta...",
-    "pollOption1": "Sim",
-    "pollOption2": "Não",
-    "countdown": "Contagem Regressiva",
-    "countdownTitle": "Dê um nome...",
-    "days": "Dias",
-    "hours": "Horas",
-    "mins": "Min"
-  },
   "messages": {
     "title": "Mensagens",
     "newMessage": "Nova mensagem",
@@ -188,15 +184,6 @@ const ptMessages = {
     "searchUsers": "Pesquisar pessoas...",
     "diariesTitle": "Notas",
     "addNote": "Sua Nota"
-  },
-  "musicSearch": {
-    "fetchError": "Erro ao buscar músicas",
-    "searchError": "Ocorreu um erro durante a busca.",
-    "trimInstructions": "Deslize para escolher os 25 segundos perfeitos",
-    "done": "Concluir",
-    "suggestions": "Sugestões para você",
-    "trending": "Bombando no Vibe",
-    "lyricsTitle": "Letras sincronizadas"
   }
 };
 

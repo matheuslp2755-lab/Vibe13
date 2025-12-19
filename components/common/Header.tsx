@@ -31,6 +31,7 @@ interface HeaderProps {
     onSelectUser: (userId: string) => void;
     onGoHome: () => void;
     onOpenMessages: (conversationId?: string) => void;
+    onOpenBrowser: () => void;
 }
 
 const SearchIcon: React.FC<{className?: string}> = ({className = "h-5 w-5 text-zinc-400 dark:text-zinc-500"}) => (
@@ -50,7 +51,13 @@ const MessageIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) =>
     </svg>
 );
 
-const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages }) => {
+const BrowserIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+    </svg>
+);
+
+const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages, onOpenBrowser }) => {
     const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -59,7 +66,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
-    const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     
     const searchRef = useRef<HTMLDivElement>(null);
     const activityRef = useRef<HTMLDivElement>(null);
@@ -77,24 +83,56 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         });
     }, [currentUser]);
 
+    // Pesquisa de usuários sincronizada com username_lowercase
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+        setIsSearching(true);
+        const timeoutId = setTimeout(async () => {
+            const q = query(
+                collection(db, 'users'),
+                where('username_lowercase', '>=', searchQuery.toLowerCase()),
+                where('username_lowercase', '<=', searchQuery.toLowerCase() + '\uf8ff'),
+                limit(10)
+            );
+            try {
+                const snap = await getDocs(q);
+                const results = snap.docs
+                    .map(d => ({ id: d.id, ...d.data() } as UserSearchResult))
+                    .filter(u => u.id !== currentUser?.uid);
+                setSearchResults(results);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, currentUser]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setIsSearchFocused(false);
+            }
+            if (activityRef.current && !activityRef.current.contains(e.target as Node)) {
+                setIsActivityDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleAcceptDuoRequest = async (n: Notification) => {
         if (!currentUser || !n.postId) return;
         const batch = writeBatch(db);
-        
-        // Atualizar Post
         batch.update(doc(db, 'posts', n.postId), {
             duoPending: false,
-            duoPartner: {
-                id: currentUser.uid,
-                username: currentUser.displayName,
-                avatar: currentUser.photoURL
-            }
+            duoPartner: { id: currentUser.uid, username: currentUser.displayName, avatar: currentUser.photoURL }
         });
-
-        // Deletar Notificação
         batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
-
-        // Notificar Originador
         const notifRef = doc(collection(db, 'users', n.fromUserId, 'notifications'));
         batch.set(notifRef, {
             type: 'duo_accepted',
@@ -104,7 +142,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             timestamp: serverTimestamp(),
             read: false
         });
-
         await batch.commit();
     };
 
@@ -135,15 +172,57 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b dark:border-zinc-800 z-50 transition-all duration-300">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">
                 
-                <h1 
-                    onClick={onGoHome} 
-                    className="text-4xl font-serif cursor-pointer shrink-0 font-black bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-transparent bg-clip-text tracking-tighter"
-                >
-                    {t('header.title')}
-                </h1>
+                <div className="flex items-center gap-3">
+                    <h1 
+                        onClick={onGoHome} 
+                        className="text-3xl font-serif cursor-pointer shrink-0 font-black bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-transparent bg-clip-text tracking-tighter"
+                    >
+                        {t('header.title')}
+                    </h1>
+                    <button 
+                        onClick={onOpenBrowser}
+                        className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all text-zinc-600 dark:text-zinc-300"
+                        title={t('header.browser')}
+                    >
+                        <BrowserIcon className="w-6 h-6" />
+                    </button>
+                </div>
 
-                <nav className="flex items-center gap-5">
-                    <button onClick={onGoHome} className="hover:scale-110 transition-transform"><svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M9.005 16.545a2.997 2.997 0 010-5.091L14.298 8.35a2.998 2.998 0 014.702 2.545v6.21a2.998 2.998 0 01-4.702 2.545l-5.293-3.105z" /></svg></button>
+                {/* Barra de Pesquisa Habilitada para Mobile e Desktop */}
+                <div ref={searchRef} className="relative flex-grow max-w-xs mx-4">
+                    <div className={`flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border transition-all ${isSearchFocused ? 'border-sky-500 bg-white shadow-sm ring-4 ring-sky-500/5' : 'border-transparent'}`}>
+                        <SearchIcon className="w-4 h-4 text-zinc-400" />
+                        <input 
+                            type="text" 
+                            placeholder={t('header.searchPlaceholder')}
+                            className="bg-transparent outline-none w-full text-sm font-medium"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setIsSearchFocused(true)}
+                        />
+                    </div>
+                    {isSearchFocused && searchQuery.trim() !== '' && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-xl shadow-2xl overflow-hidden max-h-80 overflow-y-auto animate-fade-in z-[60]">
+                            {isSearching ? (
+                                <div className="p-4 flex justify-center"><div className="w-5 h-5 border-2 border-sky-500/30 border-t-sky-500 rounded-full animate-spin"></div></div>
+                            ) : searchResults.length > 0 ? searchResults.map(user => (
+                                <div 
+                                    key={user.id} 
+                                    onClick={() => { onSelectUser(user.id); setIsSearchFocused(false); setSearchQuery(''); }} 
+                                    className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer border-b last:border-0 dark:border-zinc-800 transition-colors"
+                                >
+                                    <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-700" />
+                                    <span className="text-sm font-bold">{user.username}</span>
+                                </div>
+                            )) : <p className="p-4 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">{t('header.noResults')}</p>}
+                        </div>
+                    )}
+                </div>
+
+                <nav className="flex items-center gap-3 sm:gap-4">
+                    <button onClick={onGoHome} className="hover:scale-110 transition-transform hidden sm:block">
+                        <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.099l7 5.185V20.5a1 1 0 01-1 1h-5v-6h-2v6H5a1 1 0 01-1-1V7.284l7-5.185z"/></svg>
+                    </button>
                     
                     <div ref={activityRef} className="relative">
                         <button onClick={() => setIsActivityDropdownOpen(!isActivityDropdownOpen)} className="relative hover:scale-110 transition-transform">

@@ -17,6 +17,7 @@ import ForwardModal from './messages/ForwardModal';
 import AddCaptionModal from './post/AddCaptionModal';
 import AddMusicModal from './post/AddMusicModal';
 import SearchFollowingModal from './post/SearchFollowingModal';
+import VibeBrowser from './browser/VibeBrowser';
 import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp, deleteDoc, limit } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -38,6 +39,7 @@ const Feed: React.FC = () => {
   const [isCreateStatusOpen, setIsCreateStatusOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   
   const [targetUserForMessages, setTargetUserForMessages] = useState<any>(null);
   const [targetConversationId, setTargetConversationId] = useState<string | null>(null);
@@ -216,6 +218,10 @@ const Feed: React.FC = () => {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <span>{t('header.messages')}</span>
             </button>
+            <button onClick={() => setIsBrowserOpen(true)} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                <span>{t('header.browser')}</span>
+            </button>
             <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 <span>{t('header.create')}</span>
@@ -233,7 +239,12 @@ const Feed: React.FC = () => {
       
       {/* Oculta Header no Mobile se for Vibes */}
       <div className={`${viewMode === 'vibes' ? 'hidden' : 'block'} lg:hidden`}>
-        <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={(id) => handleOpenMessages(null, id)} />
+        <Header 
+            onSelectUser={handleSelectUser} 
+            onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} 
+            onOpenMessages={(id) => handleOpenMessages(null, id)} 
+            onOpenBrowser={() => setIsBrowserOpen(true)}
+        />
       </div>
 
       <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64 h-[calc(100dvh-4rem)] lg:h-auto' : 'lg:pl-64 lg:pr-4 pt-16 lg:pt-8'}`}>
@@ -343,6 +354,8 @@ const Feed: React.FC = () => {
       
       <SearchFollowingModal isOpen={!!duoTargetPost} onClose={() => setDuoTargetPost(null)} title={t('post.inviteDuo')} onSelect={u => {}} />
       <SearchFollowingModal isOpen={!!tagTargetPost} onClose={() => setTagTargetPost(null)} title={t('post.tagFriends')} onSelect={u => {}} />
+
+      {isBrowserOpen && <VibeBrowser onClose={() => setIsBrowserOpen(false)} />}
 
       <style>{`
         @keyframes pulse-slow {

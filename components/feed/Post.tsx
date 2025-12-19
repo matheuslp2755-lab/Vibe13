@@ -73,6 +73,7 @@ const Post: React.FC<PostProps> = ({
     const [comments, setComments] = useState<any[]>([]);
     const [showComments, setShowComments] = useState(false);
     const [newComment, setNewComment] = useState('');
+    const [isAnonymousComment, setIsAnonymousComment] = useState(false);
     const [isLiked, setIsLiked] = useState(post.likes.includes(auth.currentUser?.uid || ''));
     const [isReposted, setIsReposted] = useState(post.reposts?.includes(auth.currentUser?.uid || '') || false);
     
@@ -85,6 +86,9 @@ const Post: React.FC<PostProps> = ({
     const currentUser = auth.currentUser;
     const videoRef = useRef<HTMLVideoElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Verificar se já existe um comentário anônimo nesta postagem
+    const hasAnonymousComment = comments.some(c => c.isAnonymous);
 
     useEffect(() => {
         if (!media[currentMediaIndex] || media[currentMediaIndex].type !== 'video' || !videoRef.current) return;
@@ -109,12 +113,10 @@ const Post: React.FC<PostProps> = ({
                 setReposterData({ username: t('common.you'), avatar: currentUser.photoURL || '', isMe: true });
                 return;
             }
-
             try {
                 const followingRef = collection(db, 'users', currentUser.uid, 'following');
                 const followingSnap = await getDocs(followingRef);
                 const followingIds = followingSnap.docs.map(d => d.id);
-                
                 const followedReposterId = post.reposts?.find(id => followingIds.includes(id));
                 if (followedReposterId) {
                     const userSnap = await getDoc(doc(db, 'users', followedReposterId));
@@ -122,14 +124,9 @@ const Post: React.FC<PostProps> = ({
                         const data = userSnap.data();
                         setReposterData({ username: data.username, avatar: data.avatar, isMe: false });
                     }
-                } else {
-                    setReposterData(null);
                 }
-            } catch (e) {
-                setReposterData(null);
-            }
+            } catch (e) { setReposterData(null); }
         };
-
         fetchReposter();
     }, [post.reposts, currentUser, t]);
 
@@ -152,13 +149,23 @@ const Post: React.FC<PostProps> = ({
     const handleAddComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || !currentUser) return;
+
+        if (isAnonymousComment && hasAnonymousComment) {
+            alert(t('post.anonymousCommentTaken'));
+            return;
+        }
+
         await addDoc(collection(db, 'posts', post.id, 'comments'), {
-            userId: currentUser.uid,
-            username: currentUser.displayName,
+            userId: isAnonymousComment ? 'anon' : currentUser.uid,
+            username: isAnonymousComment ? t('post.vibeAnon') : currentUser.displayName,
+            avatar: isAnonymousComment ? 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.appspot.com/o/avatars%2Fdefault%2Favatar.png?alt=media' : currentUser.photoURL,
             text: newComment,
+            isAnonymous: isAnonymousComment,
             timestamp: serverTimestamp()
         });
+        
         setNewComment('');
+        setIsAnonymousComment(false);
     };
 
     const isAuthor = currentUser?.uid === post.userId;
@@ -210,10 +217,10 @@ const Post: React.FC<PostProps> = ({
                 </div>
             ) : (
                 <div className="relative aspect-square bg-zinc-100 dark:bg-zinc-900">
-                    {media[currentMediaIndex].type === 'video' ? (
+                    {media[currentMediaIndex]?.type === 'video' ? (
                         <video ref={videoRef} src={media[currentMediaIndex].url} loop muted={isGlobalMuted} playsInline className="w-full h-full object-cover" />
                     ) : (
-                        <img src={media[currentMediaIndex].url} className="w-full h-full object-cover" />
+                        <img src={media[currentMediaIndex]?.url} className="w-full h-full object-cover" />
                     )}
                     {media.length > 1 && (
                         <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
@@ -250,11 +257,75 @@ const Post: React.FC<PostProps> = ({
                 <div className="text-sm">
                     <p className="font-bold mb-1">{post.likes.length} {t('post.likes')}</p>
                     {!isStatusPost && post.caption && <p><span className="font-bold mr-2">{post.username}</span>{post.caption}</p>}
+                    
+                    <div className="mt-2 space-y-1">
+                        {comments.slice(-2).map(c => (
+                            <p key={c.id} className="text-xs">
+                                <span className={`font-bold mr-2 ${c.isAnonymous ? 'text-purple-500' : ''}`}>
+                                    {c.username}
+                                </span>
+                                {c.text}
+                            </p>
+                        ))}
+                    </div>
+
                     <button onClick={() => setShowComments(true)} className="text-zinc-500 text-xs mt-2">
                         {t('post.viewAllComments', { count: comments.length })}
                     </button>
                 </div>
             </div>
+
+            {/* Modal de Comentários */}
+            {showComments && (
+                <div className="fixed inset-0 bg-black/60 z-[60] flex items-end md:items-center justify-center p-0 md:p-10 animate-fade-in" onClick={() => setShowComments(false)}>
+                    <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-t-3xl md:rounded-3xl h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <header className="p-4 border-b dark:border-zinc-800 text-center font-bold relative">
+                            {t('post.comment')}
+                            <button onClick={() => setShowComments(false)} className="absolute right-4 top-4 text-zinc-400 text-3xl font-light">&times;</button>
+                        </header>
+                        <div className="flex-grow overflow-y-auto p-4 space-y-4 no-scrollbar">
+                            {comments.map(c => (
+                                <div key={c.id} className="flex gap-3 items-start animate-slide-up">
+                                    <img src={c.avatar || 'https://firebasestorage.googleapis.com/v0/b/teste-rede-fcb99.appspot.com/o/avatars%2Fdefault%2Favatar.png?alt=media'} className={`w-8 h-8 rounded-full object-cover border ${c.isAnonymous ? 'border-purple-500 p-0.5' : 'border-zinc-100 dark:border-zinc-800'}`} />
+                                    <div className="flex-grow">
+                                        <p className="text-xs font-bold mb-0.5">
+                                            {c.username}
+                                            {c.isAnonymous && <span className="ml-2 text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full uppercase font-black">Anônimo</span>}
+                                        </p>
+                                        <p className="text-sm font-medium">{c.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <form onSubmit={handleAddComment} className="p-4 border-t dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                            <div className="flex items-center gap-3 mb-3">
+                                <button 
+                                    type="button"
+                                    onClick={() => { if(!hasAnonymousComment) setIsAnonymousComment(!isAnonymousComment); }}
+                                    disabled={hasAnonymousComment}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isAnonymousComment ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'} ${hasAnonymousComment ? 'opacity-40 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'}`}
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" /></svg>
+                                    {t('post.anonymousComment')}
+                                </button>
+                                {hasAnonymousComment && <span className="text-[9px] font-black text-zinc-400 italic">Limite atingido</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    value={newComment} 
+                                    onChange={e => setNewComment(e.target.value)} 
+                                    className="flex-grow bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-2xl px-4 py-2.5 text-sm outline-none focus:ring-2 ring-sky-500/20 shadow-inner"
+                                    placeholder={t('post.addComment')}
+                                />
+                                <button type="submit" disabled={!newComment.trim()} className="text-sky-500 font-black text-sm px-3 disabled:opacity-50 hover:scale-110 active:scale-90 transition-transform">
+                                    {t('post.postButton')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {showDeleteConfirm && (
                 <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl w-full max-w-xs text-center border dark:border-zinc-800 shadow-2xl">
