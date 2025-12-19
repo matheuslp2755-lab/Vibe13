@@ -219,6 +219,33 @@ const ptMessages = {
     "minutes": "há {count}m",
     "hours": "há {count}h",
     "days": "há {count}d"
+  },
+  "call": {
+    "call": "Chamada",
+    "calling": "Chamando {username}...",
+    "incomingCall": "Chamada de voz de {username}",
+    "incomingVideoCall": "Chamada de vídeo de {username}",
+    "answer": "Atender",
+    "decline": "Recusar",
+    "hangUp": "Encerrar",
+    "callEnded": "Chamada encerrada",
+    "callDeclined": "{username} recusou a chamada.",
+    "callCancelled": "Chamada cancelada.",
+    "onCallWith": "Em chamada com {username}",
+    "callInProgress": "Chamada em andamento...",
+    "noMicrophone": "Acesso ao microfone negado.",
+    "callError": "Erro na chamada.",
+    "videoCall": "Vídeo",
+    "voiceCall": "Voz",
+    "effects": "Efeitos",
+    "filters": {
+        "none": "Nenhum",
+        "bw": "P&B",
+        "vintage": "Vintage",
+        "soft": "Suave",
+        "cool": "Frio",
+        "focus": "Foco"
+    }
   }
 };
 
