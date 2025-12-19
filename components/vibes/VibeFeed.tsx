@@ -184,8 +184,8 @@ const VibeItem: React.FC<{
                 </div>
             )}
 
-            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados mais altos (bottom-32) para não conflitar com menu inferior */}
-            <div className="absolute right-4 bottom-32 flex flex-col gap-6 items-center z-30">
+            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados mais altos para não serem cortados pelo BottomNav */}
+            <div className="absolute right-4 bottom-28 flex flex-col gap-6 items-center z-30">
                 <div className="relative group mb-2">
                     <img src={vibe.user?.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
                     <div className="absolute -bottom-1 -right-1 bg-sky-500 rounded-full p-1 border-2 border-black">
@@ -213,13 +213,13 @@ const VibeItem: React.FC<{
 
                 {isOwner && (
                     <div className="flex flex-col items-center" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
-                        <TrashIcon className="w-8 h-8 text-white/50 hover:text-red-500 drop-shadow-md transition-colors" />
+                        <TrashIcon className="w-8 h-8 text-white/60 hover:text-red-500 drop-shadow-md transition-colors" />
                     </div>
                 )}
             </div>
 
-            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL - Posicionado mais alto (bottom-24) */}
-            <div className="absolute left-4 bottom-24 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
+            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL - Posicionado mais alto para visibilidade */}
+            <div className="absolute left-4 bottom-20 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
                 {reposterData && (
                     <div className="flex items-center gap-1.5 mb-2.5 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
                         <img src={reposterData.avatar} className="w-4 h-4 rounded-full border border-white/30" />
@@ -257,7 +257,7 @@ const VibeItem: React.FC<{
                 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .animate-spin-slow { animation: spin-slow 4s linear infinite; }
                 @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
-                .animate-marquee { animation: marquee 8s linear infinite; }
+                .animate-marquee { animation: marquee 6s linear infinite; }
             `}</style>
         </div>
     );
@@ -309,8 +309,8 @@ const VibeFeed: React.FC = () => {
     );
 
     return (
-        /* ALTURA AJUSTADA: 100dvh e o container de scroll respeita isso */
-        <div className="relative h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
+        /* ALTURA AJUSTADA: 100dvh e o container de scroll respeita isso, descontando BottomNav no mobile */
+        <div className="relative h-[calc(100dvh-4rem)] lg:h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
             <div 
                 ref={containerRef} 
                 onScroll={handleScroll} 

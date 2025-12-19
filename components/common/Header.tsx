@@ -98,11 +98,12 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         const debouncedSearch = setTimeout(async () => {
             setIsSearching(true);
             const usersRef = collection(db, 'users');
+            const term = searchQuery.toLowerCase();
             const q = query(
                 usersRef,
-                where('username_lowercase', '>=', searchQuery.toLowerCase()),
-                where('username_lowercase', '<=', searchQuery.toLowerCase() + '\uf8ff'),
-                limit(8)
+                where('username_lowercase', '>=', term),
+                where('username_lowercase', '<=', term + '\uf8ff'),
+                limit(10)
             );
             
             try {
@@ -119,7 +120,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             }
         }, 400);
 
-        return () => clearTimeout(debouncedSearch);
+        return () => clearTimeout(term);
     }, [searchQuery]);
 
     useEffect(() => {
@@ -263,12 +264,14 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                         />
                     </div>
 
-                    {isSearchFocused && (searchQuery || isSearching) && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-50 animate-fade-in">
+                    {isSearchFocused && searchQuery && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-[100] animate-fade-in">
                             {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
-                                <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors">
+                                <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors border-b last:border-0 dark:border-zinc-800">
                                     <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-700" />
-                                    <span className="text-sm font-bold">{user.username}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold">{user.username}</span>
+                                    </div>
                                 </div>
                             )) : <p className="p-8 text-center text-sm text-zinc-500 font-bold">{t('header.noResults')}</p>}
                         </div>
@@ -277,7 +280,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
 
                 {isMobileSearchOpen ? (
                     <div ref={mobileSearchRef} className="flex-grow flex items-center gap-2 sm:hidden animate-slide-right">
-                        <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-1.5 border dark:border-zinc-800">
+                        <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-1.5 border dark:border-zinc-800 relative">
                             <SearchIcon className="h-4 w-4 text-zinc-400" />
                             <input
                                 autoFocus
@@ -291,6 +294,18 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                 <button onClick={() => setSearchQuery('')} className="text-zinc-400">
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" /></svg>
                                 </button>
+                            )}
+                            
+                            {/* Mobile search results dropdown */}
+                            {searchQuery && (
+                                <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-zinc-950 border dark:border-zinc-800 rounded-2xl shadow-2xl z-[100] max-h-[60vh] overflow-y-auto">
+                                    {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
+                                        <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer border-b last:border-0 dark:border-zinc-800">
+                                            <img src={user.avatar} className="w-12 h-12 rounded-full object-cover border dark:border-zinc-700" />
+                                            <span className="text-sm font-bold">{user.username}</span>
+                                        </div>
+                                    )) : <p className="p-8 text-center text-sm text-zinc-500 font-bold">{t('header.noResults')}</p>}
+                                </div>
                             )}
                         </div>
                         <button onClick={() => setIsMobileSearchOpen(false)} className="text-sm font-black text-sky-500 uppercase tracking-tighter">
