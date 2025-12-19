@@ -20,7 +20,6 @@ import {
     uploadString, 
     getDownloadURL, 
     uploadBytes,
-    // Fix: Added missing addDoc import
     addDoc 
 } from '../../firebase';
 import ConnectionCrystal from './ConnectionCrystal';
@@ -36,6 +35,7 @@ interface ChatWindowProps {
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurrentUserAnonymous }) => {
     const { t } = useLanguage();
+    const { startCall } = useCall();
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [convData, setConvData] = useState<any>(null);
@@ -90,10 +90,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const otherUserId = convData.participants.find((p: string) => p !== currentUser?.uid);
     const otherUser = convData.participantInfo[otherUserId || ''];
 
+    const handleStartCall = (isVideo: boolean) => {
+        if (isGroup || !otherUserId || !otherUser) return;
+        startCall({
+            id: otherUserId,
+            username: otherUser.username,
+            avatar: otherUser.avatar
+        }, isVideo);
+    };
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black animate-fade-in">
             <header className="flex items-center gap-3 p-4 border-b dark:border-zinc-800">
-                <button onClick={onBack} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7"/></svg></button>
+                <button onClick={onBack} className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7"/></svg>
+                </button>
                 
                 {isGroup ? (
                     <div className="flex -space-x-3">
@@ -112,6 +123,29 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                     <p className="font-black text-sm">{isGroup ? convData.name : otherUser?.username}</p>
                     <p className="text-[10px] text-zinc-500 font-bold uppercase">{isGroup ? `${convData.participants.length} participantes` : 'Visto recentemente'}</p>
                 </div>
+
+                {!isGroup && (
+                    <div className="flex items-center gap-1">
+                        <button 
+                            onClick={() => handleStartCall(false)}
+                            className="p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                            title={t('call.voiceCall')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                        </button>
+                        <button 
+                            onClick={() => handleStartCall(true)}
+                            className="p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                            title={t('call.videoCall')}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
             </header>
 
             <div className="flex-grow overflow-y-auto p-4 space-y-4 no-scrollbar">
