@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot, getDocs, deleteDoc } from '../../firebase';
+import { db, collection, query, orderBy, limit, doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot, getDocs, deleteDoc, addDoc, serverTimestamp, increment } from '../../firebase';
 import { auth } from '../../firebase';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCall } from '../../context/CallContext';
@@ -62,6 +62,8 @@ const VibeItem: React.FC<{
     const { isGlobalMuted, setGlobalMuted } = useCall();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+    const [comments, setComments] = useState<any[]>([]);
+    const [newComment, setNewComment] = useState('');
     const [showHeartAnim, setShowHeartAnim] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const lastTap = useRef<number>(0);
@@ -114,6 +116,15 @@ const VibeItem: React.FC<{
         checkVisibility();
     }, [vibe.reposts, currentUser, t]);
 
+    // Listener de comentários
+    useEffect(() => {
+        if (!isCommentsOpen) return;
+        const q = query(collection(db, 'vibes', vibe.id, 'comments'), orderBy('timestamp', 'desc'));
+        return onSnapshot(q, (snap) => {
+            setComments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+    }, [isCommentsOpen, vibe.id]);
+
     const handleLikeAction = async () => {
         if (!currentUser) return;
         const ref = doc(db, 'vibes', vibe.id);
@@ -128,6 +139,29 @@ const VibeItem: React.FC<{
         await updateDoc(ref, { 
             reposts: isReposted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) 
         });
+    };
+
+    const handleAddComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim() || !currentUser) return;
+
+        const commentText = newComment.trim();
+        setNewComment('');
+
+        try {
+            await addDoc(collection(db, 'vibes', vibe.id, 'comments'), {
+                userId: currentUser.uid,
+                username: currentUser.displayName,
+                avatar: currentUser.photoURL,
+                text: commentText,
+                timestamp: serverTimestamp()
+            });
+            await updateDoc(doc(db, 'vibes', vibe.id), {
+                commentsCount: increment(1)
+            });
+        } catch (e) {
+            console.error("Erro ao comentar:", e);
+        }
     };
 
     const handleDelete = async () => {
@@ -248,6 +282,52 @@ const VibeItem: React.FC<{
                 )}
             </div>
             
+            {/* Modal de Comentários */}
+            {isCommentsOpen && (
+                <div className="fixed inset-0 bg-black/40 z-[100] flex items-end md:items-center justify-center p-0 md:p-10 animate-fade-in" onClick={() => setIsCommentsOpen(false)}>
+                    <div className="bg-white dark:bg-zinc-950 w-full max-w-lg rounded-t-3xl md:rounded-3xl h-[70vh] flex flex-col overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <header className="p-5 border-b dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50">
+                            <div className="w-10"></div>
+                            <h2 className="text-sm font-black uppercase tracking-[0.2em]">{t('vibeFeed.comments')}</h2>
+                            <button onClick={() => setIsCommentsOpen(false)} className="text-zinc-400 text-3xl font-light hover:text-zinc-600 transition-colors">&times;</button>
+                        </header>
+                        
+                        <div className="flex-grow overflow-y-auto p-6 space-y-6 no-scrollbar">
+                            {comments.length > 0 ? comments.map(c => (
+                                <div key={c.id} className="flex gap-4 items-start animate-slide-up">
+                                    <img src={c.avatar} className="w-10 h-10 rounded-full object-cover border border-zinc-100 dark:border-zinc-800" />
+                                    <div className="flex-grow">
+                                        <p className="text-xs font-black mb-1">{c.username}</p>
+                                        <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{c.text}</p>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center py-20 opacity-30">
+                                    <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                    <p className="font-bold text-sm tracking-widest uppercase">Seja o primeiro a comentar</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleAddComment} className="p-4 border-t dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center gap-3">
+                            <img src={currentUser?.photoURL || ''} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-800" />
+                            <div className="flex-grow relative">
+                                <input 
+                                    autoFocus
+                                    value={newComment} 
+                                    onChange={e => setNewComment(e.target.value)} 
+                                    className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-2xl py-3 px-4 text-sm font-medium outline-none focus:ring-2 ring-sky-500/20"
+                                    placeholder={t('vibeFeed.addComment')}
+                                />
+                                <button type="submit" disabled={!newComment.trim()} className="absolute right-3 top-1/2 -translate-y-1/2 text-sky-500 font-black text-xs uppercase tracking-widest disabled:opacity-40">
+                                    {t('post.postButton')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none z-10" />
             
             <style>{`
