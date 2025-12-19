@@ -85,6 +85,8 @@ const ptMessages = {
     "addMusic": "Adicionar música",
     "tagFriends": "Marcar amigos",
     "inviteDuo": "Convidar Duo",
+    "duoPending": "Duo Pendente",
+    "duoPartner": "Com {username}",
     "deletePostTitle": "Excluir publicação?",
     "deletePostBody": "Tem certeza? Esta ação não pode ser desfeita.",
     "youRepublicated": "Você republicou",
@@ -139,7 +141,10 @@ const ptMessages = {
     "changeMusic": "Trocar Música",
     "searchMusicPlaceholder": "Buscar música ou artista...",
     "musicNoResults": "Nenhuma música encontrada.",
-    "selectFromComputer": "Selecionar do dispositivo"
+    "selectFromComputer": "Selecionar do dispositivo",
+    "editingPanel": "Painel de Edição",
+    "duo": "Convidar Duo",
+    "tags": "Marcar Pessoas"
   },
   "createPulse": {
     "title": "Criar Pulse",
@@ -156,23 +161,18 @@ const ptMessages = {
     "hours": "Horas",
     "mins": "Min"
   },
-  "createStatus": {
-    "placeholder": "No que você está pensando?",
-    "background": "Fundo",
-    "font": "Fonte",
-    "share": "Compartilhar",
-    "sharing": "Publicando..."
-  },
   "messages": {
     "title": "Mensagens",
     "newMessage": "Nova mensagem",
     "newMessageTitle": "Nova Mensagem",
+    "createGroup": "Criar Grupo",
+    "groupName": "Nome do Grupo",
+    "groupLimit": "Máximo de 15 pessoas.",
     "close": "Fechar",
     "loading": "Carregando...",
     "noConversations": "Nenhuma conversa ainda.",
     "back": "Voltar",
     "yourMessages": "Suas Mensagens",
-    "sendPrivate": "Envie fotos e mensagens privadas para um amigo.",
     "messagePlaceholder": "Mensagem...",
     "send": "Enviar",
     "seen": "Visualizada",
@@ -187,79 +187,7 @@ const ptMessages = {
     "deleteConversationConfirm": "Excluir",
     "searchUsers": "Pesquisar pessoas...",
     "diariesTitle": "Notas",
-    "addNote": "Sua Nota",
-    "replyToNote": "Responder nota de {username}...",
-    "media": {
-        "photo": "Foto",
-        "video": "Vídeo",
-        "audio": "Áudio",
-        "select": "Anexar mídia",
-        "uploadError": "Erro no envio.",
-        "videoTooLong": "Vídeo deve ter menos de 30s.",
-        "cancelUpload": "Cancelar",
-        "viewMedia": "Ver mídia"
-    },
-    "forwardedPost": "Encaminhou uma publicação"
-  },
-  "pulseViewer": {
-    "replyPlaceholder": "Enviar mensagem...",
-    "viewedBy": "Visto por",
-    "noViews": "Nenhuma visualização.",
-    "delete": "Excluir",
-    "deleteTitle": "Excluir Pulse?",
-    "deleteBody": "Esta ação é permanente."
-  },
-  "vibeFeed": {
-    "loading": "Sintonizando Vibes...",
-    "noVibes": "Nenhum Vibe postado ainda."
-  },
-  "welcome": {
-    "title": "Bem-vindo ao Vibe"
-  },
-  "time": {
-    "seconds": "há {count}s",
-    "minutes": "há {count}m",
-    "hours": "há {count}h",
-    "days": "há {count}d"
-  },
-  "call": {
-    "call": "Chamada",
-    "calling": "Chamando {username}...",
-    "incomingCall": "Chamada de voz",
-    "incomingVideoCall": "Chamada de vídeo",
-    "answer": "Aceitar",
-    "decline": "Recusar",
-    "hangUp": "Encerrar",
-    "callEnded": "Chamada encerrada",
-    "callDeclined": "{username} recusou a chamada.",
-    "callCancelled": "Chamada cancelada.",
-    "onCallWith": "Em chamada com {username}",
-    "callInProgress": "Chamada em andamento...",
-    "noMicrophone": "Acesso ao microfone negado.",
-    "callError": "Erro na chamada.",
-    "videoCall": "Vídeo",
-    "voiceCall": "Voz",
-    "effects": "Efeitos",
-    "filters": {
-        "none": "Nenhum",
-        "bw": "P&B",
-        "vintage": "Vintage",
-        "soft": "Suave",
-        "cool": "Frio",
-        "focus": "Foco"
-    }
-  },
-  "crystal": {
-    "formed": "Um Cristal de Conexão se formou!",
-    "glowing": "Sua conexão está brilhando!",
-    "level": {
-        "brilhante": "Brilhante",
-        "equilibrado": "Equilibrado",
-        "apagado": "Apagado",
-        "rachado": "Rachado"
-    },
-    "title": "Cristal: {status}",
-    "streak": "{streak} dias de interação"
+    "addNote": "Sua Nota"
   },
   "musicSearch": {
     "fetchError": "Erro ao buscar músicas",
@@ -269,15 +197,6 @@ const ptMessages = {
     "suggestions": "Sugestões para você",
     "trending": "Bombando no Vibe",
     "lyricsTitle": "Letras sincronizadas"
-  },
-  "addMusicModal": {
-    "title": "Selecionar Música"
-  },
-  "diary": {
-    "placeholder": "O que você está pensando hoje?",
-    "alreadyPosted": "Você já postou uma nota hoje. Volte amanhã!",
-    "publish": "Publicar",
-    "publishing": "Publicando..."
   }
 };
 

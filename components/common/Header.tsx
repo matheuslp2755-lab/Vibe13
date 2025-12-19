@@ -50,199 +50,53 @@ const MessageIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) =>
     </svg>
 );
 
-const SpinnerIcon: React.FC = () => (
-    <div className="flex justify-center items-center p-4">
-        <svg className="animate-spin h-5 w-5 text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-    </div>
-);
-
-
 const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages }) => {
     const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
     const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     
     const searchRef = useRef<HTMLDivElement>(null);
-    const mobileSearchRef = useRef<HTMLDivElement>(null);
     const activityRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
 
     useEffect(() => {
         if (!currentUser) return;
-
-        const notificationsRef = collection(db, 'users', currentUser.uid, 'notifications');
-        const q = query(notificationsRef, limit(20));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedNotifications = snapshot.docs
+        const q = query(collection(db, 'users', currentUser.uid, 'notifications'), limit(20));
+        return onSnapshot(q, (snapshot) => {
+            const fetched = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
-                .filter(notification => notification.type !== 'message'); 
-            
-            fetchedNotifications.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-            setNotifications(fetchedNotifications);
-            const hasUnread = fetchedNotifications.some(n => !n.read);
-            setHasUnreadNotifications(hasUnread);
+                .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+            setNotifications(fetched);
+            setHasUnreadNotifications(fetched.some(n => !n.read));
         });
-
-        return () => unsubscribe();
     }, [currentUser]);
 
-    useEffect(() => {
-        if (!currentUser) return;
-
-        const q = query(collection(db, 'conversations'), where('participants', 'array-contains', currentUser.uid));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            let unread = false;
-            snapshot.docs.forEach(docSnap => {
-                const data = docSnap.data();
-                const lastMsg = data.lastMessage;
-                const myInfo = data.participantInfo?.[currentUser.uid];
-                
-                if (lastMsg && lastMsg.senderId !== currentUser.uid) {
-                    if (!myInfo?.lastSeenMessageTimestamp || lastMsg.timestamp?.seconds > myInfo.lastSeenMessageTimestamp.seconds) {
-                        unread = true;
-                    }
-                }
-            });
-            setHasUnreadMessages(unread);
-        });
-
-        return () => unsubscribe();
-    }, [currentUser]);
-
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setSearchResults([]);
-            setIsSearching(false);
-            return;
-        }
-
-        setIsSearching(true);
-        const debouncedSearch = setTimeout(async () => {
-            const usersRef = collection(db, 'users');
-            const term = searchQuery.toLowerCase();
-            const q = query(
-                usersRef,
-                where('username_lowercase', '>=', term),
-                where('username_lowercase', '<=', term + '\uf8ff'),
-                limit(10)
-            );
-            
-            try {
-                const querySnapshot = await getDocs(q);
-                const users = querySnapshot.docs
-                    .map(doc => ({ id: doc.id, ...(doc.data() as Omit<UserSearchResult, 'id'>) }))
-                    .filter(user => user.id !== auth.currentUser?.uid);
-                
-                setSearchResults(users);
-            } catch (error) {
-                console.error("Erro na busca:", error);
-            } finally {
-                setIsSearching(false);
-            }
-        }, 400);
-
-        return () => clearTimeout(debouncedSearch);
-    }, [searchQuery]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                setIsSearchFocused(false);
-            }
-            if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
-                setIsMobileSearchOpen(false);
-            }
-            if (activityRef.current && !activityRef.current.contains(event.target as Node)) {
-                setIsActivityDropdownOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleAcceptRequest = async (notification: Notification) => {
-        if (!currentUser) return;
-        
+    const handleAcceptDuoRequest = async (n: Notification) => {
+        if (!currentUser || !n.postId) return;
         const batch = writeBatch(db);
         
-        // 1. Adicionar aos Seguidores do Dono (Eu)
-        const myFollowersRef = doc(db, 'users', currentUser.uid, 'followers', notification.fromUserId);
-        batch.set(myFollowersRef, { 
-            username: notification.fromUsername, 
-            avatar: notification.fromUserAvatar, 
-            timestamp: serverTimestamp() 
-        });
-
-        // 2. Adicionar aos Seguindo do Requisitante
-        const theirFollowingRef = doc(db, 'users', notification.fromUserId, 'following', currentUser.uid);
-        batch.set(theirFollowingRef, { 
-            username: currentUser.displayName, 
-            avatar: currentUser.photoURL, 
-            timestamp: serverTimestamp() 
-        });
-
-        // 3. Remover a solicitação pendente
-        const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', notification.fromUserId);
-        batch.delete(requestRef);
-        
-        const sentRequestRef = doc(db, 'users', notification.fromUserId, 'sentFollowRequests', currentUser.uid);
-        batch.delete(sentRequestRef);
-
-        // 4. Marcar notificação como lida e mudar tipo ou remover
-        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
-
-        // 5. Notificar o usuário que o pedido foi aceito
-        const successNotifyRef = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
-        batch.set(successNotifyRef, {
-            type: 'follow',
-            fromUserId: currentUser.uid,
-            fromUsername: currentUser.displayName,
-            fromUserAvatar: currentUser.photoURL,
-            timestamp: serverTimestamp(),
-            read: false
-        });
-
-        try {
-            await batch.commit();
-        } catch (error) {
-            console.error("Erro ao aceitar solicitação:", error);
-        }
-    };
-
-    const handleDeclineRequest = async (notification: Notification) => {
-        if (!currentUser) return;
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'users', currentUser.uid, 'followRequests', notification.fromUserId));
-        batch.delete(doc(db, 'users', notification.fromUserId, 'sentFollowRequests', currentUser.uid));
-        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
-        await batch.commit();
-    };
-
-    const handleAcceptDuoRequest = async (notification: Notification) => {
-        if (!currentUser || !notification.postId) return;
-        const batch = writeBatch(db);
-        const postRef = doc(db, 'posts', notification.postId);
-        batch.update(postRef, {
+        // Atualizar Post
+        batch.update(doc(db, 'posts', n.postId), {
+            duoPending: false,
             duoPartner: {
-                userId: currentUser.uid,
+                id: currentUser.uid,
                 username: currentUser.displayName,
-                userAvatar: currentUser.photoURL,
+                avatar: currentUser.photoURL
             }
         });
-        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
-        const successNotify = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
-        batch.set(successNotify, {
+
+        // Deletar Notificação
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
+
+        // Notificar Originador
+        const notifRef = doc(collection(db, 'users', n.fromUserId, 'notifications'));
+        batch.set(notifRef, {
             type: 'duo_accepted',
             fromUserId: currentUser.uid,
             fromUsername: currentUser.displayName,
@@ -250,65 +104,21 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             timestamp: serverTimestamp(),
             read: false
         });
+
         await batch.commit();
     };
 
-    const handleAcceptTagRequest = async (notification: Notification) => {
-        if (!currentUser || !notification.postId) return;
+    const handleDeclineDuoRequest = async (n: Notification) => {
+        if (!currentUser || !n.postId) return;
         const batch = writeBatch(db);
-        const postRef = doc(db, 'posts', notification.postId);
-        batch.update(postRef, {
-            tags: arrayUnion({ userId: currentUser.uid, username: currentUser.displayName })
-        });
-        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
-        const successNotify = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
-        batch.set(successNotify, {
-            type: 'tag_accepted',
-            fromUserId: currentUser.uid,
-            fromUsername: currentUser.displayName,
-            fromUserAvatar: currentUser.photoURL,
-            timestamp: serverTimestamp(),
-            read: false
-        });
+        batch.update(doc(db, 'posts', n.postId), { duoPending: false, duoPartnerId: null });
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
         await batch.commit();
     };
 
-    const handleNotificationClick = async (notification: Notification) => {
-        if (!currentUser) return;
-
-        if (!notification.read && notification.type !== 'follow_request') {
-            try {
-                await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', notification.id), {
-                    read: true
-                });
-            } catch (error) {
-                console.error("Erro ao marcar notificação como lida:", error);
-            }
-        }
-
-        switch (notification.type) {
-            case 'follow_request':
-                // Não faz nada ao clicar, usa os botões
-                break;
-            case 'message':
-                if (notification.conversationId) onOpenMessages(notification.conversationId);
-                break;
-            case 'follow':
-            case 'duo_accepted':
-            case 'tag_accepted':
-                onSelectUser(notification.fromUserId);
-                break;
-            case 'mention_comment':
-                onGoHome(); 
-                break;
-            default:
-                break;
-        }
-    };
-
-    const getNotificationText = (notification: Notification) => {
-        const params = { username: notification.fromUsername, commentText: notification.commentText || '' };
-        switch (notification.type) {
+    const getNotificationText = (n: Notification) => {
+        const params = { username: n.fromUsername, commentText: n.commentText || '' };
+        switch (n.type) {
             case 'follow': return t('header.followNotification', params);
             case 'message': return t('header.messageNotification', params);
             case 'follow_request': return t('header.followRequestNotification', params);
@@ -321,160 +131,55 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         }
     };
 
-    const handleSelectResult = (userId: string) => {
-        onSelectUser(userId);
-        setIsSearchFocused(false);
-        setIsMobileSearchOpen(false);
-        setSearchQuery('');
-    };
-
     return (
-        <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b border-zinc-200 dark:border-zinc-800 z-50">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl gap-4">
+        <header className="fixed top-0 left-0 right-0 bg-white dark:bg-black border-b dark:border-zinc-800 z-50 transition-all duration-300">
+            <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">
                 
-                {!isMobileSearchOpen && (
-                    <h1 
-                        onClick={onGoHome} 
-                        className="text-4xl font-serif cursor-pointer shrink-0 font-black bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-transparent bg-clip-text drop-shadow-md tracking-tighter"
-                    >
-                        {t('header.title')}
-                    </h1>
-                )}
+                <h1 
+                    onClick={onGoHome} 
+                    className="text-4xl font-serif cursor-pointer shrink-0 font-black bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 text-transparent bg-clip-text tracking-tighter"
+                >
+                    {t('header.title')}
+                </h1>
 
-                <div ref={searchRef} className="relative flex-grow max-w-xs hidden sm:block">
-                    <div className={`flex items-center bg-zinc-100 dark:bg-zinc-900 border border-transparent focus-within:border-zinc-300 dark:focus-within:border-zinc-700 rounded-xl px-3 transition-all ${isSearchFocused ? 'ring-2 ring-sky-500/20' : ''}`}>
-                        <SearchIcon />
-                        <input
-                            type="text"
-                            placeholder={t('header.searchPlaceholder')}
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setIsSearchFocused(true)}
-                            className="w-full bg-transparent p-2 text-sm outline-none dark:text-white font-medium"
-                        />
-                    </div>
-
-                    {isSearchFocused && searchQuery && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto z-[100] animate-fade-in">
-                            {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
-                                <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors border-b last:border-0 dark:border-zinc-800">
-                                    <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-700" />
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold">{user.username}</span>
+                <nav className="flex items-center gap-5">
+                    <button onClick={onGoHome} className="hover:scale-110 transition-transform"><svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M9.005 16.545a2.997 2.997 0 010-5.091L14.298 8.35a2.998 2.998 0 014.702 2.545v6.21a2.998 2.998 0 01-4.702 2.545l-5.293-3.105z" /></svg></button>
+                    
+                    <div ref={activityRef} className="relative">
+                        <button onClick={() => setIsActivityDropdownOpen(!isActivityDropdownOpen)} className="relative hover:scale-110 transition-transform">
+                            <HeartIcon className="text-zinc-800 dark:text-zinc-200" />
+                            {hasUnreadNotifications && <span className="absolute top-0.5 right-0.5 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-black"></span>}
+                        </button>
+                        
+                        {isActivityDropdownOpen && (
+                            <div className="absolute right-0 top-full mt-4 w-80 bg-white dark:bg-zinc-950 rounded-3xl shadow-2xl border dark:border-zinc-800 z-50 max-h-[70vh] overflow-y-auto animate-fade-in no-scrollbar">
+                                {notifications.length > 0 ? notifications.map(n => (
+                                    <div key={n.id} className="flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 border-b last:border-0 dark:border-zinc-900 transition-colors">
+                                        <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700"/>
+                                        <div className="ml-3 text-xs flex-grow">
+                                            <p className="leading-snug" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
+                                            {(n.type === 'duo_request' || n.type === 'tag_request') && (
+                                                <div className="flex gap-2 mt-3">
+                                                    <button onClick={() => handleAcceptDuoRequest(n)} className="text-[10px] font-black text-white bg-sky-500 px-3 py-1.5 rounded-xl uppercase tracking-widest">{t('header.accept')}</button>
+                                                    <button onClick={() => handleDeclineDuoRequest(n)} className="text-[10px] font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-xl uppercase tracking-widest">{t('header.decline')}</button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            )) : <p className="p-8 text-center text-sm text-zinc-500 font-bold">{t('header.noResults')}</p>}
-                        </div>
-                    )}
-                </div>
-
-                {isMobileSearchOpen ? (
-                    <div ref={mobileSearchRef} className="flex-grow flex items-center gap-2 sm:hidden animate-slide-right">
-                        <div className="flex-grow flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-1.5 border dark:border-zinc-800 relative">
-                            <SearchIcon className="h-4 w-4 text-zinc-400" />
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder={t('header.searchPlaceholder')}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-transparent p-1.5 text-sm outline-none dark:text-white font-medium"
-                            />
-                            {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="text-zinc-400">
-                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" /></svg>
-                                </button>
-                            )}
-                            
-                            {searchQuery && (
-                                <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-zinc-950 border dark:border-zinc-800 rounded-2xl shadow-2xl z-[100] max-h-[60vh] overflow-y-auto">
-                                    {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
-                                        <div key={user.id} onClick={() => handleSelectResult(user.id)} className="flex items-center gap-3 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer border-b last:border-0 dark:border-zinc-800">
-                                            <img src={user.avatar} className="w-12 h-12 rounded-full object-cover border dark:border-zinc-700" />
-                                            <span className="text-sm font-bold">{user.username}</span>
-                                        </div>
-                                    )) : <p className="p-8 text-center text-sm text-zinc-500 font-bold">{t('header.noResults')}</p>}
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={() => setIsMobileSearchOpen(false)} className="text-sm font-black text-sky-500 uppercase tracking-tighter">
-                            {t('common.cancel')}
-                        </button>
+                                )) : (
+                                    <div className="p-10 text-center flex flex-col items-center">
+                                        <HeartIcon className="w-8 h-8 text-zinc-300 mb-4" />
+                                        <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t('header.noActivity')}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <nav className="flex items-center gap-4 shrink-0">
-                        <button 
-                            onClick={() => setIsMobileSearchOpen(true)}
-                            className="p-1 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                            aria-label="Busca"
-                        >
-                            <SearchIcon className="h-7 w-7 text-zinc-800 dark:text-zinc-200" />
-                        </button>
 
-                        <button 
-                            onClick={() => onOpenMessages()}
-                            className="p-1 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors relative"
-                            aria-label="Mensagens"
-                        >
-                            <MessageIcon className="text-zinc-800 dark:text-zinc-200" />
-                            {hasUnreadMessages && (
-                                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-purple-600 ring-2 ring-white dark:ring-black animate-pulse"></span>
-                            )}
-                        </button>
-
-                        <div ref={activityRef} className="relative">
-                            <button onClick={() => setIsActivityDropdownOpen(!isActivityDropdownOpen)} className="relative hover:scale-110 transition-transform active:scale-95">
-                                <HeartIcon className="text-zinc-800 dark:text-zinc-200" />
-                                {hasUnreadNotifications && <span className="absolute top-0.5 right-0.5 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-black"></span>}
-                            </button>
-                            
-                            {isActivityDropdownOpen && (
-                                <div className="absolute right-0 top-full mt-4 w-80 bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 z-50 max-h-[70vh] overflow-y-auto animate-fade-in">
-                                    {notifications.length > 0 ? notifications.map(n => (
-                                        <div key={n.id} onClick={() => { handleNotificationClick(n); setIsActivityDropdownOpen(false); }} className="flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer border-b last:border-0 dark:border-zinc-800 transition-colors">
-                                            <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700"/>
-                                            <div className="ml-3 text-sm flex-grow text-left">
-                                                <p className="leading-snug" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
-                                                {(n.type === 'follow_request' || n.type === 'duo_request' || n.type === 'tag_request') && (
-                                                    <div className="flex gap-2 mt-3">
-                                                        <button 
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation(); 
-                                                                if (n.type === 'follow_request') handleAcceptRequest(n);
-                                                                else if (n.type === 'duo_request') handleAcceptDuoRequest(n);
-                                                                else if (n.type === 'tag_request') handleAcceptTagRequest(n);
-                                                            }} 
-                                                            className="text-xs font-black text-white bg-sky-500 px-4 py-2 rounded-xl shadow-sm hover:bg-sky-600 transition-colors uppercase tracking-widest"
-                                                        >
-                                                            {t('header.accept')}
-                                                        </button>
-                                                        <button 
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation(); 
-                                                                if (n.type === 'follow_request') handleDeclineRequest(n);
-                                                                else deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); 
-                                                            }} 
-                                                            className="text-xs font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors uppercase tracking-widest"
-                                                        >
-                                                            {t('header.decline')}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )) : (
-                                        <div className="p-10 text-center flex flex-col items-center">
-                                            <div className="w-16 h-16 rounded-full border-2 border-zinc-200 dark:border-zinc-800 flex items-center justify-center mb-4">
-                                                <HeartIcon className="w-8 h-8 text-zinc-300" />
-                                            </div>
-                                            <p className="text-sm font-black text-zinc-400 uppercase tracking-widest">{t('header.noActivity')}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </nav>
-                )}
+                    <button onClick={() => onOpenMessages()} className="relative hover:scale-110 transition-transform">
+                        <MessageIcon className="text-zinc-800 dark:text-zinc-200" />
+                    </button>
+                </nav>
             </div>
         </header>
     );
