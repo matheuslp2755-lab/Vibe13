@@ -158,7 +158,7 @@ const VibeItem: React.FC<{
             {!isLoaded && vibe.mediaType !== 'image' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-0">
                     <div className="w-12 h-12 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-4">Sintonizando Vibe...</span>
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-4">{t('vibeFeed.loading')}</span>
                 </div>
             )}
 
@@ -184,7 +184,7 @@ const VibeItem: React.FC<{
                 </div>
             )}
 
-            {/* BOTÕES DE AÇÃO LATERAIS - Posicionados mais altos para não serem cortados pelo BottomNav */}
+            {/* BOTÕES DE AÇÃO LATERAIS */}
             <div className="absolute right-4 bottom-28 flex flex-col gap-6 items-center z-30">
                 <div className="relative group mb-2">
                     <img src={vibe.user?.avatar} className="w-12 h-12 rounded-full border-2 border-white shadow-lg object-cover transition-transform group-active:scale-90" />
@@ -218,20 +218,20 @@ const VibeItem: React.FC<{
                 )}
             </div>
 
-            {/* CONTEÚDO INFERIOR - LEGENDA E PERFIL - Posicionado mais alto para visibilidade */}
+            {/* CONTEÚDO INFERIOR */}
             <div className="absolute left-4 bottom-20 z-30 text-white pointer-events-none pr-20 max-w-[85%]">
                 {reposterData && (
                     <div className="flex items-center gap-1.5 mb-2.5 bg-black/40 backdrop-blur-md rounded-full w-fit px-3 py-1 border border-white/20 animate-fade-in shadow-xl">
                         <img src={reposterData.avatar} className="w-4 h-4 rounded-full border border-white/30" />
                         <span className="text-[9px] font-black text-white tracking-tight uppercase">
-                            {reposterData.isMe ? t('common.youRepublicated') : t('post.republishedBy', { username: reposterData.username })}
+                            {reposterData.isMe ? t('post.youRepublicated') : t('post.republishedBy', { username: reposterData.username })}
                         </span>
                     </div>
                 )}
                 <div className="flex items-center gap-2 mb-2 pointer-events-auto">
                     <h3 className="font-black text-base drop-shadow-lg">@{vibe.user?.username}</h3>
                     {!isOwner && (
-                        <button className="bg-transparent border border-white/70 text-[10px] font-black px-3 py-1 rounded-full hover:bg-white hover:text-black transition-all">Seguir</button>
+                        <button className="bg-transparent border border-white/70 text-[10px] font-black px-3 py-1 rounded-full hover:bg-white hover:text-black transition-all">{t('header.follow')}</button>
                     )}
                 </div>
                 <p className="text-xs font-medium drop-shadow-lg break-words line-clamp-3 leading-tight mb-3">{vibe.caption}</p>
@@ -248,7 +248,6 @@ const VibeItem: React.FC<{
                 )}
             </div>
             
-            {/* Overlay gradiente inferior mais alto para leitura da legenda */}
             <div className="absolute bottom-0 left-0 right-0 h-80 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none z-10" />
             
             <style>{`
@@ -304,12 +303,11 @@ const VibeFeed: React.FC = () => {
     if (loading) return (
         <div className="h-full bg-black flex flex-col items-center justify-center text-white">
             <div className="w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin mb-4" />
-            <span className="font-black text-xs uppercase tracking-[0.2em] animate-pulse">Sintonizando Vibes</span>
+            <span className="font-black text-xs uppercase tracking-[0.2em] animate-pulse">{t('vibeFeed.loading')}</span>
         </div>
     );
 
     return (
-        /* ALTURA AJUSTADA: 100dvh e o container de scroll respeita isso, descontando BottomNav no mobile */
         <div className="relative h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
             <div 
                 ref={containerRef} 
@@ -329,7 +327,7 @@ const VibeFeed: React.FC = () => {
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-zinc-500 font-bold p-10 text-center gap-4">
                         <svg className="w-16 h-16 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        <p className="text-sm uppercase tracking-widest">Nenhum Vibe postado ainda.</p>
+                        <p className="text-sm uppercase tracking-widest">{t('vibeFeed.noVibes')}</p>
                     </div>
                 )}
             </div>

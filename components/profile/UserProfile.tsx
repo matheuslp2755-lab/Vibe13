@@ -61,7 +61,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setIsBlocked(blockSnap.exists());
                 }
 
-                // Simplified query to avoid index requirement: Fetch by userId only, then sort in JS
                 const postsQ = query(collection(db, 'posts'), where('userId', '==', userId));
                 unsubscribePosts = onSnapshot(postsQ, (snap) => {
                     const sortedPosts = snap.docs
@@ -72,11 +71,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     setStats(prev => ({ ...prev, posts: snap.size }));
                 });
 
-                // Simplified query for pulses: Fetch by authorId only, filter and sort in JS
-                const pulsesQ = query(
-                    collection(db, 'pulses'), 
-                    where('authorId', '==', userId)
-                );
+                const pulsesQ = query(collection(db, 'pulses'), where('authorId', '==', userId));
                 unsubscribePulses = onSnapshot(pulsesQ, (snap) => {
                     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
                     const activePulses = snap.docs
@@ -153,13 +148,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 currentVibe: updatedData.currentVibe
             };
 
-            if (updatedData.username !== user.username) {
-                updates.lastUsernameChange = serverTimestamp();
-            }
-            if (updatedData.nickname !== (user.nickname || '')) {
-                updates.lastNicknameChange = serverTimestamp();
-            }
-
             await updateDoc(doc(db, 'users', currentUser.uid), updates);
             await updateProfile(currentUser, {
                 displayName: updatedData.username,
@@ -170,7 +158,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
             setIsEditModalOpen(false);
         } catch (error) {
             console.error(error);
-            alert("Erro ao atualizar perfil.");
+            alert(t('common.error'));
         } finally {
             setIsSubmittingEdit(false);
         }
@@ -200,53 +188,45 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         }
     };
 
-    if (!user) return <div className="p-8 text-center">Carregando...</div>;
+    if (!user) return <div className="p-8 text-center">{t('messages.loading')}</div>;
 
     const hasActivePulses = pulses.length > 0;
 
     return (
         <div className="container mx-auto max-w-4xl p-4 sm:p-8">
             <header className="flex flex-col sm:flex-row items-center gap-8 mb-8 relative">
-                {isOwner && (
-                    <div className="absolute top-0 right-0" ref={profileMenuRef}>
-                        <button 
-                            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                            className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors"
-                            aria-label={t('profile.options')}
-                        >
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="1.5"></circle>
-                                <circle cx="6" cy="12" r="1.5"></circle>
-                                <circle cx="18" cy="12" r="1.5"></circle>
-                            </svg>
-                        </button>
-                        {isProfileMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1 backdrop-blur-md bg-opacity-95">
-                                <button 
-                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                                    {t('profile.logout')}
+                {/* MENU SUPERIOR DIREITO */}
+                <div className="absolute top-0 right-0" ref={profileMenuRef}>
+                    <button 
+                        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                        className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                        aria-label={t('profile.options')}
+                    >
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="1.5"></circle>
+                            <circle cx="6" cy="12" r="1.5"></circle>
+                            <circle cx="18" cy="12" r="1.5"></circle>
+                        </svg>
+                    </button>
+
+                    {isProfileMenuOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1 backdrop-blur-md bg-opacity-95">
+                            {isOwner ? (
+                                <>
+                                    <button onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                        {t('profile.logout')}
+                                    </button>
+                                </>
+                            ) : (
+                                <button className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 font-semibold">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                    Denunciar
                                 </button>
-                                <button 
-                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 border-t dark:border-zinc-800"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                                    {t('profile.switchAccount')}
-                                </button>
-                                <button 
-                                    onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3 border-t dark:border-zinc-800"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                    {t('profile.addAccount')}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 <div 
                     className={`relative w-32 h-32 flex-shrink-0 cursor-pointer ${hasActivePulses ? 'p-1 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500' : ''}`}
@@ -270,13 +250,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                         </div>
                         <div className="flex gap-2">
                             {isOwner ? (
-                                <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white !font-bold">Editar Perfil</Button>
+                                <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white !font-bold">{t('profile.editProfile')}</Button>
                             ) : (
                                 <>
                                     <Button onClick={handleFollow} className={`!w-auto ${isFollowing ? '!bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white' : ''}`}>
-                                        {isFollowing ? 'Seguindo' : 'Seguir'}
+                                        {isFollowing ? t('header.following') : t('header.follow')}
                                     </Button>
-                                    <Button onClick={() => onStartMessage(user)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">Mensagem</Button>
+                                    <Button onClick={() => onStartMessage({ id: userId, ...user })} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">{t('profile.message')}</Button>
                                 </>
                             )}
                         </div>

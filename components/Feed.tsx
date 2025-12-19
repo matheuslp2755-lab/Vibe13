@@ -39,6 +39,9 @@ const Feed: React.FC = () => {
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
+  const [targetUserForMessages, setTargetUserForMessages] = useState<any>(null);
+  const [targetConversationId, setTargetConversationId] = useState<string | null>(null);
+  
   const [selectedMedia, setSelectedMedia] = useState<any[]>([]);
   const [forwardingPost, setForwardingPost] = useState<any>(null);
   const [activePulseAuthor, setActivePulseAuthor] = useState<any>(null);
@@ -146,6 +149,12 @@ const Feed: React.FC = () => {
     setDesktopSearchResults([]);
   };
 
+  const handleOpenMessages = (user?: any, conversationId?: string) => {
+    setTargetUserForMessages(user || null);
+    setTargetConversationId(conversationId || null);
+    setIsMessagesOpen(true);
+  };
+
   const handlePostDeleted = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'posts', id));
@@ -203,7 +212,7 @@ const Feed: React.FC = () => {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span>{t('header.vibes')}</span>
             </button>
-            <button onClick={() => setIsMessagesOpen(true)} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all">
+            <button onClick={() => handleOpenMessages()} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <span>{t('header.messages')}</span>
             </button>
@@ -224,14 +233,14 @@ const Feed: React.FC = () => {
       
       {/* Oculta Header no Mobile se for Vibes */}
       <div className={`${viewMode === 'vibes' ? 'hidden' : 'block'} lg:hidden`}>
-        <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={() => setIsMessagesOpen(true)} />
+        <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={(id) => handleOpenMessages(null, id)} />
       </div>
 
       <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64 h-[calc(100dvh-4rem)] lg:h-auto' : 'lg:pl-64 lg:pr-4 pt-16 lg:pt-8'}`}>
         {viewMode === 'vibes' ? <VibeFeed /> : 
          viewMode === 'profile' || viewingProfileId ? (
            <div className="container mx-auto max-w-4xl py-4">
-             <UserProfile userId={viewingProfileId || currentUser?.uid || ''} onStartMessage={() => setIsMessagesOpen(true)} onSelectUser={handleSelectUser} />
+             <UserProfile userId={viewingProfileId || currentUser?.uid || ''} onStartMessage={(u) => handleOpenMessages(u)} onSelectUser={handleSelectUser} />
            </div>
          ) : (
           <div className="container mx-auto max-w-lg py-4 pb-24 px-4">
@@ -296,7 +305,16 @@ const Feed: React.FC = () => {
       <CreatePulseModal isOpen={isCreatePulseOpen} onClose={() => setIsCreatePulseOpen(false)} onPulseCreated={() => setIsCreatePulseOpen(false)} />
       <CreateVibeModal isOpen={isCreateVibeOpen} onClose={() => setIsCreateVibeOpen(false)} onVibeCreated={() => setViewMode('vibes')} />
       <CreateStatusModal isOpen={isCreateStatusOpen} onClose={() => setIsCreateStatusOpen(false)} onPostCreated={() => { setViewMode('feed'); setViewingProfileId(null); }} />
-      <MessagesModal isOpen={isMessagesOpen} onClose={() => setIsMessagesOpen(false)} initialTargetUser={null} initialConversationId={null} />
+      <MessagesModal 
+        isOpen={isMessagesOpen} 
+        onClose={() => {
+            setIsMessagesOpen(false);
+            setTargetUserForMessages(null);
+            setTargetConversationId(null);
+        }} 
+        initialTargetUser={targetUserForMessages} 
+        initialConversationId={targetConversationId} 
+      />
       
       {activePulseAuthor && (
           <PulseViewerModal 

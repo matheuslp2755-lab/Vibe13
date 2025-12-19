@@ -55,7 +55,7 @@ const AudioPlayer: React.FC<{ src: string }> = ({ src }) => {
             if (isPlaying) {
                 audioRef.current.pause();
             } else {
-                audioRef.current.play().catch(err => console.error("Audio playback error:", err?.message || String(err)));
+                audioRef.current.play().catch(err => console.error("Erro na reprodução do áudio:", err?.message || String(err)));
             }
         }
     };
@@ -111,7 +111,7 @@ const ForwardedPost: React.FC<ForwardedPostProps> = ({ content }) => {
                 <img src={content.originalPosterAvatar} alt={content.originalPosterUsername} className="w-6 h-6 rounded-full" />
                 <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{content.originalPosterUsername}</span>
             </div>
-            <img src={content.imageUrl} alt="Forwarded post" className="w-full aspect-square object-cover" />
+            <img src={content.imageUrl} alt="Publicação encaminhada" className="w-full aspect-square object-cover" />
             {content.caption && <p className="text-xs p-2 truncate text-zinc-600 dark:text-zinc-400">{content.caption}</p>}
         </div>
     </div>
@@ -263,6 +263,7 @@ const VideoIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const ActivityIndicator: React.FC<{ type: 'typing' | 'recording' }> = ({ type }) => {
+    const { t } = useLanguage();
     return (
         <div className="flex items-center justify-center p-3 bg-zinc-100 dark:bg-zinc-800 rounded-full w-fit transition-all duration-200">
             {type === 'typing' ? (
@@ -272,7 +273,10 @@ const ActivityIndicator: React.FC<{ type: 'typing' | 'recording' }> = ({ type })
                     <div className="w-1.5 h-1.5 bg-zinc-500 dark:bg-zinc-400 rounded-full animate-bounce"></div>
                 </div>
             ) : (
-                <MicrophoneIcon className="w-4 h-4 text-red-500 animate-pulse" />
+                <div className="flex items-center gap-2">
+                    <MicrophoneIcon className="w-4 h-4 text-red-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase">{t('messages.recordingAudio')}</span>
+                </div>
             )}
         </div>
     );
@@ -329,7 +333,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
     const callDropdownRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<any>(null);
 
-    // Function to update user activity status in Firestore
+    // Função para atualizar atividade
     const updateActivity = async (status: 'typing' | 'recording' | null) => {
         if (!conversationId || !currentUser) return;
         try {
@@ -338,11 +342,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 [`participantInfo.${currentUser.uid}.activity`]: status
             });
         } catch (error: any) {
-            console.error("Error updating activity status:", error?.message || String(error));
+            console.error("Erro ao atualizar atividade:", error?.message || String(error));
         }
     };
 
-    // Cleanup activity on unmount
     useEffect(() => {
         return () => {
             if (conversationId && currentUser) {
@@ -365,7 +368,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    }, [messages, conversationData]); // Scroll when messages change or activity updates
+    }, [messages, conversationData]);
 
     useEffect(() => {
         if (replyingTo) {
@@ -559,17 +562,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             
             let mimeType = 'audio/webm;codecs=opus';
             if (typeof MediaRecorder === 'undefined') {
-                 console.error("MediaRecorder not supported");
-                 setUploadError(t('messages.recordingError'));
+                 setUploadError("Gravador de áudio não suportado neste navegador.");
                  return;
             }
 
             if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'audio/mp4'; // Safari
+                mimeType = 'audio/mp4';
                 if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = 'audio/ogg'; // Older
+                    mimeType = 'audio/ogg';
                     if (!MediaRecorder.isTypeSupported(mimeType)) {
-                        mimeType = ''; // Default
+                        mimeType = '';
                     }
                 }
             }
@@ -598,8 +600,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             mediaRecorder.start(); 
 
         } catch (error: any) {
-            console.error("Error accessing microphone:", error?.message || String(error));
-            setUploadError(t('messages.recordingError'));
+            console.error("Erro ao acessar microfone:", error?.message || String(error));
+            setUploadError("Erro ao acessar microfone. Verifique as permissões.");
         }
     };
 
@@ -644,7 +646,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         setIsUploading(true);
 
         try {
-            // Determine extension based on MIME type
             let extension = 'webm';
             if (mimeType.includes('mp4') || mimeType.includes('aac')) {
                 extension = 'm4a'; 
@@ -652,7 +653,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                 extension = 'ogg';
             }
             
-            // Upload Audio to Conversation Folder
             const fileName = `${Date.now()}.${extension}`;
             const audioRef = storageRef(storage, `chat_media/${conversationId}/${fileName}`);
             
@@ -660,7 +660,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await uploadBytes(audioRef, audioBlob, metadata);
             const audioUrl = await getDownloadURL(audioRef);
 
-            // Send Message
             const conversationRef = doc(db, 'conversations', conversationId);
             const messagesRef = collection(conversationRef, 'messages');
 
@@ -676,7 +675,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             const newMessageRef = doc(messagesRef);
             batch.set(newMessageRef, messageData);
             
-            // Update last message
             batch.update(conversationRef, {
                 lastMessage: {
                     text: '🎤 Áudio',
@@ -690,7 +688,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await batch.commit();
 
         } catch (error: any) {
-            console.error("Error sending audio:", error?.message || String(error));
+            console.error("Erro ao enviar áudio:", error?.message || String(error));
             setUploadError(t('messages.media.uploadError'));
         } finally {
             setIsUploading(false);
@@ -704,7 +702,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
         setIsUploading(true);
         setUploadError('');
         
-        // Clear typing activity immediately when sending
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
@@ -807,7 +804,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await batch.commit();
 
         } catch (error: any) {
-            console.error("Error sending message:", error?.message || String(error));
+            console.error("Erro ao enviar mensagem:", error?.message || String(error));
             setUploadError(t('messages.media.uploadError'));
             setNewMessage(tempMessageText);
             setReplyingTo(tempReplyingTo);
@@ -850,7 +847,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
             await updateDoc(conversationRef, lastMessageUpdate);
 
         } catch (error: any) {
-            console.error("Error deleting message:", error?.message || String(error));
+            console.error("Erro ao excluir mensagem:", error?.message || String(error));
         }
     };
 
@@ -1012,7 +1009,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                 <button 
                                     onClick={() => setReplyingTo(msg)}
                                     className="p-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                    aria-label="Reply to message"
+                                    aria-label="Responder mensagem"
                                 >
                                     <ReplyIcon className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                                 </button>
@@ -1020,7 +1017,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                                     <button 
                                         onClick={() => setShowDeleteConfirm({ open: true, messageId: msg.id })}
                                         className="p-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                        aria-label="Delete message"
+                                        aria-label="Excluir mensagem"
                                     >
                                         <TrashIcon className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                                     </button>
@@ -1029,7 +1026,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                         </div>
                     ))}
                     
-                    {/* Activity Indicator (Typing/Recording) */}
+                    {/* Indicador de atividade */}
                     {otherUserActivity && (
                         <div className="self-start pl-2 mb-2 animate-fade-in">
                             <ActivityIndicator type={otherUserActivity} />
@@ -1048,7 +1045,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, onBack, isCurre
                  {mediaPreview && (
                     <div className="relative w-24 h-24 mb-2 p-1 border border-zinc-300 dark:border-zinc-700 rounded-lg">
                         {mediaType === 'image' ? (
-                            <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover rounded" />
+                            <img src={mediaPreview} alt="Prévia" className="w-full h-full object-cover rounded" />
                         ) : (
                             <video src={mediaPreview} className="w-full h-full object-cover rounded" />
                         )}

@@ -40,7 +40,14 @@ const SearchIcon: React.FC<{className?: string}> = ({className = "h-5 w-5 text-z
 );
 
 const HeartIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) => (
-    <svg aria-label="Notifications" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><title>Notifications</title><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-6.12 8.351C12.89 20.72 12.434 21 12 21s-.89-.28-1.38-.627C7.152 14.08 4.5 12.192 4.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.118-1.763a4.21 4.21 0 0 1 3.675-1.941Z"></path></svg>
+    <svg aria-label="Notifications" className={className} fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24"><title>Notificações</title><path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-6.12 8.351C12.89 20.72 12.434 21 12 21s-.89-.28-1.38-.627C7.152 14.08 4.5 12.192 4.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.118-1.763a4.21 4.21 0 0 1 3.675-1.941Z"></path></svg>
+);
+
+const MessageIcon: React.FC<{className?: string}> = ({className = "h-7 w-7"}) => (
+    <svg aria-label="Direct" className={className} fill="none" stroke="currentColor" strokeWidth="2" height="24" role="img" viewBox="0 0 24 24" width="24">
+        <title>Mensagens</title>
+        <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2Z" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
 );
 
 const SpinnerIcon: React.FC = () => (
@@ -63,12 +70,14 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     const [isActivityDropdownOpen, setIsActivityDropdownOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+    const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
     
     const searchRef = useRef<HTMLDivElement>(null);
     const mobileSearchRef = useRef<HTMLDivElement>(null);
     const activityRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
 
+    // Listener para notificações gerais (não mensagens)
     useEffect(() => {
         if (!currentUser) return;
 
@@ -84,6 +93,31 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             setNotifications(fetchedNotifications);
             const hasUnread = fetchedNotifications.some(n => !n.read);
             setHasUnreadNotifications(hasUnread);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser]);
+
+    // Listener para mensagens não lidas
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const q = query(collection(db, 'conversations'), where('participants', 'array-contains', currentUser.uid));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            let unread = false;
+            snapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                const lastMsg = data.lastMessage;
+                const myInfo = data.participantInfo?.[currentUser.uid];
+                
+                // Se a última mensagem não foi minha e eu não a vi ainda
+                if (lastMsg && lastMsg.senderId !== currentUser.uid) {
+                    if (!myInfo?.lastSeenMessageTimestamp || lastMsg.timestamp?.seconds > myInfo.lastSeenMessageTimestamp.seconds) {
+                        unread = true;
+                    }
+                }
+            });
+            setHasUnreadMessages(unread);
         });
 
         return () => unsubscribe();
@@ -115,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                 
                 setSearchResults(users);
             } catch (error) {
-                console.error("Error searching users:", error);
+                console.error("Erro na busca:", error);
             } finally {
                 setIsSearching(false);
             }
@@ -195,7 +229,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                     read: true
                 });
             } catch (error) {
-                console.error("Error marking notification as read:", error);
+                console.error("Erro ao marcar notificação como lida:", error);
             }
         }
 
@@ -314,13 +348,24 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                         </button>
                     </div>
                 ) : (
-                    <nav className="flex items-center gap-5 shrink-0">
+                    <nav className="flex items-center gap-4 shrink-0">
                         <button 
                             onClick={() => setIsMobileSearchOpen(true)}
-                            className="p-1.5 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
+                            className="p-1 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                             aria-label="Busca"
                         >
                             <SearchIcon className="h-7 w-7 text-zinc-800 dark:text-zinc-200" />
+                        </button>
+
+                        <button 
+                            onClick={() => onOpenMessages()}
+                            className="p-1 sm:hidden hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors relative"
+                            aria-label="Mensagens"
+                        >
+                            <MessageIcon className="text-zinc-800 dark:text-zinc-200" />
+                            {hasUnreadMessages && (
+                                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-purple-600 ring-2 ring-white dark:ring-black animate-pulse"></span>
+                            )}
                         </button>
 
                         <div ref={activityRef} className="relative">
