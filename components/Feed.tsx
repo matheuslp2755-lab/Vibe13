@@ -46,6 +46,7 @@ const Feed: React.FC = () => {
   
   const [selectedMedia, setSelectedMedia] = useState<any[]>([]);
   const [forwardingPost, setForwardingPost] = useState<any>(null);
+  const [sharedPostToPulse, setSharedPostToPulse] = useState<any>(null);
   const [activePulseAuthor, setActivePulseAuthor] = useState<any>(null);
   
   const [editingCaptionPost, setEditingCaptionPost] = useState<any>(null);
@@ -313,7 +314,12 @@ const Feed: React.FC = () => {
 
       <GalleryModal isOpen={isGalleryOpen} onClose={() => setIsGalleryOpen(false)} onImagesSelected={imgs => { setSelectedMedia(imgs); setIsGalleryOpen(false); setIsCreatePostOpen(true); }} />
       <CreatePostModal isOpen={isCreatePostOpen} onClose={() => setIsCreatePostOpen(false)} onPostCreated={() => setIsCreatePostOpen(false)} initialImages={selectedMedia} />
-      <CreatePulseModal isOpen={isCreatePulseOpen} onClose={() => setIsCreatePulseOpen(false)} onPulseCreated={() => setIsCreatePulseOpen(false)} />
+      <CreatePulseModal 
+        isOpen={isCreatePulseOpen} 
+        onClose={() => { setIsCreatePulseOpen(false); setSharedPostToPulse(null); }} 
+        onPulseCreated={() => setIsCreatePulseOpen(false)} 
+        initialSharedContent={sharedPostToPulse}
+      />
       <CreateVibeModal isOpen={isCreateVibeOpen} onClose={() => setIsCreateVibeOpen(false)} onVibeCreated={() => setViewMode('vibes')} />
       <CreateStatusModal isOpen={isCreateStatusOpen} onClose={() => setIsCreateStatusOpen(false)} onPostCreated={() => { setViewMode('feed'); setViewingProfileId(null); }} />
       <MessagesModal 
@@ -348,7 +354,18 @@ const Feed: React.FC = () => {
           />
       )}
 
-      {forwardingPost && <ForwardModal isOpen={true} onClose={() => setForwardingPost(null)} post={forwardingPost} />}
+      {forwardingPost && (
+        <ForwardModal 
+          isOpen={true} 
+          onClose={() => setForwardingPost(null)} 
+          post={forwardingPost} 
+          onShareToPulse={(content) => {
+            setSharedPostToPulse(content);
+            setForwardingPost(null);
+            setIsCreatePulseOpen(true);
+          }}
+        />
+      )}
       {editingCaptionPost && <AddCaptionModal isOpen={true} onClose={() => setEditingCaptionPost(null)} postId={editingCaptionPost.id} onCaptionSaved={() => setEditingCaptionPost(null)} />}
       {editingMusicPost && <AddMusicModal isOpen={true} onClose={() => setEditingMusicPost(null)} postId={editingMusicPost.id} onMusicAdded={() => setEditingMusicPost(null)} />}
       

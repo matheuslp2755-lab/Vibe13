@@ -51,6 +51,7 @@ const ptMessages = {
     "follow": "Seguir",
     "requested": "Solicitado",
     "notifications": "Notificações",
+    "clearAll": "Limpar tudo",
     "noActivity": "Nenhuma atividade nova.",
     "profile": "Perfil",
     "create": "Criar",
@@ -84,7 +85,7 @@ const ptMessages = {
     "title": "Novo Pulse",
     "effects": "Efeitos",
     "filters": "Filtros",
-    "lenses": "Lentes",
+    "lenses": "Lentes AR",
     "takePhoto": "Tirar Foto",
     "gallery": "Galeria",
     "effectNone": "Nenhum",
@@ -92,7 +93,13 @@ const ptMessages = {
     "effectNoir": "Cinema Noir",
     "effectCyber": "Cyberpunk",
     "effectRetro": "Vintage",
-    "effectAura": "Aura Mística"
+    "effectAura": "Aura Mística",
+    "sharedBackground": "Cor de fundo",
+    "stickers": "Stickers",
+    "gifSuggestions": "Sugestões",
+    "searchGifs": "Pesquisar no Giphy...",
+    "scaleLabel": "Zoom / Escala",
+    "musicStyle": "Estilo da Capa"
   },
   "diary": {
     "title": "Notas",
@@ -180,7 +187,8 @@ const ptMessages = {
     "noResults": "Nenhum usuário encontrado.",
     "send": "Enviar",
     "sending": "Enviando...",
-    "sent": "Enviado"
+    "sent": "Enviado",
+    "addToPulse": "Adicionar publicação ao seu Pulse"
   },
   "pulseViewer": {
     "previous": "Anterior",
@@ -189,7 +197,9 @@ const ptMessages = {
     "deleteTitle": "Excluir Pulse?",
     "deleteBody": "Tem certeza que deseja excluir?",
     "save": "Salvar",
-    "replyPlaceholder": "Enviar mensagem..."
+    "replyPlaceholder": "Enviar mensagem...",
+    "viewedBy": "Visualizado por",
+    "noViews": "Nenhuma visualização ainda."
   },
   "vibeFeed": {
     "loading": "Carregando Vibes...",
@@ -242,7 +252,8 @@ const ptMessages = {
     "creating": "Criando...",
     "added": "Adicionado!",
     "addToMemoryTitle": "Salvar na Memória",
-    "createNew": "Criar Nova"
+    "createNew": "Criar Nova",
+    "uploadPhoto": "Upload de Foto"
   },
   "call": {
     "call": "Chamada",
@@ -296,6 +307,9 @@ const ptMessages = {
     "sharing": "Compartilhando...",
     "background": "Fundo",
     "font": "Fonte"
+  },
+  "pulseBar": {
+    "live": "AO VIVO"
   }
 };
 

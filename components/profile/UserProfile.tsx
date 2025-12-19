@@ -119,20 +119,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
         const batch = writeBatch(db);
 
         if (isFollowing) {
-            // Unfollow sempre funciona igual
             batch.delete(doc(db, 'users', currentUser.uid, 'following', userId));
             batch.delete(doc(db, 'users', userId, 'followers', currentUser.uid));
             await batch.commit();
             setIsFollowing(false);
         } else if (isRequested) {
-            // Cancelar solicitação
             batch.delete(doc(db, 'users', currentUser.uid, 'sentFollowRequests', userId));
             batch.delete(doc(db, 'users', userId, 'followRequests', currentUser.uid));
             await batch.commit();
             setIsRequested(false);
         } else {
             if (user.isPrivate) {
-                // Enviar Solicitação para conta privada
                 const requestRef = doc(db, 'users', userId, 'followRequests', currentUser.uid);
                 batch.set(requestRef, { 
                     username: currentUser.displayName, 
@@ -160,7 +157,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 await batch.commit();
                 setIsRequested(true);
             } else {
-                // Seguir diretamente conta pública
                 const myFollowing = doc(db, 'users', currentUser.uid, 'following', userId);
                 const theirFollowers = doc(db, 'users', userId, 'followers', currentUser.uid);
                 batch.set(myFollowing, { username: user.username, avatar: user.avatar, timestamp: serverTimestamp() });

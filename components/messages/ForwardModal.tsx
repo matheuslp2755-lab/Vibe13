@@ -9,9 +9,10 @@ interface ForwardModalProps {
     isOpen: boolean;
     onClose: () => void;
     post: any;
+    onShareToPulse?: (content: any) => void;
 }
 
-const ForwardModal: React.FC<ForwardModalProps> = ({ isOpen, onClose, post }) => {
+const ForwardModal: React.FC<ForwardModalProps> = ({ isOpen, onClose, post, onShareToPulse }) => {
     const { t } = useLanguage();
     const [following, setFollowing] = useState<any[]>([]);
     const [search, setSearch] = useState('');
@@ -69,10 +70,11 @@ const ForwardModal: React.FC<ForwardModalProps> = ({ isOpen, onClose, post }) =>
                 mediaType: 'forwarded_post',
                 forwardedPostData: {
                     postId: post.id,
-                    imageUrl: post.imageUrl || (post.media && post.media[0].url),
-                    originalPosterUsername: post.username,
-                    originalPosterAvatar: post.userAvatar,
-                    caption: post.caption
+                    imageUrl: post.imageUrl || (post.media && post.media[0].url) || post.videoUrl,
+                    originalPosterUsername: post.username || post.user?.username,
+                    originalPosterAvatar: post.userAvatar || post.user?.avatar,
+                    caption: post.caption,
+                    type: post.videoUrl ? 'vibe' : 'post'
                 }
             };
 
@@ -105,7 +107,26 @@ const ForwardModal: React.FC<ForwardModalProps> = ({ isOpen, onClose, post }) =>
                     <button onClick={onClose} className="absolute right-4 top-4 text-2xl font-light">&times;</button>
                 </header>
                 
-                <div className="p-3">
+                <div className="p-3 space-y-3">
+                    {/* Opção Adicionar ao Pulse */}
+                    <button 
+                      onClick={() => onShareToPulse?.({
+                        id: post.id,
+                        userId: post.userId || post.user?.id, // ID do autor original para navegação
+                        imageUrl: post.imageUrl || (post.media && post.media[0].url) || post.videoUrl,
+                        username: post.username || post.user?.username,
+                        avatar: post.userAvatar || post.user?.avatar,
+                        type: post.videoUrl ? 'vibe' : 'post',
+                        musicInfo: post.musicInfo || null // Repassa música se houver
+                      })}
+                      className="w-full flex items-center gap-4 p-3 bg-sky-50 dark:bg-sky-900/10 rounded-2xl group active:scale-95 transition-all"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/20">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M12 4v16m8-8H4"/></svg>
+                        </div>
+                        <span className="text-sm font-black text-sky-600 dark:text-sky-400">{t('forwardModal.addToPulse')}</span>
+                    </button>
+
                     <TextInput 
                         id="forward-search" 
                         label={t('forwardModal.search')} 

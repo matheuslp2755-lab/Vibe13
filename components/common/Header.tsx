@@ -73,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
 
     useEffect(() => {
         if (!currentUser) return;
-        const q = query(collection(db, 'users', currentUser.uid, 'notifications'), limit(20));
+        const q = query(collection(db, 'users', currentUser.uid, 'notifications'), limit(40));
         return onSnapshot(q, (snapshot) => {
             const fetched = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
@@ -83,7 +83,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
         });
     }, [currentUser]);
 
-    // Pesquisa de usuários sincronizada com username_lowercase
     useEffect(() => {
         if (!searchQuery.trim()) {
             setSearchResults([]);
@@ -125,6 +124,20 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleDeleteNotification = async (id: string) => {
+        if (!currentUser) return;
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'notifications', id));
+    };
+
+    const handleClearAllNotifications = async () => {
+        if (!currentUser || notifications.length === 0) return;
+        const batch = writeBatch(db);
+        notifications.forEach(n => {
+            batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
+        });
+        await batch.commit();
+    };
+
     const handleAcceptDuoRequest = async (n: Notification) => {
         if (!currentUser || !n.postId) return;
         const batch = writeBatch(db);
@@ -149,6 +162,41 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
         if (!currentUser || !n.postId) return;
         const batch = writeBatch(db);
         batch.update(doc(db, 'posts', n.postId), { duoPending: false, duoPartnerId: null });
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
+        await batch.commit();
+    };
+
+    const handleAcceptFollowRequest = async (n: Notification) => {
+        if (!currentUser) return;
+        const batch = writeBatch(db);
+        const myFollowers = doc(db, 'users', currentUser.uid, 'followers', n.fromUserId);
+        const theirFollowing = doc(db, 'users', n.fromUserId, 'following', currentUser.uid);
+        
+        batch.set(myFollowers, { username: n.fromUsername, avatar: n.fromUserAvatar, timestamp: serverTimestamp() });
+        batch.set(theirFollowing, { username: currentUser.displayName, avatar: currentUser.photoURL, timestamp: serverTimestamp() });
+        
+        batch.delete(doc(db, 'users', currentUser.uid, 'followRequests', n.fromUserId));
+        batch.delete(doc(db, 'users', n.fromUserId, 'sentFollowRequests', currentUser.uid));
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
+        
+        const notifRef = doc(collection(db, 'users', n.fromUserId, 'notifications'));
+        batch.set(notifRef, {
+            type: 'follow',
+            fromUserId: currentUser.uid,
+            fromUsername: currentUser.displayName,
+            fromUserAvatar: currentUser.photoURL,
+            timestamp: serverTimestamp(),
+            read: false
+        });
+        
+        await batch.commit();
+    };
+
+    const handleDeclineFollowRequest = async (n: Notification) => {
+        if (!currentUser) return;
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'users', currentUser.uid, 'followRequests', n.fromUserId));
+        batch.delete(doc(db, 'users', n.fromUserId, 'sentFollowRequests', currentUser.uid));
         batch.delete(doc(db, 'users', currentUser.uid, 'notifications', n.id));
         await batch.commit();
     };
@@ -188,7 +236,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
                     </button>
                 </div>
 
-                {/* Barra de Pesquisa Habilitada para Mobile e Desktop */}
                 <div ref={searchRef} className="relative flex-grow max-w-xs mx-4">
                     <div className={`flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border transition-all ${isSearchFocused ? 'border-sky-500 bg-white shadow-sm ring-4 ring-sky-500/5' : 'border-transparent'}`}>
                         <SearchIcon className="w-4 h-4 text-zinc-400" />
@@ -231,26 +278,59 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages,
                         </button>
                         
                         {isActivityDropdownOpen && (
-                            <div className="absolute right-0 top-full mt-4 w-80 bg-white dark:bg-zinc-950 rounded-3xl shadow-2xl border dark:border-zinc-800 z-50 max-h-[70vh] overflow-y-auto animate-fade-in no-scrollbar">
-                                {notifications.length > 0 ? notifications.map(n => (
-                                    <div key={n.id} className="flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 border-b last:border-0 dark:border-zinc-900 transition-colors">
-                                        <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700"/>
-                                        <div className="ml-3 text-xs flex-grow">
-                                            <p className="leading-snug" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
-                                            {(n.type === 'duo_request' || n.type === 'tag_request') && (
-                                                <div className="flex gap-2 mt-3">
-                                                    <button onClick={() => handleAcceptDuoRequest(n)} className="text-[10px] font-black text-white bg-sky-500 px-3 py-1.5 rounded-xl uppercase tracking-widest">{t('header.accept')}</button>
-                                                    <button onClick={() => handleDeclineDuoRequest(n)} className="text-[10px] font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-xl uppercase tracking-widest">{t('header.decline')}</button>
-                                                </div>
-                                            )}
+                            <div className="absolute right-0 top-full mt-4 w-80 bg-white dark:bg-zinc-950 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border dark:border-zinc-800 z-50 overflow-hidden animate-fade-in">
+                                <div className="p-4 border-b dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50 backdrop-blur-md">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('header.notifications')}</span>
+                                    {notifications.length > 0 && (
+                                        <button onClick={handleClearAllNotifications} className="text-[9px] font-black uppercase tracking-widest text-sky-500 hover:text-sky-600 transition-colors">
+                                            {t('header.clearAll')}
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="max-h-[60vh] overflow-y-auto no-scrollbar">
+                                    {notifications.length > 0 ? notifications.map(n => (
+                                        <div key={n.id} className="group relative flex items-start p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 border-b last:border-0 dark:border-zinc-900 transition-all">
+                                            <img 
+                                                onClick={() => onSelectUser(n.fromUserId)}
+                                                src={n.fromUserAvatar} 
+                                                className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700 cursor-pointer active:scale-90 transition-transform"
+                                            />
+                                            <div className="ml-3 text-xs flex-grow pr-6">
+                                                <p className="leading-snug text-zinc-800 dark:text-zinc-200" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
+                                                {(n.type === 'duo_request' || n.type === 'tag_request' || n.type === 'follow_request') && (
+                                                    <div className="flex gap-2 mt-3">
+                                                        <button 
+                                                            onClick={() => n.type === 'follow_request' ? handleAcceptFollowRequest(n) : handleAcceptDuoRequest(n)} 
+                                                            className="text-[10px] font-black text-white bg-sky-500 px-4 py-1.5 rounded-xl uppercase tracking-widest shadow-lg shadow-sky-500/20 active:scale-95 transition-all"
+                                                        >
+                                                            {t('header.accept')}
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => n.type === 'follow_request' ? handleDeclineFollowRequest(n) : handleDeclineDuoRequest(n)} 
+                                                            className="text-[10px] font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-1.5 rounded-xl uppercase tracking-widest active:scale-95 transition-all"
+                                                        >
+                                                            {t('header.decline')}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button 
+                                                onClick={() => handleDeleteNotification(n.id)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-2 text-zinc-400 hover:text-red-500 transition-all"
+                                                title={t('common.delete')}
+                                            >
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
                                         </div>
-                                    </div>
-                                )) : (
-                                    <div className="p-10 text-center flex flex-col items-center">
-                                        <HeartIcon className="w-8 h-8 text-zinc-300 mb-4" />
-                                        <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">{t('header.noActivity')}</p>
-                                    </div>
-                                )}
+                                    )) : (
+                                        <div className="p-12 text-center flex flex-col items-center">
+                                            <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-4">
+                                                <HeartIcon className="w-8 h-8 text-zinc-300" />
+                                            </div>
+                                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">{t('header.noActivity')}</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
