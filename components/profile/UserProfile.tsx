@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTimestamp, updateDoc, query, where, orderBy, onSnapshot, writeBatch, storage, storageRef, uploadBytes, getDownloadURL } from '../../firebase';
+import { auth, db, doc, getDoc, collection, getDocs, setDoc, deleteDoc, serverTimestamp, updateDoc, query, where, orderBy, onSnapshot, writeBatch, storage, storageRef, uploadBytes, getDownloadURL, addDoc } from '../../firebase';
 import { updateProfile, signOut } from 'firebase/auth';
 import Button from '../common/Button';
 import EditProfileModal from './EditProfileModal';
@@ -31,6 +31,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const [pulses, setPulses] = useState<any[]>([]);
     const [stats, setStats] = useState({ posts: 0, followers: 0, following: 0 });
     const [isFollowing, setIsFollowing] = useState(false);
+    const [isRequested, setIsRequested] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [viewingPulses, setViewingPulses] = useState(false);
@@ -57,6 +58,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                 if (currentUser) {
                     const followSnap = await getDoc(doc(db, 'users', currentUser.uid, 'following', userId));
                     setIsFollowing(followSnap.exists());
+                    
+                    const requestSnap = await getDoc(doc(db, 'users', currentUser.uid, 'sentFollowRequests', userId));
+                    setIsRequested(requestSnap.exists());
+
                     const blockSnap = await getDoc(doc(db, 'users', currentUser.uid, 'blocked', userId));
                     setIsBlocked(blockSnap.exists());
                 }
@@ -112,18 +117,69 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     const handleFollow = async () => {
         if (!currentUser || !user) return;
         const batch = writeBatch(db);
-        const myFollowing = doc(db, 'users', currentUser.uid, 'following', userId);
-        const theirFollowers = doc(db, 'users', userId, 'followers', currentUser.uid);
 
         if (isFollowing) {
-            batch.delete(myFollowing);
-            batch.delete(theirFollowers);
+            // Unfollow sempre funciona igual
+            batch.delete(doc(db, 'users', currentUser.uid, 'following', userId));
+            batch.delete(doc(db, 'users', userId, 'followers', currentUser.uid));
+            await batch.commit();
+            setIsFollowing(false);
+        } else if (isRequested) {
+            // Cancelar solicitação
+            batch.delete(doc(db, 'users', currentUser.uid, 'sentFollowRequests', userId));
+            batch.delete(doc(db, 'users', userId, 'followRequests', currentUser.uid));
+            await batch.commit();
+            setIsRequested(false);
         } else {
-            batch.set(myFollowing, { username: user.username, avatar: user.avatar, timestamp: serverTimestamp() });
-            batch.set(theirFollowers, { username: currentUser.displayName, avatar: currentUser.photoURL, timestamp: serverTimestamp() });
+            if (user.isPrivate) {
+                // Enviar Solicitação para conta privada
+                const requestRef = doc(db, 'users', userId, 'followRequests', currentUser.uid);
+                batch.set(requestRef, { 
+                    username: currentUser.displayName, 
+                    avatar: currentUser.photoURL, 
+                    timestamp: serverTimestamp() 
+                });
+
+                const sentRequestRef = doc(db, 'users', currentUser.uid, 'sentFollowRequests', userId);
+                batch.set(sentRequestRef, { 
+                    username: user.username, 
+                    avatar: user.avatar, 
+                    timestamp: serverTimestamp() 
+                });
+
+                const notificationRef = doc(collection(db, 'users', userId, 'notifications'));
+                batch.set(notificationRef, {
+                    type: 'follow_request',
+                    fromUserId: currentUser.uid,
+                    fromUsername: currentUser.displayName,
+                    fromUserAvatar: currentUser.photoURL,
+                    timestamp: serverTimestamp(),
+                    read: false
+                });
+
+                await batch.commit();
+                setIsRequested(true);
+            } else {
+                // Seguir diretamente conta pública
+                const myFollowing = doc(db, 'users', currentUser.uid, 'following', userId);
+                const theirFollowers = doc(db, 'users', userId, 'followers', currentUser.uid);
+                batch.set(myFollowing, { username: user.username, avatar: user.avatar, timestamp: serverTimestamp() });
+                batch.set(theirFollowers, { username: currentUser.displayName, avatar: currentUser.photoURL, timestamp: serverTimestamp() });
+                
+                const notificationRef = doc(collection(db, 'users', userId, 'notifications'));
+                batch.set(notificationRef, {
+                    type: 'follow',
+                    fromUserId: currentUser.uid,
+                    fromUsername: currentUser.displayName,
+                    fromUserAvatar: currentUser.photoURL,
+                    timestamp: serverTimestamp(),
+                    read: false
+                });
+
+                await batch.commit();
+                setIsFollowing(true);
+            }
         }
-        await batch.commit();
-        setIsFollowing(!isFollowing);
     };
 
     const handleUpdateProfile = async (updatedData: any) => {
@@ -165,7 +221,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     };
 
     const handleOpenFollowersList = () => {
-        if (isOwner || !user.isPrivate) {
+        if (isOwner || !user.isPrivate || isFollowing) {
             setIsFollowersModalOpen(true);
         } else {
             alert(t('profile.privateListsMessage'));
@@ -173,7 +229,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     };
 
     const handleOpenFollowingList = () => {
-        if (isOwner || !user.isPrivate) {
+        if (isOwner || !user.isPrivate || isFollowing) {
             setIsFollowingModalOpen(true);
         } else {
             alert(t('profile.privateListsMessage'));
@@ -195,7 +251,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
     return (
         <div className="container mx-auto max-w-4xl p-4 sm:p-8">
             <header className="flex flex-col sm:flex-row items-center gap-8 mb-8 relative">
-                {/* MENU SUPERIOR DIREITO */}
                 <div className="absolute top-0 right-0" ref={profileMenuRef}>
                     <button 
                         onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
@@ -212,12 +267,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                     {isProfileMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden py-1 backdrop-blur-md bg-opacity-95">
                             {isOwner ? (
-                                <>
-                                    <button onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                                        {t('profile.logout')}
-                                    </button>
-                                </>
+                                <button onClick={() => { handleLogout(); setIsProfileMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-3">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                    {t('profile.logout')}
+                                </button>
                             ) : (
                                 <button className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 font-semibold">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>
@@ -253,8 +306,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartMessage, onSel
                                 <Button onClick={() => setIsEditModalOpen(true)} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white !font-bold">{t('profile.editProfile')}</Button>
                             ) : (
                                 <>
-                                    <Button onClick={handleFollow} className={`!w-auto ${isFollowing ? '!bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white' : ''}`}>
-                                        {isFollowing ? t('header.following') : t('header.follow')}
+                                    <Button onClick={handleFollow} className={`!w-auto ${isFollowing || isRequested ? '!bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white' : ''}`}>
+                                        {isFollowing ? t('header.following') : isRequested ? t('header.requested') : t('header.follow')}
                                     </Button>
                                     <Button onClick={() => onStartMessage({ id: userId, ...user })} className="!w-auto !bg-zinc-200 dark:!bg-zinc-700 !text-black dark:!text-white">{t('profile.message')}</Button>
                                 </>

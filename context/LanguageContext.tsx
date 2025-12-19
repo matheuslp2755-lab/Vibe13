@@ -65,7 +65,9 @@ const ptMessages = {
     "followRequestNotification": "{username} quer seguir você.",
     "mentionCommentNotification": "{username} mencionou você: \"{commentText}\"",
     "duoRequestNotification": "<b>{username}</b> te convidou para um Duo.",
-    "tagRequestNotification": "<b>{username}</b> te marcou numa publicação."
+    "tagRequestNotification": "<b>{username}</b> te marcou numa publicação.",
+    "duoAcceptedNotification": "<b>{username}</b> aceitou seu convite de Duo.",
+    "tagAcceptedNotification": "<b>{username}</b> aceitou sua marcação."
   },
   "post": {
     "like": "Curtir",
@@ -246,6 +248,18 @@ const ptMessages = {
         "cool": "Frio",
         "focus": "Foco"
     }
+  },
+  "crystal": {
+    "formed": "Um Cristal de Conexão se formou!",
+    "glowing": "Sua conexão está brilhando!",
+    "level": {
+        "brilhante": "Brilhante",
+        "equilibrado": "Equilibrado",
+        "apagado": "Apagado",
+        "rachado": "Rachado"
+    },
+    "title": "Cristal: {status}",
+    "streak": "{streak} dias de interação"
   }
 };
 

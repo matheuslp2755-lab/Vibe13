@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, StrictMode, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db, doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from './firebase';
+import { auth, db, doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot, getDoc } from './firebase';
 import Login from './components/Login';
 import SignUp from './context/SignUp';
 import Feed from './components/Feed';
@@ -13,14 +13,9 @@ import CallUI from './components/call/CallUI';
 
 const GalaxyBackground = ({ variant = 'default' }: { variant?: 'default' | 'subtle' }) => (
   <div className="fixed inset-0 z-0 bg-black overflow-hidden pointer-events-none">
-    {/* Gradient Background */}
     <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-black to-slate-950 opacity-100"></div>
-    
-    {/* Nebula Effects - Reduced opacity if subtle */}
     <div className={`absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/30 rounded-full blur-[120px] animate-pulse transition-opacity duration-1000 ${variant === 'subtle' ? 'opacity-20' : 'opacity-100'}`}></div>
     <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-900/30 rounded-full blur-[120px] animate-pulse transition-opacity duration-1000 ${variant === 'subtle' ? 'opacity-20' : 'opacity-100'}`} style={{ animationDelay: '2s' }}></div>
-    
-    {/* Stars via CSS */}
     <style>{`
         .star-field {
             background-image: 
@@ -78,11 +73,9 @@ const AppContent: React.FC = () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         stream.getTracks().forEach(track => track.stop());
       } catch (err: any) {
-        // Fix circular structure error in logging
         console.warn("Media permissions denied or error:", err?.message || String(err));
       }
     };
-
     requestMediaPermissions();
   }, []);
 
@@ -102,51 +95,57 @@ const AppContent: React.FC = () => {
     return () => unsubscribe();
   }, [t]);
   
-  // Listener for incoming calls
+  // Listener para chamadas recebidas com carregamento de dados do chamador
   useEffect(() => {
     if (!user || activeCall) return;
 
     const callsRef = collection(db, 'calls');
     const q = query(callsRef, where('receiverId', '==', user.uid), where('status', '==', 'ringing'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
         if (!snapshot.empty) {
             const callDoc = snapshot.docs[0];
             const callData = callDoc.data();
-            setIncomingCall({ callId: callDoc.id, ...callData });
+            
+            // Garantir que temos os dados do chamador (pode vir de cache ou Firestore)
+            setIncomingCall({ 
+                callId: callDoc.id, 
+                caller: { 
+                    id: callData.callerId, 
+                    username: callData.callerUsername || t('common.user'), 
+                    avatar: callData.callerAvatar || '' 
+                },
+                receiver: { 
+                    id: user.uid, 
+                    username: user.displayName || '', 
+                    avatar: user.photoURL || '' 
+                },
+                status: 'ringing-incoming',
+                isVideo: callData.type === 'video'
+            });
         }
     });
 
     return () => unsubscribe();
-  }, [user, activeCall, setIncomingCall]);
+  }, [user, activeCall, setIncomingCall, t]);
 
   useEffect(() => {
     if (!user) return;
-
     const userDocRef = doc(db, 'users', user.uid);
-
     const updateUserLastSeen = () => {
         updateDoc(userDocRef, {
             lastSeen: serverTimestamp()
         }).catch(err => {
-            // Fix circular structure error in logging
             console.error("Failed to update last seen:", err?.message || String(err));
         });
     };
-
     updateUserLastSeen();
-
-    const intervalId = setInterval(updateUserLastSeen, 5 * 60 * 1000); // every 5 minutes
-
+    const intervalId = setInterval(updateUserLastSeen, 5 * 60 * 1000);
     const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-            updateUserLastSeen();
-        }
+        if (document.visibilityState === 'visible') updateUserLastSeen();
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('beforeunload', updateUserLastSeen);
-
     return () => {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -184,7 +183,6 @@ const AppContent: React.FC = () => {
 
     return (
       <div className="font-sans text-zinc-900 dark:text-zinc-100 min-h-screen relative">
-        {/* Subtle Galaxy Background for authenticated feed */}
         <GalaxyBackground variant="subtle" />
         <div className="relative z-10">
             <Feed />

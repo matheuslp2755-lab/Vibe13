@@ -77,7 +77,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     const activityRef = useRef<HTMLDivElement>(null);
     const currentUser = auth.currentUser;
 
-    // Listener para notificações gerais (não mensagens)
     useEffect(() => {
         if (!currentUser) return;
 
@@ -98,7 +97,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         return () => unsubscribe();
     }, [currentUser]);
 
-    // Listener para mensagens não lidas
     useEffect(() => {
         if (!currentUser) return;
 
@@ -110,7 +108,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                 const lastMsg = data.lastMessage;
                 const myInfo = data.participantInfo?.[currentUser.uid];
                 
-                // Se a última mensagem não foi minha e eu não a vi ainda
                 if (lastMsg && lastMsg.senderId !== currentUser.uid) {
                     if (!myInfo?.lastSeenMessageTimestamp || lastMsg.timestamp?.seconds > myInfo.lastSeenMessageTimestamp.seconds) {
                         unread = true;
@@ -174,6 +171,64 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleAcceptRequest = async (notification: Notification) => {
+        if (!currentUser) return;
+        
+        const batch = writeBatch(db);
+        
+        // 1. Adicionar aos Seguidores do Dono (Eu)
+        const myFollowersRef = doc(db, 'users', currentUser.uid, 'followers', notification.fromUserId);
+        batch.set(myFollowersRef, { 
+            username: notification.fromUsername, 
+            avatar: notification.fromUserAvatar, 
+            timestamp: serverTimestamp() 
+        });
+
+        // 2. Adicionar aos Seguindo do Requisitante
+        const theirFollowingRef = doc(db, 'users', notification.fromUserId, 'following', currentUser.uid);
+        batch.set(theirFollowingRef, { 
+            username: currentUser.displayName, 
+            avatar: currentUser.photoURL, 
+            timestamp: serverTimestamp() 
+        });
+
+        // 3. Remover a solicitação pendente
+        const requestRef = doc(db, 'users', currentUser.uid, 'followRequests', notification.fromUserId);
+        batch.delete(requestRef);
+        
+        const sentRequestRef = doc(db, 'users', notification.fromUserId, 'sentFollowRequests', currentUser.uid);
+        batch.delete(sentRequestRef);
+
+        // 4. Marcar notificação como lida e mudar tipo ou remover
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
+
+        // 5. Notificar o usuário que o pedido foi aceito
+        const successNotifyRef = doc(collection(db, 'users', notification.fromUserId, 'notifications'));
+        batch.set(successNotifyRef, {
+            type: 'follow',
+            fromUserId: currentUser.uid,
+            fromUsername: currentUser.displayName,
+            fromUserAvatar: currentUser.photoURL,
+            timestamp: serverTimestamp(),
+            read: false
+        });
+
+        try {
+            await batch.commit();
+        } catch (error) {
+            console.error("Erro ao aceitar solicitação:", error);
+        }
+    };
+
+    const handleDeclineRequest = async (notification: Notification) => {
+        if (!currentUser) return;
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'users', currentUser.uid, 'followRequests', notification.fromUserId));
+        batch.delete(doc(db, 'users', notification.fromUserId, 'sentFollowRequests', currentUser.uid));
+        batch.delete(doc(db, 'users', currentUser.uid, 'notifications', notification.id));
+        await batch.commit();
+    };
+
     const handleAcceptDuoRequest = async (notification: Notification) => {
         if (!currentUser || !notification.postId) return;
         const batch = writeBatch(db);
@@ -196,7 +251,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             read: false
         });
         await batch.commit();
-        setIsActivityDropdownOpen(false);
     };
 
     const handleAcceptTagRequest = async (notification: Notification) => {
@@ -217,13 +271,12 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             read: false
         });
         await batch.commit();
-        setIsActivityDropdownOpen(false);
     };
 
     const handleNotificationClick = async (notification: Notification) => {
         if (!currentUser) return;
 
-        if (!notification.read) {
+        if (!notification.read && notification.type !== 'follow_request') {
             try {
                 await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', notification.id), {
                     read: true
@@ -234,11 +287,13 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
         }
 
         switch (notification.type) {
+            case 'follow_request':
+                // Não faz nada ao clicar, usa os botões
+                break;
             case 'message':
                 if (notification.conversationId) onOpenMessages(notification.conversationId);
                 break;
             case 'follow':
-            case 'follow_request':
             case 'duo_accepted':
             case 'tag_accepted':
                 onSelectUser(notification.fromUserId);
@@ -331,7 +386,6 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                 </button>
                             )}
                             
-                            {/* Mobile search results dropdown */}
                             {searchQuery && (
                                 <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-zinc-950 border dark:border-zinc-800 rounded-2xl shadow-2xl z-[100] max-h-[60vh] overflow-y-auto">
                                     {isSearching ? <SpinnerIcon /> : searchResults.length > 0 ? searchResults.map(user => (
@@ -381,10 +435,29 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
                                             <img src={n.fromUserAvatar} className="w-10 h-10 rounded-full object-cover shrink-0 border dark:border-zinc-700"/>
                                             <div className="ml-3 text-sm flex-grow text-left">
                                                 <p className="leading-snug" dangerouslySetInnerHTML={{ __html: getNotificationText(n).replace(n.fromUsername, `<b class="text-sky-500">${n.fromUsername}</b>`) }} />
-                                                {(n.type === 'duo_request' || n.type === 'tag_request') && (
+                                                {(n.type === 'follow_request' || n.type === 'duo_request' || n.type === 'tag_request') && (
                                                     <div className="flex gap-2 mt-3">
-                                                        <button onClick={(e) => { e.stopPropagation(); n.type === 'duo_request' ? handleAcceptDuoRequest(n) : handleAcceptTagRequest(n); }} className="text-xs font-black text-white bg-sky-500 px-4 py-2 rounded-xl shadow-sm hover:bg-sky-600 transition-colors uppercase tracking-widest">{t('header.accept')}</button>
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); }} className="text-xs font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors uppercase tracking-widest">{t('header.decline')}</button>
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                if (n.type === 'follow_request') handleAcceptRequest(n);
+                                                                else if (n.type === 'duo_request') handleAcceptDuoRequest(n);
+                                                                else if (n.type === 'tag_request') handleAcceptTagRequest(n);
+                                                            }} 
+                                                            className="text-xs font-black text-white bg-sky-500 px-4 py-2 rounded-xl shadow-sm hover:bg-sky-600 transition-colors uppercase tracking-widest"
+                                                        >
+                                                            {t('header.accept')}
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                if (n.type === 'follow_request') handleDeclineRequest(n);
+                                                                else deleteDoc(doc(db, 'users', currentUser!.uid, 'notifications', n.id)); 
+                                                            }} 
+                                                            className="text-xs font-black text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors uppercase tracking-widest"
+                                                        >
+                                                            {t('header.decline')}
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
