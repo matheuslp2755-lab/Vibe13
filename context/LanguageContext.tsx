@@ -108,23 +108,48 @@ const ptMessages = {
     "galleryTab": "Galeria",
     "cameraTab": "Câmera",
     "capture": "Capturar",
-    "cameraError": "Não foi possível acessar a câmera. Verifique as permissões."
+    "cameraError": "Não foi possível acessar a câmera."
   },
   "aiGenerator": {
     "title": "Criador IA Vibe",
     "promptLabel": "O que você quer criar?",
-    "promptPlaceholder": "Descreva a foto dos seus sonhos em detalhes...",
+    "promptPlaceholder": "Descreva a imagem que deseja gerar...",
     "generate": "Gerar com IA",
     "generating": "Inspirando a IA...",
     "useImage": "Usar esta Foto",
     "error": "Erro ao gerar imagem. Tente novamente."
+  },
+  "profile": {
+    "editProfile": "Editar Perfil",
+    "posts": "publicações",
+    "followers": "seguidores",
+    "followingCount": "seguindo",
+    "message": "Mensagem",
+    "logout": "Sair",
+    "privateAccountMessage": "Esta conta é privada",
+    "privateAccountSuggestion": "Siga para ver as fotos e vídeos.",
+    "privateListsMessage": "Esta lista é privada.",
+    "options": "Opções de perfil",
+    "followersModalTitle": "Seguidores",
+    "followingModalTitle": "Seguindo",
+    "noFollowers": "Nenhum seguidor ainda.",
+    "notFollowingAnyone": "Não segue ninguém ainda."
+  },
+  "forwardModal": {
+    "title": "Encaminhar para",
+    "search": "Pesquisar amigos...",
+    "noFollowing": "Você não segue ninguém ainda.",
+    "noResults": "Nenhum usuário encontrado.",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "sent": "Enviado"
   },
   "pulseViewer": {
     "previous": "Anterior",
     "next": "Próximo",
     "delete": "Excluir Pulse",
     "deleteTitle": "Excluir Pulse?",
-    "deleteBody": "Tem certeza que deseja excluir? Isso não pode ser desfeito.",
+    "deleteBody": "Tem certeza que deseja excluir?",
     "save": "Salvar",
     "replyPlaceholder": "Enviar mensagem..."
   },
@@ -135,7 +160,7 @@ const ptMessages = {
     "share": "Compartilhar",
     "addComment": "Comentar...",
     "deleteTitle": "Excluir Vibe?",
-    "deleteBody": "Tem certeza que deseja excluir este vídeo?",
+    "deleteBody": "Tem certeza que deseja excluir?",
     "sendTo": "Enviar para",
     "shareExternal": "Compartilhar via",
     "whatsapp": "WhatsApp / Status"
@@ -143,7 +168,7 @@ const ptMessages = {
   "browser": {
     "title": "Vibe Explorer",
     "placeholder": "Pesquise na internet...",
-    "searching": "Buscando resultados...",
+    "searching": "Buscando no Google...",
     "empty": "O que você quer descobrir hoje?",
     "sources": "Fontes:"
   },
@@ -159,12 +184,7 @@ const ptMessages = {
     "addNote": "Sua Nota",
     "replyToNote": "Responder a {username}...",
     "anonymousModeOn": "Modo Anônimo Ativado",
-    "anonymousModeOff": "Modo Anônimo Desativado",
-    "createGroup": "Criar Grupo",
-    "groupName": "Nome do Grupo",
-    "groupLimit": "Limite de membros",
-    "searchUsers": "Pesquisar pessoas...",
-    "forwardedPost": "Encaminhou uma publicação"
+    "anonymousModeOff": "Modo Anônimo Desativado"
   },
   "memories": {
     "new": "Nova",
@@ -179,12 +199,10 @@ const ptMessages = {
     "editCover": "Editar Capa",
     "create": "Criar",
     "save": "Salvar",
-    "selectItems": "Selecione os itens para a memória.",
     "memoryName": "Nome da Memória",
     "selectCover": "Escolha uma capa",
     "creating": "Criando...",
     "added": "Adicionado!",
-    "uploadPhoto": "Enviar Foto",
     "addToMemoryTitle": "Salvar na Memória",
     "createNew": "Criar Nova"
   },
@@ -192,14 +210,11 @@ const ptMessages = {
     "call": "Chamada",
     "calling": "Chamando {username}...",
     "incomingCall": "Chamada de {username}",
-    "incomingVideoCall": "Vídeo chamada de {username}",
     "answer": "Atender",
     "decline": "Recusar",
     "hangUp": "Desligar",
     "callEnded": "Chamada encerrada",
     "onCallWith": "Em chamada com {username}",
-    "shareScreen": "Compartilhar Tela",
-    "stopShare": "Parar de Compartilhar",
     "videoCall": "Chamada de Vídeo",
     "voiceCall": "Chamada de Voz",
     "filters": {
@@ -213,7 +228,7 @@ const ptMessages = {
   },
   "editProfile": {
     "title": "Editar Perfil",
-    "changePhoto": "Alterar foto do perfil",
+    "changePhoto": "Alterar foto",
     "usernameLabel": "Nome de usuário",
     "nicknameLabel": "Apelido",
     "bioLabel": "Bio",
@@ -235,6 +250,14 @@ const ptMessages = {
   },
   "welcome": {
     "title": "Bem-vindo ao Vibe"
+  },
+  "createStatus": {
+    "title": "Nova Publicação",
+    "placeholder": "No que você está pensando?",
+    "share": "Compartilhar",
+    "sharing": "Compartilhando...",
+    "background": "Fundo",
+    "font": "Fonte"
   }
 };
 
