@@ -17,7 +17,7 @@ import ForwardModal from './messages/ForwardModal';
 import AddCaptionModal from './post/AddCaptionModal';
 import AddMusicModal from './post/AddMusicModal';
 import SearchFollowingModal from './post/SearchFollowingModal';
-import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp, deleteDoc } from '../firebase';
+import { auth, db, collection, query, onSnapshot, orderBy, getDocs, where, doc, getDoc, updateDoc, arrayUnion, addDoc, serverTimestamp, deleteDoc, limit } from '../firebase';
 import { useLanguage } from '../context/LanguageContext';
 
 const Feed: React.FC = () => {
@@ -48,6 +48,11 @@ const Feed: React.FC = () => {
   const [duoTargetPost, setDuoTargetPost] = useState<any>(null);
   const [tagTargetPost, setTagTargetPost] = useState<any>(null);
 
+  // Desktop Search Logic
+  const [desktopSearchQuery, setDesktopSearchQuery] = useState('');
+  const [desktopSearchResults, setDesktopSearchResults] = useState<any[]>([]);
+  const [isDesktopSearching, setIsDesktopSearching] = useState(false);
+
   const currentUser = auth.currentUser;
 
   useEffect(() => {
@@ -59,6 +64,31 @@ const Feed: React.FC = () => {
       });
     }
   }, [viewMode, viewingProfileId]);
+
+  useEffect(() => {
+    if (!desktopSearchQuery.trim()) {
+      setDesktopSearchResults([]);
+      return;
+    }
+    setIsDesktopSearching(true);
+    const timeoutId = setTimeout(async () => {
+      const q = query(
+        collection(db, 'users'),
+        where('username_lowercase', '>=', desktopSearchQuery.toLowerCase()),
+        where('username_lowercase', '<=', desktopSearchQuery.toLowerCase() + '\uf8ff'),
+        limit(10)
+      );
+      try {
+        const snap = await getDocs(q);
+        setDesktopSearchResults(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.id !== currentUser?.uid));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsDesktopSearching(false);
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [desktopSearchQuery, currentUser]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -112,6 +142,8 @@ const Feed: React.FC = () => {
   const handleSelectUser = (id: string) => {
     setViewingProfileId(id);
     setViewMode('profile');
+    setDesktopSearchQuery('');
+    setDesktopSearchResults([]);
   };
 
   const handlePostDeleted = async (id: string) => {
@@ -127,7 +159,7 @@ const Feed: React.FC = () => {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       {/* Sidebar Desktop */}
       <div className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r dark:border-zinc-800 bg-white dark:bg-black p-6 z-40">
-        <div className="mb-14 pt-6">
+        <div className="mb-10 pt-6">
             <h1 
                 onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} 
                 className="text-6xl font-black italic cursor-pointer bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500 text-transparent bg-clip-text tracking-tighter drop-shadow-[0_10px_20px_rgba(168,85,247,0.5)] transition-all hover:scale-105 active:scale-95 animate-pulse-slow"
@@ -135,8 +167,35 @@ const Feed: React.FC = () => {
                 Vibe
             </h1>
         </div>
+
+        {/* Desktop Search Bar */}
+        <div className="mb-8 relative">
+            <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-900 border border-transparent focus-within:border-zinc-300 dark:focus-within:border-zinc-700 rounded-xl px-3 py-2 transition-all">
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input 
+                    type="text" 
+                    placeholder={t('header.searchPlaceholder')}
+                    value={desktopSearchQuery}
+                    onChange={e => setDesktopSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-sm outline-none font-medium"
+                />
+            </div>
+            {desktopSearchQuery && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-50 animate-fade-in">
+                    {isDesktopSearching ? (
+                        <div className="p-4 flex justify-center"><div className="w-5 h-5 border-2 border-sky-500/30 border-t-sky-500 rounded-full animate-spin"></div></div>
+                    ) : desktopSearchResults.length > 0 ? desktopSearchResults.map(user => (
+                        <div key={user.id} onClick={() => handleSelectUser(user.id)} className="flex items-center gap-3 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors border-b last:border-0 dark:border-zinc-800">
+                            <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border dark:border-zinc-700" />
+                            <span className="text-sm font-bold">{user.username}</span>
+                        </div>
+                    )) : <p className="p-4 text-center text-xs text-zinc-500 font-bold">{t('header.noResults')}</p>}
+                </div>
+            )}
+        </div>
+
         <nav className="flex flex-col gap-4">
-            <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all ${viewMode === 'feed' ? 'font-bold bg-zinc-50 dark:bg-zinc-900 shadow-sm' : ''}`}>
+            <button onClick={() => { setViewMode('feed'); setViewingProfileId(null); }} className={`flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all ${viewMode === 'feed' && !viewingProfileId ? 'font-bold bg-zinc-50 dark:bg-zinc-900 shadow-sm' : ''}`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7-7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                 <span>{t('header.home')}</span>
             </button>
@@ -168,7 +227,7 @@ const Feed: React.FC = () => {
         <Header onSelectUser={handleSelectUser} onGoHome={() => { setViewMode('feed'); setViewingProfileId(null); }} onOpenMessages={() => setIsMessagesOpen(true)} />
       </div>
 
-      <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64 h-screen lg:h-auto' : 'lg:pl-64 lg:pr-4 pt-16 lg:pt-8'}`}>
+      <main className={`transition-all duration-300 ${viewMode === 'vibes' ? 'lg:pl-64 h-[calc(100dvh-4rem)] lg:h-auto' : 'lg:pl-64 lg:pr-4 pt-16 lg:pt-8'}`}>
         {viewMode === 'vibes' ? <VibeFeed /> : 
          viewMode === 'profile' || viewingProfileId ? (
            <div className="container mx-auto max-w-4xl py-4">

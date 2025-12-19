@@ -257,7 +257,7 @@ const VibeItem: React.FC<{
                 @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .animate-spin-slow { animation: spin-slow 4s linear infinite; }
                 @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-150%); } }
-                .animate-marquee { animation: marquee 6s linear infinite; }
+                .animate-marquee { animation: marquee 8s linear infinite; }
             `}</style>
         </div>
     );
@@ -310,7 +310,7 @@ const VibeFeed: React.FC = () => {
 
     return (
         /* ALTURA AJUSTADA: 100dvh e o container de scroll respeita isso, descontando BottomNav no mobile */
-        <div className="relative h-[calc(100dvh-4rem)] lg:h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
+        <div className="relative h-full bg-black overflow-hidden lg:rounded-3xl shadow-2xl">
             <div 
                 ref={containerRef} 
                 onScroll={handleScroll} 

@@ -92,11 +92,12 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
     useEffect(() => {
         if (searchQuery.trim() === '') {
             setSearchResults([]);
+            setIsSearching(false);
             return;
         }
 
+        setIsSearching(true);
         const debouncedSearch = setTimeout(async () => {
-            setIsSearching(true);
             const usersRef = collection(db, 'users');
             const term = searchQuery.toLowerCase();
             const q = query(
@@ -120,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({ onSelectUser, onGoHome, onOpenMessages 
             }
         }, 400);
 
-        return () => clearTimeout(term);
+        return () => clearTimeout(debouncedSearch);
     }, [searchQuery]);
 
     useEffect(() => {
