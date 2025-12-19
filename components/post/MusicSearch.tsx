@@ -26,11 +26,11 @@ interface MusicSearchProps {
 }
 
 const Spinner: React.FC = () => (
-    <div className="flex justify-center items-center p-4">
-        <svg className="animate-spin h-5 w-5 text-zinc-500 dark:text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
+    <div className="flex justify-center items-center p-10">
+        <div className="relative w-12 h-12">
+            <div className="absolute inset-0 border-4 border-sky-500/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
     </div>
 );
 
@@ -48,10 +48,9 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
   const [trimmingTrack, setTrimmingTrack] = useState<MusicTrackFromAPI | null>(null);
 
   useEffect(() => {
-    // Carregar sugestões iniciais (Trending)
     const fetchSuggestions = async () => {
         try {
-            const res = await fetch(`https://itunes.apple.com/search?term=pop&entity=song&limit=6`);
+            const res = await fetch(`https://itunes.apple.com/search?term=trending&entity=song&limit=8`);
             const data = await res.json();
             setSuggestions(data.results);
         } catch (e) { console.error(e); }
@@ -87,7 +86,7 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
 
   if (trimmingTrack) {
       return (
-          <div className="p-4 flex flex-col h-[60vh] md:h-auto">
+          <div className="h-full bg-white dark:bg-black overflow-hidden">
               <MusicTrimmer
                   track={trimmingTrack}
                   onConfirm={handleConfirmTrim}
@@ -98,40 +97,53 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
   }
 
   return (
-    <div className="p-4 flex flex-col h-[60vh] md:h-auto">
-        <div className="flex items-center gap-3 mb-6">
-            <button onClick={onBack} className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" aria-label="Voltar">
-                <BackArrowIcon className="w-6 h-6"/>
+    <div className="p-4 flex flex-col h-[75vh] md:h-full bg-white dark:bg-black">
+        <div className="flex items-center gap-4 mb-8">
+            <button onClick={onBack} className="p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-900 hover:scale-110 active:scale-95 transition-all" aria-label="Voltar">
+                <BackArrowIcon className="w-5 h-5"/>
             </button>
-            <form onSubmit={handleSearch} className="flex-grow relative">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder={t('createPost.searchMusicPlaceholder')}
-                    className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-sky-500 font-medium"
-                    autoFocus
-                />
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <form onSubmit={handleSearch} className="flex-grow relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-sky-500 to-purple-500 rounded-2xl blur opacity-20 group-focus-within:opacity-40 transition-opacity" />
+                <div className="relative flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-4 py-3.5 border border-transparent focus-within:border-sky-500/50 transition-all">
+                    <svg className="w-5 h-5 text-zinc-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder={t('createPost.searchMusicPlaceholder')}
+                        className="w-full bg-transparent text-sm outline-none font-bold placeholder:text-zinc-500"
+                        autoFocus
+                    />
+                </div>
             </form>
         </div>
 
-        <div className="flex-grow overflow-y-auto custom-scrollbar">
+        <div className="flex-grow overflow-y-auto no-scrollbar pb-10">
             {loading && <Spinner />}
             
-            {!searchTerm && suggestions.length > 0 && (
-                <div className="mb-8">
-                    <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 px-2">{t('musicSearch.suggestions')}</h3>
-                    <div className="flex flex-col gap-1">
-                        {suggestions.map((track) => (
-                            <button key={track.trackId} onClick={() => setTrimmingTrack(track)} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-left group">
-                                <img src={track.artworkUrl100} className="w-14 h-14 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform" />
-                                <div className="flex-grow overflow-hidden">
-                                    <p className="font-bold text-sm truncate">{track.trackName}</p>
-                                    <p className="text-xs text-zinc-500 truncate font-semibold">{track.artistName}</p>
+            {!searchTerm && suggestions.length > 0 && !loading && (
+                <div className="animate-fade-in">
+                    <div className="flex items-center justify-between mb-6 px-2">
+                        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">{t('musicSearch.suggestions')}</h3>
+                        <div className="h-px flex-grow bg-zinc-100 dark:bg-zinc-800 ml-4" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                        {suggestions.map((track, i) => (
+                            <button 
+                                key={track.trackId} 
+                                onClick={() => setTrimmingTrack(track)} 
+                                className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-left group active:scale-95 animate-slide-up"
+                                style={{ animationDelay: `${i * 50}ms` }}
+                            >
+                                <div className="relative shrink-0">
+                                    <img src={track.artworkUrl100} className="w-14 h-14 rounded-xl object-cover shadow-lg group-hover:shadow-sky-500/10 transition-all" />
+                                    <div className="absolute inset-0 bg-black/20 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" /></svg>
+                                    </div>
                                 </div>
-                                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <svg className="w-4 h-4 text-sky-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" /></svg>
+                                <div className="flex-grow overflow-hidden">
+                                    <p className="font-black text-sm truncate tracking-tight">{track.trackName}</p>
+                                    <p className="text-xs text-zinc-500 truncate font-bold uppercase tracking-wider mt-0.5 opacity-60">{track.artistName}</p>
                                 </div>
                             </button>
                         ))}
@@ -139,19 +151,22 @@ const MusicSearch: React.FC<MusicSearchProps> = ({ onSelectMusic, onBack }) => {
                 </div>
             )}
 
-            {error && <p className="text-zinc-500 text-center py-4">{error}</p>}
+            {error && <div className="p-10 text-center animate-bounce"><p className="text-zinc-500 font-bold text-sm">{error}</p></div>}
             
-            <div className="flex flex-col gap-1">
-                {results.map((track) => (
-                    <button key={track.trackId} onClick={() => setTrimmingTrack(track)} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-left group">
-                        <img src={track.artworkUrl100} alt={track.trackName} className="w-14 h-14 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform" />
+            <div className="flex flex-col gap-2">
+                {results.map((track, i) => (
+                    <button 
+                        key={track.trackId} 
+                        onClick={() => setTrimmingTrack(track)} 
+                        className="flex items-center gap-4 p-4 rounded-3xl hover:bg-sky-50 dark:hover:bg-sky-900/10 transition-all text-left group active:scale-95 animate-slide-up border border-transparent hover:border-sky-500/20"
+                        style={{ animationDelay: `${i * 30}ms` }}
+                    >
+                        <img src={track.artworkUrl100} alt={track.trackName} className="w-16 h-16 rounded-2xl object-cover shadow-xl group-hover:rotate-3 transition-transform" />
                         <div className="flex-grow overflow-hidden">
-                            <p className="font-bold text-sm truncate">{track.trackName}</p>
-                            <p className="text-xs text-zinc-500 truncate font-semibold">{track.artistName}</p>
+                            <p className="font-black text-base truncate tracking-tighter">{track.trackName}</p>
+                            <p className="text-xs text-zinc-500 truncate font-black uppercase tracking-widest mt-1 opacity-50">{track.artistName}</p>
                         </div>
-                        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <svg className="w-4 h-4 text-sky-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8.002v3.996a1 1 0 001.555.832l3.197-1.998a1 1 0 000-1.664l-3.197-1.998z" /></svg>
-                        </div>
+                        <svg className="w-5 h-5 text-sky-500 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M9 5l7 7-7 7" /></svg>
                     </button>
                 ))}
             </div>

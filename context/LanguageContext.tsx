@@ -260,6 +260,24 @@ const ptMessages = {
     },
     "title": "Cristal: {status}",
     "streak": "{streak} dias de interação"
+  },
+  "musicSearch": {
+    "fetchError": "Erro ao buscar músicas",
+    "searchError": "Ocorreu um erro durante a busca.",
+    "trimInstructions": "Deslize para escolher os 25 segundos perfeitos",
+    "done": "Concluir",
+    "suggestions": "Sugestões para você",
+    "trending": "Bombando no Vibe",
+    "lyricsTitle": "Letras sincronizadas"
+  },
+  "addMusicModal": {
+    "title": "Selecionar Música"
+  },
+  "diary": {
+    "placeholder": "O que você está pensando hoje?",
+    "alreadyPosted": "Você já postou uma nota hoje. Volte amanhã!",
+    "publish": "Publicar",
+    "publishing": "Publicando..."
   }
 };
 
