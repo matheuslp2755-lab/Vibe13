@@ -22,6 +22,7 @@ type Pulse = {
     createdAt: { seconds: number; nanoseconds: number };
     authorId: string;
     musicInfo?: { nome: string; artista: string; capa: string; preview: string; startTime?: number; };
+    musicStyle?: string;
     musicMode?: number;
     musicCoverPosition?: { x: number, y: number };
     location?: { name: string; x: number; y: number };
@@ -130,6 +131,65 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
         } catch (err) { console.error(err); } finally { setIsReplying(false); }
     };
 
+    const renderMusicStyle = () => {
+        const music = currentPulse.musicInfo;
+        if (!music) return null;
+        const style = currentPulse.musicStyle || 'standard';
+
+        switch(style) {
+            case 'vinyl':
+                return (
+                    <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center animate-fade-in">
+                        <div className="relative w-40 h-40 animate-spin-slow">
+                            <div className="absolute inset-0 bg-zinc-900 rounded-full border-4 border-black/40 shadow-2xl" />
+                            <img src={music.capa} className="absolute inset-6 rounded-full border-2 border-white/20" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-black rounded-full border border-white/20" />
+                        </div>
+                        <p className="text-white font-black text-xs uppercase mt-4 drop-shadow-lg tracking-widest">{music.nome}</p>
+                    </div>
+                );
+            case 'cassette':
+                return (
+                    <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-slide-up">
+                        <div className="bg-amber-50 p-3 rounded-xl shadow-2xl border-t-8 border-amber-600 w-48 rotate-[-2deg] flex flex-col gap-2">
+                             <div className="flex justify-between px-4">
+                                <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-black flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+                                </div>
+                                <div className="w-12 h-12 rounded-full bg-zinc-800 border-4 border-black flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+                                </div>
+                             </div>
+                             <div className="bg-white/80 p-2 rounded border border-amber-200">
+                                <p className="text-[10px] font-mono text-zinc-900 font-bold truncate text-center uppercase">{music.nome}</p>
+                             </div>
+                        </div>
+                    </div>
+                );
+            case 'glass':
+                return (
+                    <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-fade-in w-[80%] max-w-xs">
+                        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-4 rounded-[2rem] shadow-2xl flex items-center gap-4">
+                            <img src={music.capa} className="w-16 h-16 rounded-2xl shadow-lg" />
+                            <div className="flex-grow overflow-hidden">
+                                <p className="text-white font-black text-sm truncate">{music.nome}</p>
+                                <p className="text-white/60 font-bold text-[10px] uppercase truncate">{music.artista}</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return (
+                    <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                        <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-white/20 shadow-2xl animate-fade-in">
+                            <img src={music.capa} className="w-6 h-6 rounded-md" />
+                            <span className="text-[10px] font-black text-white uppercase truncate max-w-[150px] tracking-tight">{music.nome}</span>
+                        </div>
+                    </div>
+                );
+        }
+    };
+
     return (
         <div className={`fixed inset-0 z-[100] flex flex-col select-none transition-all duration-700 ${currentPulse.bgGradient ? `bg-gradient-to-br ${currentPulse.bgGradient}` : 'bg-black'}`} onClick={(e) => { e.stopPropagation(); onClose(); }}>
             <div className="absolute top-4 left-4 right-4 flex gap-1 z-[110]">
@@ -149,7 +209,6 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                     <div 
                         onClick={(e) => { 
                             e.stopPropagation(); 
-                            // NAVEGAÇÃO AO PERFIL ORIGINAL
                             if(currentPulse.sharedPostData.userId) onViewProfile?.(currentPulse.sharedPostData.userId);
                         }}
                         className="w-[85%] max-w-sm bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.6)] overflow-hidden animate-slide-up border dark:border-white/5 active:scale-95 transition-all cursor-pointer group"
@@ -176,13 +235,14 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                     </div>
                   )}
 
-                  {/* STICKERS RENDERER */}
                   {currentPulse.stickers?.map(s => (
                       <div key={s.id} className="absolute z-40" style={{ left: `${s.x}%`, top: `${s.y}%`, transform: 'translate(-50%, -50%)' }}>
                           <img src={s.url} className="w-32 h-32 object-contain" />
                       </div>
                   ))}
                 </div>
+
+                {renderMusicStyle()}
 
                 {currentPulse.legenda && (
                     <div className="absolute px-6 py-3 bg-black/40 backdrop-blur-md rounded-2xl text-white font-black shadow-2xl pointer-events-none text-center z-50 border border-white/10" style={{ left: '50%', top: '30%', transform: 'translate(-50%, -50%)', fontSize: `${currentPulse.textSize || 32}px`, fontFamily: FONT_FAMILIES[currentPulse.textFont || 'classic'] }}>
@@ -238,6 +298,15 @@ const PulseViewerModal: React.FC<PulseViewerModalProps> = ({ pulses, initialPuls
                     <MusicPlayer musicInfo={currentPulse.musicInfo} isPlaying={true} isMuted={isGlobalMuted} setIsMuted={() => {}} />
                 </div>
             )}
+
+            <style>{`
+                @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+                @keyframes marquee { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+                .animate-marquee { animation: marquee 15s linear infinite; }
+                @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+                .animate-bounce-subtle { animation: bounce-subtle 3s infinite ease-in-out; }
+            `}</style>
         </div>
     );
 };

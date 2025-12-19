@@ -79,7 +79,7 @@ const ptMessages = {
     "title": "Criar Publicação",
     "share": "Compartilhar",
     "captionLabel": "Escreva uma legenda...",
-    "addMusic": "Adicionar música"
+    "addMusic": "Escolher Música"
   },
   "createPulse": {
     "title": "Novo Pulse",
@@ -95,11 +95,11 @@ const ptMessages = {
     "effectRetro": "Vintage",
     "effectAura": "Aura Mística",
     "sharedBackground": "Cor de fundo",
-    "stickers": "Stickers",
-    "gifSuggestions": "Sugestões",
-    "searchGifs": "Pesquisar no Giphy...",
+    "stickers": "Figurinhas",
+    "chooseSticker": "Escolha uma Figurinha",
     "scaleLabel": "Zoom / Escala",
-    "musicStyle": "Estilo da Capa"
+    "musicStyle": "Estilo da Capa",
+    "musicStyleLabel": "Visual da Música"
   },
   "diary": {
     "title": "Notas",
@@ -118,6 +118,9 @@ const ptMessages = {
     "suggestions": "Sugestões para você",
     "trending": "Bombando no Vibe",
     "lyricsTitle": "Letras sincronizadas"
+  },
+  "addMusicModal": {
+    "title": "Adicionar Música"
   },
   "post": {
     "like": "Curtir",
