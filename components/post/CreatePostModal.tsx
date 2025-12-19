@@ -6,6 +6,7 @@ import Button from '../common/Button';
 import TextAreaInput from '../common/TextAreaInput';
 import AddMusicModal from './AddMusicModal';
 import SearchFollowingModal from './SearchFollowingModal';
+import AIGeneratorModal from './AIGeneratorModal';
 
 const FILTERS = [
     { name: 'Normal', filter: 'none' },
@@ -51,6 +52,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
     const [isDuoModalOpen, setIsDuoModalOpen] = useState(false);
     const [isTagModalOpen, setIsTagModalOpen] = useState(false);
 
+    // AI
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+
     // Text Sticker
     const [overlayText, setOverlayText] = useState('');
     const [isAddingText, setIsAddingText] = useState(false);
@@ -78,6 +82,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         setter({ x: Math.max(5, Math.min(95, x)), y: Math.max(5, Math.min(95, y)) });
+    };
+
+    const handleAIImageGenerated = (file: File, preview: string) => {
+        setMediaList([{ file, preview }]);
     };
 
     const handleSubmit = async () => {
@@ -112,7 +120,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
 
             const postRef = await addDoc(collection(db, 'posts'), postData);
 
-            // Se houver convite Duo, enviar notificação especial
             if (duoPartner) {
                 await addDoc(collection(db, 'users', duoPartner.id, 'notifications'), {
                     type: 'duo_request',
@@ -125,7 +132,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                 });
             }
 
-            // Notificar marcados
             for (const tag of taggedUsers) {
                 await addDoc(collection(db, 'users', tag.id, 'notifications'), {
                     type: 'tag_request',
@@ -155,13 +161,20 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                     ref={containerRef}
                     className="relative w-full md:w-[60%] aspect-square md:aspect-auto bg-black flex items-center justify-center overflow-hidden border-r dark:border-zinc-800"
                 >
-                    <div className="w-full h-full flex items-center justify-center transition-all duration-300" style={{ filter: FILTERS[filterIndex].filter }}>
-                        {mediaList[0]?.file.type.startsWith('video/') ? (
-                            <video src={mediaList[0].preview} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                        ) : (
-                            <img src={mediaList[0]?.preview} className="w-full h-full object-cover" />
-                        )}
-                    </div>
+                    {mediaList.length > 0 ? (
+                        <div className="w-full h-full flex items-center justify-center transition-all duration-300" style={{ filter: FILTERS[filterIndex].filter }}>
+                            {mediaList[0]?.file.type.startsWith('video/') ? (
+                                <video src={mediaList[0].preview} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                            ) : (
+                                <img src={mediaList[0]?.preview} className="w-full h-full object-cover" />
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-4 text-zinc-500">
+                             <svg className="w-16 h-16 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                             <p className="text-xs font-black uppercase tracking-widest">{t('memories.selectContent')}</p>
+                        </div>
+                    )}
 
                     {/* Sticker Texto */}
                     {overlayText && (
@@ -176,6 +189,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
 
                     {/* Botões Flutuantes laterais */}
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-20">
+                        <button onClick={() => setIsAIModalOpen(true)} className="p-3 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-full text-white shadow-xl hover:scale-110 active:scale-95 transition-all group" title="Criar com IA">
+                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                        </button>
                         <button onClick={() => setIsAddingText(true)} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white border border-white/20 hover:bg-white/20">Aa</button>
                         <button onClick={() => setIsMusicModalOpen(true)} className={`p-3 backdrop-blur-md rounded-full border border-white/20 transition-all ${selectedMusic ? 'bg-sky-500 text-white' : 'bg-white/10 text-white'}`}>
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
@@ -183,20 +199,22 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                     </div>
 
                     {/* Filtros horizontais */}
-                    <div className="absolute bottom-4 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
-                        {FILTERS.map((f, i) => (
-                            <button 
-                                key={i} 
-                                onClick={() => setFilterIndex(i)}
-                                className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${filterIndex === i ? 'scale-110' : 'opacity-60 scale-90'}`}
-                            >
-                                <div className="w-12 h-12 rounded-lg border-2 border-white/50 overflow-hidden" style={{ filter: f.filter }}>
-                                    <img src={mediaList[0]?.preview} className="w-full h-full object-cover" />
-                                </div>
-                                <span className="text-[9px] text-white font-black uppercase">{f.name}</span>
-                            </button>
-                        ))}
-                    </div>
+                    {mediaList.length > 0 && (
+                        <div className="absolute bottom-4 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
+                            {FILTERS.map((f, i) => (
+                                <button 
+                                    key={i} 
+                                    onClick={() => setFilterIndex(i)}
+                                    className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${filterIndex === i ? 'scale-110' : 'opacity-60 scale-90'}`}
+                                >
+                                    <div className="w-12 h-12 rounded-lg border-2 border-white/50 overflow-hidden" style={{ filter: f.filter }}>
+                                        <img src={mediaList[0]?.preview} className="w-full h-full object-cover" />
+                                    </div>
+                                    <span className="text-[9px] text-white font-black uppercase">{f.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Lado Direito: Opções de Postagem */}
@@ -204,7 +222,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                     <header className="flex justify-between items-center mb-6">
                         <button onClick={onClose} className="text-zinc-400 text-3xl font-light">&times;</button>
                         <h2 className="font-black text-lg">{t('createPost.title')}</h2>
-                        <Button onClick={handleSubmit} disabled={submitting} className="!w-auto !py-1 !px-6 !text-xs !rounded-full">
+                        <Button onClick={handleSubmit} disabled={submitting || mediaList.length === 0} className="!w-auto !py-1 !px-6 !text-xs !rounded-full">
                             {submitting ? '...' : t('createPost.share')}
                         </Button>
                     </header>
@@ -223,7 +241,15 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
                             className="!min-h-[120px] !bg-zinc-50 dark:!bg-zinc-900 !border-none !rounded-2xl"
                         />
 
-                        {/* Duo e Tags */}
+                        {/* Botão Especial AI */}
+                        <button 
+                            onClick={() => setIsAIModalOpen(true)}
+                            className="w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                            {t('aiGenerator.generate')}
+                        </button>
+
                         <div className="grid grid-cols-1 gap-2">
                             <button 
                                 onClick={() => setIsDuoModalOpen(true)}
@@ -281,6 +307,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onPo
             <AddMusicModal isOpen={isMusicModalOpen} onClose={() => setIsMusicModalOpen(false)} postId="" isProfileModal={true} onMusicAdded={m => { setSelectedMusic(m); setIsMusicModalOpen(false); }} />
             <SearchFollowingModal isOpen={isDuoModalOpen} onClose={() => setIsDuoModalOpen(false)} title={t('post.inviteDuo')} onSelect={u => { setDuoPartner(u); setIsDuoModalOpen(false); }} />
             <SearchFollowingModal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} title={t('post.tagFriends')} onSelect={u => { if(!taggedUsers.find(t=>t.id===u.id)) setTaggedUsers([...taggedUsers, u]); }} />
+            <AIGeneratorModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} onImageGenerated={handleAIImageGenerated} />
         </div>
     );
 };

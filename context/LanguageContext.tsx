@@ -104,6 +104,15 @@ const ptMessages = {
     "empty": "O que você quer descobrir hoje?",
     "sources": "Fontes da pesquisa:"
   },
+  "aiGenerator": {
+    "title": "Vibe AI Creator",
+    "promptLabel": "O que você quer criar?",
+    "promptPlaceholder": "Descreva a foto dos seus sonhos...",
+    "generate": "Gerar Imagem",
+    "generating": "Inspirando a IA...",
+    "useImage": "Usar esta Foto",
+    "error": "Erro ao gerar. Tente novamente."
+  },
   "forwardModal": {
     "title": "Encaminhar para",
     "search": "Pesquisar amigos...",
